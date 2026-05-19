@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Moderation — XenChee</title>
+  <link rel="stylesheet" href="css/main.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <nav class="nav">
+    <a href="/" class="nav-brand">XenChee</a>
+    <div class="nav-actions">
+      <a href="/login.html" class="btn btn-ghost">Log In</a>
+      <a href="/signup.html" class="btn btn-primary">Join Free</a>
+    </div>
+  </nav>
+
+  <div style="max-width:760px;margin:40px auto;padding:0 24px 80px;">
+
+    <h1 style="font-size:32px;font-weight:800;margin-bottom:8px;">Moderation Policy</h1>
+    <p style="color:var(--text-muted);font-size:14px;margin-bottom:40px;">Transparent by design. Last updated: May 19, 2026</p>
+
+    <div style="color:var(--text-secondary);line-height:1.8;font-size:15px;">
+
+      <div style="background:rgba(108,99,255,0.1);border:1px solid rgba(108,99,255,0.3);border-radius:12px;padding:20px;margin-bottom:32px;">
+        <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px;">Our Commitment</div>
+        <p style="margin:0;">XenChee does not shadowban. Every moderation action is logged publicly below. If content is removed you are told why. Every decision can be appealed.</p>
+      </div>
+
+      <h2 style="font-size:20px;font-weight:700;color:var(--text);margin:32px 0 12px;">What Gets Removed</h2>
+      <p>We remove only content that crosses legal or absolute ethical lines:</p>
+      <ul style="margin:12px 0 12px 24px;">
+        <li style="margin-bottom:8px;"><strong style="color:var(--text);">CSAM</strong> — Child sexual abuse material. Immediate removal and NCMEC report. No exceptions.</li>
+        <li style="margin-bottom:8px;"><strong style="color:var(--text);">Credible specific threats</strong> — Explicit threats of imminent violence against named individuals.</li>
+        <li style="margin-bottom:8px;"><strong style="color:var(--text);">Doxxing</strong> — Publishing private personal information of others without consent.</li>
+        <li style="margin-bottom:8px;"><strong style="color:var(--text);">Illegal content</strong> — Content that violates applicable federal law.</li>
+      </ul>
+
+      <h2 style="font-size:20px;font-weight:700;color:var(--text);margin:32px 0 12px;">What We Do Not Remove</h2>
+      <p>We do not remove content based on viewpoint, political opinion, unpopular speech, offensive language, controversial topics, or content that mainstream platforms would suppress. Adults are capable of deciding for themselves what to read and engage with.</p>
+
+      <h2 style="font-size:20px;font-weight:700;color:var(--text);margin:32px 0 12px;">The Strike System</h2>
+      <p>Violations result in strikes against your account.</p>
+      <ul style="margin:12px 0 12px 24px;">
+        <li style="margin-bottom:8px;"><strong style="color:var(--text);">Strike 1</strong> — Warning and content removal. Reason provided.</li>
+        <li style="margin-bottom:8px;"><strong style="color:var(--text);">Strike 2</strong> — Temporary posting restriction. Reason provided.</li>
+        <li style="margin-bottom:8px;"><strong style="color:var(--text);">Strike 3</strong> — Account review. Possible suspension.</li>
+        <li style="margin-bottom:8px;"><strong style="color:var(--text);">CSAM</strong> — Immediate permanent ban. No strikes. NCMEC report filed.</li>
+      </ul>
+
+      <h2 style="font-size:20px;font-weight:700;color:var(--text);margin:32px 0 12px;">Appeals</h2>
+      <p>Every moderation decision can be appealed. Email info@xenchee.com with your username and the content in question. Appeals are reviewed within 72 hours. Appeal outcomes are final and logged publicly.</p>
+
+      <h2 style="font-size:20px;font-weight:700;color:var(--text);margin:32px 0 12px;">Public Moderation Log</h2>
+      <p>Every moderation action is logged below. No shadowbanning. No secret suppression. Full transparency.</p>
+
+      <div id="moderation-log" style="margin-top:20px;">
+        <div class="loading"><div class="spinner"></div>Loading moderation log...</div>
+      </div>
+
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="footer-brand">XenChee</div>
+    <div class="footer-tagline">Say Exactly What You Mean</div>
+    <div class="footer-links">
+      <a href="/about.html">About</a>
+      <a href="/terms.html">Terms</a>
+      <a href="/privacy.html">Privacy</a>
+      <a href="/moderation.html">Moderation</a>
+    </div>
+    <div class="footer-legal">© 2026 XenChee. All rights reserved. 18+ only.</div>
+  </footer>
+
+  <script src="js/supabase.js"></script>
+  <script>
+    async function waitForDb(timeout = 5000) {
+      const start = Date.now();
+      while (!window.db) {
+        if (Date.now() - start > timeout) throw new Error('timeout');
+        await new Promise(r => setTimeout(r, 50));
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        await waitForDb();
+        const { data: logs } = await window.db
+          .from('moderation_log')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(50);
+
+        const container = document.getElementById('moderation-log');
+
+        if (!logs || logs.length === 0) {
+          container.innerHTML = '<div style="padding:20px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;color:var(--text-muted);text-align:center;">No moderation actions on record. The log is clean.</div>';
+          return;
+        }
+
+        container.innerHTML = logs.map(log => `
+          <div style="padding:16px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;margin-bottom:8px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <span style="font-size:13px;font-weight:600;color:var(--text);text-transform:capitalize;">${log.action} — ${log.target_type}</span>
+              <span style="font-size:12px;color:var(--text-muted);">${new Date(log.created_at).toLocaleDateString()}</span>
+            </div>
+            <div style="font-size:13px;color:var(--text-secondary);">${log.reason}</div>
+            ${log.is_ai_action ? '<div style="font-size:11px;color:var(--primary-light);margin-top:4px;">AI assisted</div>' : ''}
+            ${log.is_appealed ? '<div style="font-size:11px;color:var(--warning);margin-top:4px;">Appealed — ' + (log.appeal_outcome || 'Pending') + '</div>' : ''}
+          </div>
+        `).join('');
+      } catch (err) {
+        document.getElementById('moderation-log').innerHTML = '<div style="color:var(--text-muted);">Could not load moderation log.</div>';
+      }
+    });
+  </script>
+
+</body>
+</html>
