@@ -37,11 +37,34 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadFeed(),
     loadSidebarCommunities(),
     loadTrendingCommunities(),
-    loadEcosystemSidebar()
+    loadEcosystemSidebar(),
+    loadNotifBadge()
   ]);
 
   setupEventListeners();
 });
+
+async function loadNotifBadge() {
+  const badge = document.getElementById('notif-badge');
+  if (!badge || !currentUser) return;
+
+  try {
+    const { count } = await window.db
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', currentUser.id)
+      .eq('is_read', false);
+
+    if (count && count > 0) {
+      badge.textContent = count > 99 ? '99+' : count;
+      badge.style.display = 'inline-flex';
+    } else {
+      badge.style.display = 'none';
+    }
+  } catch (err) {
+    console.error('Notif badge error:', err);
+  }
+}
 
 function setupEventListeners() {
   document.getElementById('post-btn').addEventListener('click', handleCreatePost);
@@ -169,7 +192,7 @@ async function loadFeed() {
       });
     }
 
-    // Fetch current user's reactions to know which they've already voted
+    // Fetch current user's reactions
     let myReactionMap = {};
     if (currentUser) {
       const { data: myReactions } = await window.db
@@ -311,7 +334,6 @@ async function handleReaction(postId, type) {
       });
     }
 
-    // Refresh just this post's counts without full reload
     await refreshPostReactions(postId);
 
   } catch (err) {
@@ -337,7 +359,6 @@ async function refreshPostReactions(postId) {
   if (likeCount) likeCount.textContent = likes;
   if (downvoteCount) downvoteCount.textContent = downvotes;
 
-  // Update active states
   const { data: myReaction } = await window.db
     .from('reactions')
     .select('reaction_type')
