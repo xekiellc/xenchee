@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Comments — XenChee</title>
+  <link rel="stylesheet" href="/css/main.css" />
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/feed.html" class="nav-brand">XenChee</a>
+    <div class="nav-actions">
+      <a href="/feed.html" class="btn btn-ghost">Feed</a>
+      <a href="/profile.html" class="btn btn-ghost">Profile</a>
+      <button id="logout-btn" class="btn btn-ghost">Log Out</button>
+    </div>
+  </nav>
+
+  <div class="container" style="max-width:720px;margin:0 auto;padding:24px 16px;">
+
+    <!-- Original Post -->
+    <div id="original-post" class="card" style="margin-bottom:24px;">
+      <div class="loading"><div class="spinner"></div>Loading post...</div>
+    </div>
+
+    <!-- Comment Composer -->
+    <div class="card" style="margin-bottom:24px;">
+      <div style="display:flex;gap:12px;align-items:flex-start;">
+        <div class="post-avatar" id="current-user-avatar">?</div>
+        <div style="flex:1;">
+          <textarea id="comment-content" class="form-input" rows="3" placeholder="Write a comment..." maxlength="1000" style="resize:vertical;width:100%;"></textarea>
+          <div style="display:flex;justify-content:flex-end;margin-top:8px;">
+            <button id="comment-btn" class="btn btn-primary">Comment</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Comments List -->
+    <div id="comments-container">
+      <div class="loading"><div class="spinner"></div>Loading comments...</div>
+    </div>
+
+  </div>
+
+  <script src="/js/supabase.js"></script>
+  <script src="/js/comments.js"></script>
+</body>
+</html>
