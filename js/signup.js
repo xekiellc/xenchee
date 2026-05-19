@@ -8,6 +8,18 @@ async function waitForDb(timeout = 5000) {
 
 document.addEventListener('DOMContentLoaded', async () => {
   await waitForDb();
+
+  // Password toggle
+  const passwordInput = document.getElementById('password');
+  const toggleBtn = document.getElementById('password-toggle');
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', () => {
+      const isPassword = passwordInput.type === 'password';
+      passwordInput.type = isPassword ? 'text' : 'password';
+      toggleBtn.textContent = isPassword ? '🙈' : '👁️';
+    });
+  }
+
   const signupBtn = document.getElementById('signup-btn');
   signupBtn.addEventListener('click', handleSignup);
 });
