@@ -89,13 +89,9 @@ async function loadFeed() {
   container.innerHTML = '<div class="loading"><div class="spinner"></div>Loading feed...</div>';
 
   try {
-    let query = window.db
+    let postsQuery = window.db
       .from('posts')
-      .select(`
-        *,
-        profiles:user_id (username, display_name, avatar_url),
-        communities:community_id (name, slug)
-      `)
+      .select('*')
       .eq('is_removed', false)
       .order('created_at', { ascending: false })
       .limit(50);
@@ -111,10 +107,10 @@ async function loadFeed() {
         container.innerHTML = '<div class="loading">Follow some people to see their posts here.</div>';
         return;
       }
-      query = query.in('user_id', followingIds);
+      postsQuery = postsQuery.in('user_id', followingIds);
     }
 
-    const { data: posts, error } = await query;
+    const { data: posts, error } = await postsQuery;
 
     if (error) throw error;
 
@@ -123,7 +119,32 @@ async function loadFeed() {
       return;
     }
 
-    container.innerHTML = posts.map(post => renderPost(post)).join('');
+    // Fetch profiles for post authors
+    const userIds = [...new Set(posts.map(p => p.user_id))];
+    const { data: profiles } = await window.db
+      .from('profiles')
+      .select('user_id, username, display_name, avatar_url')
+      .in('user_id', userIds);
+
+    const profileMap = {};
+    if (profiles) {
+      profiles.forEach(p => { profileMap[p.user_id] = p; });
+    }
+
+    // Fetch communities for posts that have community_id
+    const communityIds = [...new Set(posts.filter(p => p.community_id).map(p => p.community_id))];
+    let communityMap = {};
+    if (communityIds.length > 0) {
+      const { data: communities } = await window.db
+        .from('communities')
+        .select('id, name, slug')
+        .in('id', communityIds);
+      if (communities) {
+        communities.forEach(c => { communityMap[c.id] = c; });
+      }
+    }
+
+    container.innerHTML = posts.map(post => renderPost(post, profileMap, communityMap)).join('');
     attachPostListeners();
 
   } catch (err) {
@@ -132,11 +153,14 @@ async function loadFeed() {
   }
 }
 
-function renderPost(post) {
-  const username = post.profiles?.username || 'unknown';
-  const displayName = post.profiles?.display_name || username;
+function renderPost(post, profileMap, communityMap) {
+  const profile = profileMap[post.user_id];
+  const username = profile?.username || 'unknown';
+  const displayName = profile?.display_name || username;
   const initial = username.charAt(0).toUpperCase();
-  const community = post.communities ? `<span class="post-community">in ${post.communities.name}</span>` : '';
+  const community = post.community_id && communityMap[post.community_id]
+    ? `<span class="post-community">in ${communityMap[post.community_id].name}</span>`
+    : '';
   const timestamp = new Date(post.created_at).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
@@ -149,7 +173,7 @@ function renderPost(post) {
       <div class="post-header">
         <div class="post-avatar">${initial}</div>
         <div class="post-meta">
-          <div class="post-username">${displayName} <span style="font-weight:400;color:var(--text-muted);font-size:13px;">@${username}</span></div>
+          <div class="post-username">${escapeHtml(displayName)} <span style="font-weight:400;color:var(--text-muted);font-size:13px;">@${escapeHtml(username)}</span></div>
           <div style="display:flex;gap:8px;align-items:center;">
             <span class="post-timestamp">${timestamp}</span>
             ${community}
