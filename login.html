@@ -30,7 +30,10 @@
 
       <div class="form-group">
         <label class="form-label">Password</label>
-        <input type="password" id="password" class="form-input" placeholder="Your password" />
+        <div style="position:relative;">
+          <input type="password" id="password" class="form-input" placeholder="Your password" style="padding-right:48px;" />
+          <button id="password-toggle" type="button" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-muted);">👁️</button>
+        </div>
       </div>
 
       <button id="login-btn" class="btn btn-primary" style="width:100%;justify-content:center;">
