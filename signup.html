@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Join XenChee — Sign Up</title>
+  <link rel="stylesheet" href="css/main.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <nav class="nav">
+    <a href="/" class="nav-brand">XenChee</a>
+    <div class="nav-actions">
+      <a href="/login.html" class="btn btn-ghost">Log In</a>
+    </div>
+  </nav>
+
+  <div class="form-container">
+    <div class="form-card">
+      <div class="form-title">Join XenChee</div>
+      <div class="form-subtitle">Free speech. Verified adults. No shadowbans.</div>
+
+      <div id="alert-container"></div>
+
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input type="email" id="email" class="form-input" placeholder="you@example.com" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Username</label>
+        <input type="text" id="username" class="form-input" placeholder="yourhandle" maxlength="30" />
+        <div class="form-hint">Letters, numbers, underscores only</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" id="password" class="form-input" placeholder="Minimum 8 characters" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Date of Birth</label>
+        <input type="date" id="dob" class="form-input" />
+        <div class="form-hint">You must be 18 or older to join XenChee</div>
+      </div>
+
+      <div class="form-group">
+        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;">
+          <input type="checkbox" id="terms" style="margin-top:3px;accent-color:var(--primary);" />
+          <span style="font-size:13px;color:var(--text-secondary);">
+            I am 18 or older and agree to the
+            <a href="/terms.html">Terms of Service</a> and
+            <a href="/privacy.html">Privacy Policy</a>
+          </span>
+        </label>
+      </div>
+
+      <button id="signup-btn" class="btn btn-primary" style="width:100%;justify-content:center;">
+        Create Account
+      </button>
+
+      <div class="form-footer">
+        Already have an account? <a href="/login.html">Log in</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/supabase.js"></script>
+  <script src="js/signup.js"></script>
+</body>
+</html>
