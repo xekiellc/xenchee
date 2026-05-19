@@ -1,6 +1,15 @@
+async function waitForDb(timeout = 5000) {
+  const start = Date.now();
+  while (!window.db) {
+    if (Date.now() - start > timeout) throw new Error('Supabase init timeout');
+    await new Promise(r => setTimeout(r, 50));
+  }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
-  // If already logged in redirect to feed
-  const user = await auth.getUser();
+  await waitForDb();
+
+  const user = await window.auth.getUser();
   if (user) {
     window.location.href = '/feed.html';
     return;
@@ -9,7 +18,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const loginBtn = document.getElementById('login-btn');
   loginBtn.addEventListener('click', handleLogin);
 
-  // Allow enter key to submit
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') handleLogin();
   });
@@ -31,7 +39,7 @@ async function handleLogin() {
   btn.disabled = true;
 
   try {
-    const { data, error } = await auth.signIn(email, password);
+    const { data, error } = await window.auth.signIn(email, password);
 
     if (error) {
       showAlert('Invalid email or password. Please try again.', 'error');
@@ -41,8 +49,7 @@ async function handleLogin() {
     }
 
     if (data?.user) {
-      // Update last login
-      await db
+      await window.db
         .from('users')
         .update({ last_login: new Date().toISOString() })
         .eq('id', data.user.id);
@@ -64,6 +71,5 @@ function showAlert(message, type) {
 }
 
 function clearAlert() {
-  const container = document.getElementById('alert-container');
-  container.innerHTML = '';
+  document.getElementById('alert-container').innerHTML = '';
 }
