@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>XenChee — Say Exactly What You Mean</title>
+  <link rel="stylesheet" href="css/main.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <!-- LANDING PAGE — shown to logged out users -->
+  <div id="landing" class="landing">
+
+    <nav class="nav">
+      <div class="nav-brand">XenChee</div>
+      <div class="nav-actions">
+        <a href="/login.html" class="btn btn-ghost">Log In</a>
+        <a href="/signup.html" class="btn btn-primary">Join Free</a>
+      </div>
+    </nav>
+
+    <section class="hero">
+      <h1>Say Exactly What You Mean</h1>
+      <p>The social platform that respects adults. No shadowbans. No censorship. No algorithm deciding what you see. Just real people, real conversations, and the freedom to speak freely.</p>
+      <div class="hero-actions">
+        <a href="/signup.html" class="btn btn-primary btn-large">Join XenChee Free</a>
+        <a href="#communities" class="btn btn-ghost btn-large">Explore Communities</a>
+      </div>
+      <div class="hero-features">
+        <div class="feature">
+          <span class="feature-icon">🔒</span>
+          <span>18+ Verified</span>
+        </div>
+        <div class="feature">
+          <span class="feature-icon">🚫</span>
+          <span>No Shadowbans</span>
+        </div>
+        <div class="feature">
+          <span class="feature-icon">📅</span>
+          <span>Chronological Feed</span>
+        </div>
+        <div class="feature">
+          <span class="feature-icon">🗳️</span>
+          <span>Polls & Downvotes</span>
+        </div>
+        <div class="feature">
+          <span class="feature-icon">💬</span>
+          <span>Real Communities</span>
+        </div>
+        <div class="feature">
+          <span class="feature-icon">🔓</span>
+          <span>First Amendment First</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="communities-section" id="communities">
+      <div class="section-header">
+        <h2>Explore Communities</h2>
+        <p>Join the conversation across dozens of communities — all free, all uncensored, all verified adults.</p>
+      </div>
+      <div class="communities-grid" id="communities-grid">
+        <!-- populated by JS -->
+      </div>
+    </section>
+
+    <section class="ecosystem-section" id="ecosystem">
+      <div class="section-header">
+        <h2>The XenChee Ecosystem</h2>
+        <p>More than a social platform. A complete alternative internet built for adults.</p>
+      </div>
+      <div class="ecosystem-grid" id="ecosystem-grid">
+        <!-- populated by JS -->
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div class="footer-brand">XenChee</div>
+      <div class="footer-tagline">Say Exactly What You Mean</div>
+      <div class="footer-links">
+        <a href="/about.html">About</a>
+        <a href="/terms.html">Terms</a>
+        <a href="/privacy.html">Privacy</a>
+        <a href="/moderation.html">Moderation</a>
+      </div>
+      <div class="footer-legal">© 2026 XenChee. All rights reserved. 18+ only.</div>
+    </footer>
+
+  </div>
+
+  <script src="js/supabase.js"></script>
+  <script src="js/landing.js"></script>
+</body>
+</html>
