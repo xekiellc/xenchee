@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Notifications — XenChee</title>
+  <link rel="stylesheet" href="/css/main.css" />
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/feed.html" class="nav-brand">XenChee</a>
+    <div class="nav-actions">
+      <a href="/feed.html" class="btn btn-ghost">Feed</a>
+      <a href="/profile.html" class="btn btn-ghost">Profile</a>
+      <button id="logout-btn" class="btn btn-ghost">Log Out</button>
+    </div>
+  </nav>
+
+  <div class="container" style="max-width:720px;margin:0 auto;padding:24px 16px;">
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+      <h2 style="font-size:22px;font-weight:700;color:var(--text);margin:0;">Notifications</h2>
+      <button id="mark-all-read-btn" class="btn btn-ghost" style="font-size:13px;">Mark all read</button>
+    </div>
+
+    <div id="notifications-container">
+      <div class="loading"><div class="spinner"></div>Loading notifications...</div>
+    </div>
+
+  </div>
+
+  <script src="/js/supabase.js"></script>
+  <script src="/js/notifications.js"></script>
+</body>
+</html>
