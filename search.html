@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Search — XenChee</title>
+  <link rel="stylesheet" href="/css/main.css" />
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/feed.html" class="nav-brand">XenChee</a>
+    <div class="nav-actions">
+      <a href="/feed.html" class="btn btn-ghost">Feed</a>
+      <a href="/profile.html" class="btn btn-ghost">Profile</a>
+      <button id="logout-btn" class="btn btn-ghost">Log Out</button>
+    </div>
+  </nav>
+
+  <div class="container" style="max-width:720px;margin:0 auto;padding:24px 16px;">
+
+    <!-- Search Bar -->
+    <div style="margin-bottom:24px;">
+      <div style="display:flex;gap:8px;">
+        <input
+          type="text"
+          id="search-input"
+          class="form-input"
+          placeholder="Search users, posts, communities..."
+          maxlength="100"
+          autocomplete="off"
+          style="flex:1;font-size:16px;padding:12px 16px;"
+        />
+        <button id="search-btn" class="btn btn-primary" style="padding:0 24px;">Search</button>
+      </div>
+    </div>
+
+    <!-- Search Type Tabs -->
+    <div style="display:flex;gap:8px;margin-bottom:24px;">
+      <button class="btn btn-primary search-tab" data-tab="users" style="font-size:13px;">👤 Users</button>
+      <button class="btn btn-ghost search-tab" data-tab="posts" style="font-size:13px;">📝 Posts</button>
+      <button class="btn btn-ghost search-tab" data-tab="communities" style="font-size:13px;">💬 Communities</button>
+    </div>
+
+    <!-- Results -->
+    <div id="search-results">
+      <div style="text-align:center;color:var(--text-muted);font-size:15px;padding:48px 0;">
+        Search for users, posts, or communities.
+      </div>
+    </div>
+
+  </div>
+
+  <script src="/js/supabase.js"></script>
+  <script src="/js/search.js"></script>
+</body>
+</html>
