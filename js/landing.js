@@ -1,15 +1,26 @@
-// Landing page — loads communities and ecosystem cards from Supabase
+// Wait for Supabase to initialize then load page
+async function waitForDb(timeout = 5000) {
+  const start = Date.now();
+  while (!window.db) {
+    if (Date.now() - start > timeout) throw new Error('Supabase init timeout');
+    await new Promise(r => setTimeout(r, 50));
+  }
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
-  await Promise.all([
-    loadCommunities(),
-    loadEcosystemCards()
-  ]);
+  try {
+    await waitForDb();
+    await Promise.all([
+      loadCommunities(),
+      loadEcosystemCards()
+    ]);
 
-  // Check if user is already logged in
-  const user = await auth.getUser();
-  if (user) {
-    window.location.href = '/feed.html';
+    const user = await window.auth.getUser();
+    if (user) {
+      window.location.href = '/feed.html';
+    }
+  } catch (err) {
+    console.error('Landing init error:', err);
   }
 });
 
@@ -20,7 +31,7 @@ async function loadCommunities() {
   grid.innerHTML = '<div class="loading"><div class="spinner"></div>Loading communities...</div>';
 
   try {
-    const { data: communities, error } = await db
+    const { data: communities, error } = await window.db
       .from('communities')
       .select('*')
       .eq('community_type', 'portfolio')
@@ -69,7 +80,7 @@ async function loadEcosystemCards() {
   grid.innerHTML = '<div class="loading"><div class="spinner"></div>Loading ecosystem...</div>';
 
   try {
-    const { data: cards, error } = await db
+    const { data: cards, error } = await window.db
       .from('ecosystem_cards')
       .select('*')
       .order('display_order');
