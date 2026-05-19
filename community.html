@@ -24,7 +24,8 @@
     <div class="sidebar-left">
       <ul class="sidebar-nav">
         <li><a href="/feed.html"><span class="sidebar-nav-icon">🏠</span>Home</a></li>
-        <li><a href="/communities.html"><span class="sidebar-nav-icon">💬</span>Communities</a></li>
+        <li><a href="/search.html"><span class="sidebar-nav-icon">🔍</span>Search</a></li>
+        <li><a href="/communities.html" class="active"><span class="sidebar-nav-icon">💬</span>Communities</a></li>
         <li><a href="/events.html"><span class="sidebar-nav-icon">📅</span>Events</a></li>
         <li><a href="/messages.html"><span class="sidebar-nav-icon">✉️</span>Messages</a></li>
         <li><a href="/notifications.html"><span class="sidebar-nav-icon">🔔</span>Notifications</a></li>
@@ -60,7 +61,7 @@
       </div>
 
       <!-- Create Post in Community -->
-      <div id="create-post-community" class="create-post" style="margin-bottom:20px;">
+      <div class="create-post" style="margin-bottom:20px;">
         <div class="create-post-header">
           <div class="post-avatar" id="user-avatar">?</div>
           <textarea class="create-post-input" id="post-content" placeholder="Post in this community..." maxlength="2000"></textarea>
@@ -81,7 +82,6 @@
     <!-- Right Sidebar -->
     <div class="sidebar-right">
       <div id="community-rules-sidebar"></div>
-
       <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-top:24px;margin-bottom:16px;">Other Communities</div>
       <div id="other-communities"></div>
     </div>
@@ -89,249 +89,6 @@
   </div>
 
   <script src="js/supabase.js"></script>
-  <script>
-    async function waitForDb(timeout = 5000) {
-      const start = Date.now();
-      while (!window.db) {
-        if (Date.now() - start > timeout) throw new Error('timeout');
-        await new Promise(r => setTimeout(r, 50));
-      }
-    }
-
-    let currentUser = null;
-    let currentCommunity = null;
-
-    document.addEventListener('DOMContentLoaded', async () => {
-      await waitForDb();
-
-      currentUser = await window.auth.getUser();
-      if (!currentUser) {
-        window.location.href = '/login.html';
-        return;
-      }
-
-      document.getElementById('logout-btn').addEventListener('click', async () => {
-        await window.auth.signOut();
-        window.location.href = '/';
-      });
-
-      const params = new URLSearchParams(window.location.search);
-      const slug = params.get('slug');
-
-      if (!slug) {
-        window.location.href = '/communities.html';
-        return;
-      }
-
-      await loadCommunity(slug);
-      await loadOtherCommunities(slug);
-      setupPostBtn();
-    });
-
-    async function loadCommunity(slug) {
-      const { data: community } = await window.db
-        .from('communities')
-        .select('*')
-        .eq('slug', slug)
-        .single();
-
-      if (!community) {
-        document.getElementById('community-header').innerHTML = '<div class="loading">Community not found.</div>';
-        return;
-      }
-
-      currentCommunity = community;
-
-      // Update page title
-      document.title = community.name + ' — XenChee';
-
-      // Render header
-      document.getElementById('community-name').textContent = community.name;
-      document.getElementById('community-slug').textContent = 'xenchee.com/c/' + community.slug;
-      document.getElementById('community-description').textContent = community.description || '';
-      document.getElementById('community-member-count').textContent = community.member_count || 0;
-
-      // Show join button
-      const joinBtn = document.getElementById('join-btn');
-      joinBtn.style.display = 'block';
-
-      // Check if already member
-      const { data: membership } = await window.db
-        .from('community_members')
-        .select('id')
-        .eq('community_id', community.id)
-        .eq('user_id', currentUser.id)
-        .single();
-
-      if (membership) {
-        joinBtn.textContent = 'Joined ✓';
-        joinBtn.className = 'btn btn-ghost';
-      } else {
-        joinBtn.textContent = 'Join Community';
-        joinBtn.addEventListener('click', () => joinCommunity(community.id));
-      }
-
-      // Set user avatar
-      const { data: profile } = await window.db
-        .from('profiles')
-        .select('username')
-        .eq('user_id', currentUser.id)
-        .single();
-
-      if (profile) {
-        document.getElementById('user-avatar').textContent = profile.username.charAt(0).toUpperCase();
-      }
-
-      // Load rules
-      if (community.rules && community.rules.length > 0) {
-        document.getElementById('community-rules-sidebar').innerHTML = `
-          <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">Community Rules</div>
-          ${community.rules.map((rule, i) => `
-            <div style="padding:10px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;margin-bottom:8px;font-size:13px;color:var(--text-secondary);">
-              <span style="font-weight:700;color:var(--text);">${i + 1}.</span> ${rule}
-            </div>
-          `).join('')}
-        `;
-      }
-
-      // Load posts
-      await loadCommunityPosts(community.id);
-    }
-
-    async function loadCommunityPosts(communityId) {
-      const container = document.getElementById('community-posts');
-
-      const { data: posts } = await window.db
-        .from('posts')
-        .select('*')
-        .eq('community_id', communityId)
-        .eq('is_removed', false)
-        .order('created_at', { ascending: false })
-        .limit(50);
-
-      document.getElementById('community-post-count').textContent = posts ? posts.length : 0;
-
-      if (!posts || posts.length === 0) {
-        container.innerHTML = '<div class="loading">No posts yet. Be the first to post in this community.</div>';
-        return;
-      }
-
-      const userIds = [...new Set(posts.map(p => p.user_id))];
-      const { data: profiles } = await window.db
-        .from('profiles')
-        .select('user_id, username, display_name')
-        .in('user_id', userIds);
-
-      const profileMap = {};
-      if (profiles) profiles.forEach(p => { profileMap[p.user_id] = p; });
-
-      container.innerHTML = posts.map(post => {
-        const profile = profileMap[post.user_id];
-        const username = profile?.username || 'unknown';
-        const displayName = profile?.display_name || username;
-        const initial = username.charAt(0).toUpperCase();
-        const timestamp = new Date(post.created_at).toLocaleDateString('en-US', {
-          month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-        });
-
-        return `
-          <div class="post-card">
-            <div class="post-header">
-              <div class="post-avatar">${initial}</div>
-              <div class="post-meta">
-                <div class="post-username">${escapeHtml(displayName)} <span style="font-weight:400;color:var(--text-muted);font-size:13px;">@${escapeHtml(username)}</span></div>
-                <span class="post-timestamp">${timestamp}</span>
-              </div>
-            </div>
-            <div class="post-content">${escapeHtml(post.content || '')}</div>
-            <div class="post-actions">
-              <button class="post-action-btn">❤️ 0</button>
-              <button class="post-action-btn">💬 Comment</button>
-              <button class="post-action-btn">👎 0</button>
-              <button class="post-action-btn">🔗 Share</button>
-              ${post.user_id === currentUser.id ? `<button class="post-action-btn" onclick="deletePost('${post.id}')" style="margin-left:auto;color:var(--danger);">🗑️</button>` : ''}
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    async function joinCommunity(communityId) {
-      const btn = document.getElementById('join-btn');
-      btn.textContent = 'Joining...';
-      btn.disabled = true;
-
-      await window.db.from('community_members').insert({
-        community_id: communityId,
-        user_id: currentUser.id,
-        role: 'member'
-      });
-
-      await window.db.from('communities')
-        .update({ member_count: (currentCommunity.member_count || 0) + 1 })
-        .eq('id', communityId);
-
-      btn.textContent = 'Joined ✓';
-      btn.className = 'btn btn-ghost';
-      btn.disabled = false;
-    }
-
-    function setupPostBtn() {
-      document.getElementById('post-btn').addEventListener('click', async () => {
-        if (!currentCommunity) return;
-        const content = document.getElementById('post-content').value.trim();
-        if (!content) return;
-
-        const btn = document.getElementById('post-btn');
-        btn.textContent = 'Posting...';
-        btn.disabled = true;
-
-        await window.db.from('posts').insert({
-          user_id: currentUser.id,
-          community_id: currentCommunity.id,
-          content: content
-        });
-
-        document.getElementById('post-content').value = '';
-        btn.textContent = 'Post';
-        btn.disabled = false;
-
-        await loadCommunityPosts(currentCommunity.id);
-      });
-    }
-
-    async function deletePost(postId) {
-      if (!confirm('Delete this post?')) return;
-      await window.db.from('posts').update({ is_removed: true }).eq('id', postId);
-      await loadCommunityPosts(currentCommunity.id);
-    }
-
-    async function loadOtherCommunities(currentSlug) {
-      const container = document.getElementById('other-communities');
-
-      const { data: communities } = await window.db
-        .from('communities')
-        .select('name, slug')
-        .neq('slug', currentSlug)
-        .eq('is_official', true)
-        .order('name')
-        .limit(8);
-
-      if (!communities) return;
-
-      container.innerHTML = communities.map(c => `
-        <a href="/community.html?slug=${c.slug}" style="display:block;padding:10px 12px;border-radius:8px;margin-bottom:6px;background:var(--bg-card);border:1px solid var(--border);color:var(--text);font-size:14px;text-decoration:none;">
-          ${c.name}
-        </a>
-      `).join('');
-    }
-
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.appendChild(document.createTextNode(text));
-      return div.innerHTML;
-    }
-  </script>
-
+  <script src="js/community.js"></script>
 </body>
 </html>
