@@ -1,18 +1,26 @@
+async function waitForDb(timeout = 5000) {
+  const start = Date.now();
+  while (!window.db) {
+    if (Date.now() - start > timeout) throw new Error('Supabase init timeout');
+    await new Promise(r => setTimeout(r, 50));
+  }
+}
+
 let currentUser = null;
 let currentProfile = null;
 let feedMode = 'all';
 let pollVisible = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // Auth check
-  currentUser = await auth.getUser();
+  await waitForDb();
+
+  currentUser = await window.auth.getUser();
   if (!currentUser) {
     window.location.href = '/login.html';
     return;
   }
 
-  // Load profile
-  const { data: profile } = await db
+  const { data: profile } = await window.db
     .from('profiles')
     .select('*')
     .eq('user_id', currentUser.id)
@@ -25,7 +33,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (avatar) avatar.textContent = profile.username.charAt(0).toUpperCase();
   }
 
-  // Setup
   await Promise.all([
     loadFeed(),
     loadSidebarCommunities(),
@@ -37,16 +44,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 function setupEventListeners() {
-  // Post button
   document.getElementById('post-btn').addEventListener('click', handleCreatePost);
 
-  // Logout
   document.getElementById('logout-btn').addEventListener('click', async () => {
-    await auth.signOut();
+    await window.auth.signOut();
     window.location.href = '/';
   });
 
-  // Feed toggle
   document.getElementById('feed-all-btn').addEventListener('click', () => {
     feedMode = 'all';
     document.getElementById('feed-all-btn').className = 'btn btn-primary';
@@ -61,13 +65,11 @@ function setupEventListeners() {
     loadFeed();
   });
 
-  // Poll toggle
   document.getElementById('poll-toggle-btn').addEventListener('click', () => {
     pollVisible = !pollVisible;
     document.getElementById('poll-creator').style.display = pollVisible ? 'block' : 'none';
   });
 
-  // Add poll option
   document.getElementById('add-option-btn').addEventListener('click', () => {
     const container = document.getElementById('poll-options').querySelector('.form-group');
     const options = container.querySelectorAll('.poll-option');
@@ -87,7 +89,7 @@ async function loadFeed() {
   container.innerHTML = '<div class="loading"><div class="spinner"></div>Loading feed...</div>';
 
   try {
-    let query = db
+    let query = window.db
       .from('posts')
       .select(`
         *,
@@ -99,7 +101,7 @@ async function loadFeed() {
       .limit(50);
 
     if (feedMode === 'following' && currentUser) {
-      const { data: follows } = await db
+      const { data: follows } = await window.db
         .from('follows')
         .select('following_id')
         .eq('follower_id', currentUser.id);
@@ -179,22 +181,18 @@ function renderPost(post) {
 }
 
 function attachPostListeners() {
-  // Like buttons
   document.querySelectorAll('.like-btn').forEach(btn => {
     btn.addEventListener('click', () => handleReaction(btn.dataset.postId, 'like'));
   });
 
-  // Downvote buttons
   document.querySelectorAll('.downvote-btn').forEach(btn => {
     btn.addEventListener('click', () => handleReaction(btn.dataset.postId, 'downvote'));
   });
 
-  // Delete buttons
   document.querySelectorAll('.delete-btn').forEach(btn => {
     btn.addEventListener('click', () => handleDeletePost(btn.dataset.postId));
   });
 
-  // Share buttons
   document.querySelectorAll('.share-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const url = `${window.location.origin}/post.html?id=${btn.dataset.postId}`;
@@ -212,60 +210,47 @@ async function handleCreatePost() {
   const content = document.getElementById('post-content').value.trim();
   const hasPoll = pollVisible;
 
-  if (!content && !hasPoll) {
-    return;
-  }
+  if (!content && !hasPoll) return;
 
   const btn = document.getElementById('post-btn');
   btn.textContent = 'Posting...';
   btn.disabled = true;
 
   try {
-    // Create post
-    const { data: post, error: postError } = await db
+    const { data: post, error: postError } = await window.db
       .from('posts')
-      .insert({
-        user_id: currentUser.id,
-        content: content,
-      })
+      .insert({ user_id: currentUser.id, content: content })
       .select()
       .single();
 
     if (postError) throw postError;
 
-    // Create poll if enabled
     if (hasPoll && post) {
       const question = document.getElementById('poll-question').value.trim();
       const optionInputs = document.querySelectorAll('.poll-option');
-      const options = Array.from(optionInputs)
-        .map(i => i.value.trim())
-        .filter(v => v.length > 0);
+      const options = Array.from(optionInputs).map(i => i.value.trim()).filter(v => v.length > 0);
       const duration = parseInt(document.getElementById('poll-duration').value);
 
       if (question && options.length >= 2) {
         const expiresAt = new Date();
         expiresAt.setHours(expiresAt.getHours() + duration);
-
-        await db.from('polls').insert({
+        await window.db.from('polls').insert({
           post_id: post.id,
           user_id: currentUser.id,
-          question: question,
-          options: options,
+          question,
+          options,
           duration_hours: duration,
           expires_at: expiresAt.toISOString()
         });
       }
     }
 
-    // Update post count
-    await db
+    await window.db
       .from('profiles')
       .update({ post_count: (currentProfile?.post_count || 0) + 1 })
       .eq('user_id', currentUser.id);
 
-    // Reset form
     document.getElementById('post-content').value = '';
-    document.getElementById('post-content').style.height = 'auto';
     if (hasPoll) {
       document.getElementById('poll-creator').style.display = 'none';
       document.getElementById('poll-question').value = '';
@@ -278,8 +263,6 @@ async function handleCreatePost() {
 
     btn.textContent = 'Post';
     btn.disabled = false;
-
-    // Reload feed
     await loadFeed();
 
   } catch (err) {
@@ -293,7 +276,7 @@ async function handleReaction(postId, type) {
   if (!currentUser) return;
 
   try {
-    const { data: existing } = await db
+    const { data: existing } = await window.db
       .from('reactions')
       .select('*')
       .eq('user_id', currentUser.id)
@@ -303,12 +286,12 @@ async function handleReaction(postId, type) {
 
     if (existing) {
       if (existing.reaction_type === type) {
-        await db.from('reactions').delete().eq('id', existing.id);
+        await window.db.from('reactions').delete().eq('id', existing.id);
       } else {
-        await db.from('reactions').update({ reaction_type: type }).eq('id', existing.id);
+        await window.db.from('reactions').update({ reaction_type: type }).eq('id', existing.id);
       }
     } else {
-      await db.from('reactions').insert({
+      await window.db.from('reactions').insert({
         user_id: currentUser.id,
         target_id: postId,
         target_type: 'post',
@@ -323,8 +306,7 @@ async function handleReaction(postId, type) {
 async function handleDeletePost(postId) {
   if (!currentUser) return;
   if (!confirm('Delete this post?')) return;
-
-  await db.from('posts').update({ is_removed: true }).eq('id', postId).eq('user_id', currentUser.id);
+  await window.db.from('posts').update({ is_removed: true }).eq('id', postId).eq('user_id', currentUser.id);
   await loadFeed();
 }
 
@@ -332,7 +314,7 @@ async function loadSidebarCommunities() {
   const container = document.getElementById('sidebar-communities');
   if (!container) return;
 
-  const { data: communities } = await db
+  const { data: communities } = await window.db
     .from('communities')
     .select('name, slug')
     .eq('is_official', true)
@@ -357,9 +339,9 @@ async function loadTrendingCommunities() {
   const container = document.getElementById('trending-communities');
   if (!container) return;
 
-  const { data: communities } = await db
+  const { data: communities } = await window.db
     .from('communities')
-    .select('name, slug, member_count, description')
+    .select('name, slug, member_count')
     .eq('is_official', true)
     .order('member_count', { ascending: false })
     .limit(5);
@@ -378,9 +360,9 @@ async function loadEcosystemSidebar() {
   const container = document.getElementById('ecosystem-sidebar');
   if (!container) return;
 
-  const { data: cards } = await db
+  const { data: cards } = await window.db
     .from('ecosystem_cards')
-    .select('name, tagline, status, external_url')
+    .select('name, tagline, status')
     .order('display_order');
 
   if (!cards) return;
