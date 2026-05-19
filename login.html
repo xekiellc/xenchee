@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Log In — XenChee</title>
+  <link rel="stylesheet" href="css/main.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <nav class="nav">
+    <a href="/" class="nav-brand">XenChee</a>
+    <div class="nav-actions">
+      <a href="/signup.html" class="btn btn-primary">Join Free</a>
+    </div>
+  </nav>
+
+  <div class="form-container">
+    <div class="form-card">
+      <div class="form-title">Welcome Back</div>
+      <div class="form-subtitle">Log in to your XenChee account</div>
+
+      <div id="alert-container"></div>
+
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input type="email" id="email" class="form-input" placeholder="you@example.com" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" id="password" class="form-input" placeholder="Your password" />
+      </div>
+
+      <button id="login-btn" class="btn btn-primary" style="width:100%;justify-content:center;">
+        Log In
+      </button>
+
+      <div class="form-footer">
+        Don't have an account? <a href="/signup.html">Join free</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/supabase.js"></script>
+  <script src="js/login.js"></script>
+</body>
+</html>
