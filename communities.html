@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Communities — XenChee</title>
+  <link rel="stylesheet" href="css/main.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <nav class="nav">
+    <a href="/feed.html" class="nav-brand">XenChee</a>
+    <div class="nav-actions">
+      <a href="/feed.html" class="btn btn-ghost">Feed</a>
+      <a href="/profile.html" class="btn btn-ghost">Profile</a>
+      <button class="btn btn-ghost" id="logout-btn">Log Out</button>
+    </div>
+  </nav>
+
+  <div class="app-layout">
+
+    <!-- Left Sidebar -->
+    <div class="sidebar-left">
+      <ul class="sidebar-nav">
+        <li><a href="/feed.html"><span class="sidebar-nav-icon">🏠</span>Home</a></li>
+        <li><a href="/communities.html" class="active"><span class="sidebar-nav-icon">💬</span>Communities</a></li>
+        <li><a href="/events.html"><span class="sidebar-nav-icon">📅</span>Events</a></li>
+        <li><a href="/messages.html"><span class="sidebar-nav-icon">✉️</span>Messages</a></li>
+        <li><a href="/notifications.html"><span class="sidebar-nav-icon">🔔</span>Notifications</a></li>
+        <li><a href="/profile.html"><span class="sidebar-nav-icon">👤</span>Profile</a></li>
+        <li><a href="/ecosystem.html"><span class="sidebar-nav-icon">🌐</span>Ecosystem</a></li>
+      </ul>
+    </div>
+
+    <!-- Main Content -->
+    <div class="feed-main">
+
+      <div style="margin-bottom:24px;">
+        <div style="font-size:24px;font-weight:800;margin-bottom:8px;">Communities</div>
+        <div style="color:var(--text-muted);font-size:15px;">Find your people. Say exactly what you mean.</div>
+      </div>
+
+      <!-- Search -->
+      <div style="margin-bottom:24px;">
+        <input type="text" id="community-search" class="form-input" placeholder="Search communities..." style="max-width:400px;" />
+      </div>
+
+      <!-- Filter tabs -->
+      <div style="display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap;">
+        <button class="btn btn-primary community-filter-btn" data-filter="all">All</button>
+        <button class="btn btn-ghost community-filter-btn" data-filter="portfolio">Portfolio Sites</button>
+        <button class="btn btn-ghost community-filter-btn" data-filter="advocacy">Advocacy</button>
+        <button class="btn btn-ghost community-filter-btn" data-filter="general">General</button>
+      </div>
+
+      <!-- Communities Grid -->
+      <div id="communities-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;">
+        <div class="loading"><div class="spinner"></div>Loading communities...</div>
+      </div>
+
+    </div>
+
+    <!-- Right Sidebar -->
+    <div class="sidebar-right">
+      <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">Most Active</div>
+      <div id="active-communities"></div>
+    </div>
+
+  </div>
+
+  <script src="js/supabase.js"></script>
+  <script>
+    async function waitForDb(timeout = 5000) {
+      const start = Date.now();
+      while (!window.db) {
+        if (Date.now() - start > timeout) throw new Error('timeout');
+        await new Promise(r => setTimeout(r, 50));
+      }
+    }
+
+    let allCommunities = [];
+    let currentFilter = 'all';
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      await waitForDb();
+
+      const user = await window.auth.getUser();
+      if (!user) {
+        window.location.href = '/login.html';
+        return;
+      }
+
+      document.getElementById('logout-btn').addEventListener('click', async () => {
+        await window.auth.signOut();
+        window.location.href = '/';
+      });
+
+      await loadCommunities();
+      setupFilters();
+      setupSearch();
+    });
+
+    async function loadCommunities() {
+      const { data: communities } = await window.db
+        .from('communities')
+        .select('*')
+        .order('name');
+
+      if (!communities) return;
+      allCommunities = communities;
+      renderCommunities(communities);
+      renderActiveSidebar(communities);
+    }
+
+    function renderCommunities(communities) {
+      const grid = document.getElementById('communities-grid');
+
+      if (!communities || communities.length === 0) {
+        grid.innerHTML = '<div class="loading">No communities found.</div>';
+        return;
+      }
+
+      grid.innerHTML = communities.map(c => `
+        <a href="/community.html?slug=${c.slug}" style="text-decoration:none;">
+          <div class="community-card" style="height:100%;">
+            <div class="community-card-header">
+              <div class="community-avatar">${c.name.charAt(0)}</div>
+              <div>
+                <div class="community-name">${c.name}</div>
+                <div class="community-type">${c.community_type || 'Community'}</div>
+              </div>
+            </div>
+            <div class="community-description">${c.description || ''}</div>
+            <div class="community-footer">
+              <span class="community-members">${c.member_count > 0 ? c.member_count.toLocaleString() + ' members' : 'Be the first to join'}</span>
+              ${c.is_official ? '<span class="community-badge badge-official">Official</span>' : ''}
+            </div>
+          </div>
+        </a>
+      `).join('');
+    }
+
+    function renderActiveSidebar(communities) {
+      const container = document.getElementById('active-communities');
+      const sorted = [...communities].sort((a, b) => (b.member_count || 0) - (a.member_count || 0)).slice(0, 6);
+
+      container.innerHTML = sorted.map(c => `
+        <a href="/community.html?slug=${c.slug}" style="display:block;padding:10px 12px;border-radius:8px;margin-bottom:6px;background:var(--bg-card);border:1px solid var(--border);text-decoration:none;transition:all 0.15s ease;">
+          <div style="font-size:14px;font-weight:600;color:var(--text);">${c.name}</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">${c.member_count > 0 ? c.member_count.toLocaleString() + ' members' : 'New'}</div>
+        </a>
+      `).join('');
+    }
+
+    function setupFilters() {
+      document.querySelectorAll('.community-filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          currentFilter = btn.dataset.filter;
+          document.querySelectorAll('.community-filter-btn').forEach(b => b.className = 'btn btn-ghost community-filter-btn');
+          btn.className = 'btn btn-primary community-filter-btn';
+          applyFilters();
+        });
+      });
+    }
+
+    function setupSearch() {
+      document.getElementById('community-search').addEventListener('input', applyFilters);
+    }
+
+    function applyFilters() {
+      const search = document.getElementById('community-search').value.toLowerCase();
+      let filtered = allCommunities;
+
+      if (currentFilter !== 'all') {
+        filtered = filtered.filter(c => c.community_type === currentFilter);
+      }
+
+      if (search) {
+        filtered = filtered.filter(c =>
+          c.name.toLowerCase().includes(search) ||
+          (c.description || '').toLowerCase().includes(search)
+        );
+      }
+
+      renderCommunities(filtered);
+    }
+  </script>
+
+</body>
+</html>
