@@ -9,6 +9,7 @@ async function waitForDb(timeout = 5000) {
 let currentUser = null;
 let viewingProfile = null;
 let isOwnProfile = false;
+let isFollowing = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
   await waitForDb();
@@ -24,9 +25,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.location.href = '/';
   });
 
-  // Check if viewing own profile or another user's
   const params = new URLSearchParams(window.location.search);
-  const username = params.get('u');
+  const username = params.get('user') || params.get('u');
 
   if (username) {
     await loadProfileByUsername(username);
@@ -68,6 +68,18 @@ async function loadProfileByUsername(username) {
 
   viewingProfile = profile;
   isOwnProfile = profile.user_id === currentUser.id;
+
+  if (!isOwnProfile) {
+    // Check if already following
+    const { data: followRow } = await window.db
+      .from('follows')
+      .select('id')
+      .eq('follower_id', currentUser.id)
+      .eq('following_id', profile.user_id)
+      .single();
+    isFollowing = !!followRow;
+  }
+
   renderProfile(profile);
   await loadProfilePosts(profile.user_id);
   await loadProfileCommunities();
@@ -88,9 +100,80 @@ function renderProfile(profile) {
 
   if (isOwnProfile) {
     const editBtn = document.getElementById('edit-profile-btn');
-    editBtn.style.display = 'block';
-    editBtn.addEventListener('click', () => showEditForm(profile));
+    if (editBtn) {
+      editBtn.style.display = 'block';
+      editBtn.addEventListener('click', () => showEditForm(profile));
+    }
+  } else {
+    // Show follow/unfollow button on other profiles
+    const editBtn = document.getElementById('edit-profile-btn');
+    if (editBtn) {
+      editBtn.style.display = 'block';
+      editBtn.textContent = isFollowing ? 'Unfollow' : 'Follow';
+      editBtn.className = isFollowing ? 'btn btn-ghost' : 'btn btn-primary';
+      editBtn.addEventListener('click', handleFollowToggle);
+    }
   }
+}
+
+async function handleFollowToggle() {
+  const btn = document.getElementById('edit-profile-btn');
+  btn.disabled = true;
+
+  try {
+    if (isFollowing) {
+      // Unfollow
+      await window.db
+        .from('follows')
+        .delete()
+        .eq('follower_id', currentUser.id)
+        .eq('following_id', viewingProfile.user_id);
+
+      // Decrement counts
+      await window.db
+        .from('profiles')
+        .update({ follower_count: Math.max((viewingProfile.follower_count || 1) - 1, 0) })
+        .eq('user_id', viewingProfile.user_id);
+
+      await window.db
+        .from('profiles')
+        .update({ following_count: Math.max((currentUser.following_count || 1) - 1, 0) })
+        .eq('user_id', currentUser.id);
+
+      isFollowing = false;
+      viewingProfile.follower_count = Math.max((viewingProfile.follower_count || 1) - 1, 0);
+
+    } else {
+      // Follow
+      await window.db
+        .from('follows')
+        .insert({ follower_id: currentUser.id, following_id: viewingProfile.user_id });
+
+      // Increment counts
+      await window.db
+        .from('profiles')
+        .update({ follower_count: (viewingProfile.follower_count || 0) + 1 })
+        .eq('user_id', viewingProfile.user_id);
+
+      await window.db
+        .from('profiles')
+        .update({ following_count: (currentUser.following_count || 0) + 1 })
+        .eq('user_id', currentUser.id);
+
+      isFollowing = true;
+      viewingProfile.follower_count = (viewingProfile.follower_count || 0) + 1;
+    }
+
+    // Update UI
+    btn.textContent = isFollowing ? 'Unfollow' : 'Follow';
+    btn.className = isFollowing ? 'btn btn-ghost' : 'btn btn-primary';
+    document.getElementById('profile-follower-count').textContent = viewingProfile.follower_count;
+
+  } catch (err) {
+    console.error('Follow error:', err);
+  }
+
+  btn.disabled = false;
 }
 
 function showEditForm(profile) {
@@ -160,6 +243,36 @@ async function loadProfilePosts(userId) {
     .eq('user_id', userId)
     .single();
 
+  // Fetch reaction counts
+  const postIds = posts.map(p => p.id);
+  const { data: reactions } = await window.db
+    .from('reactions')
+    .select('target_id, reaction_type')
+    .in('target_id', postIds)
+    .eq('target_type', 'post');
+
+  const reactionMap = {};
+  if (reactions) {
+    reactions.forEach(r => {
+      if (!reactionMap[r.target_id]) reactionMap[r.target_id] = { like: 0, downvote: 0 };
+      reactionMap[r.target_id][r.reaction_type]++;
+    });
+  }
+
+  // Fetch comment counts
+  const { data: comments } = await window.db
+    .from('comments')
+    .select('post_id')
+    .in('post_id', postIds)
+    .eq('is_removed', false);
+
+  const commentCountMap = {};
+  if (comments) {
+    comments.forEach(c => {
+      commentCountMap[c.post_id] = (commentCountMap[c.post_id] || 0) + 1;
+    });
+  }
+
   container.innerHTML = posts.map(post => {
     const username = profile?.username || 'unknown';
     const displayName = profile?.display_name || username;
@@ -167,6 +280,9 @@ async function loadProfilePosts(userId) {
     const timestamp = new Date(post.created_at).toLocaleDateString('en-US', {
       month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
     });
+    const likes = reactionMap[post.id]?.like || 0;
+    const downvotes = reactionMap[post.id]?.downvote || 0;
+    const commentCount = commentCountMap[post.id] || 0;
 
     return `
       <div class="post-card">
@@ -179,15 +295,36 @@ async function loadProfilePosts(userId) {
         </div>
         <div class="post-content">${escapeHtml(post.content || '')}</div>
         <div class="post-actions">
-          <button class="post-action-btn">❤️ 0</button>
-          <button class="post-action-btn">💬 Comment</button>
-          <button class="post-action-btn">👎 0</button>
-          <button class="post-action-btn">🔗 Share</button>
-          ${isOwnProfile ? `<button class="post-action-btn" onclick="deletePost('${post.id}')" style="margin-left:auto;color:var(--danger);">🗑️</button>` : ''}
+          <button class="post-action-btn">❤️ ${likes}</button>
+          <button class="post-action-btn comment-link-btn" data-post-id="${post.id}">💬 ${commentCount > 0 ? commentCount : ''} Comment${commentCount !== 1 ? 's' : ''}</button>
+          <button class="post-action-btn">👎 ${downvotes}</button>
+          <button class="post-action-btn share-btn" data-post-id="${post.id}">🔗 Share</button>
+          ${isOwnProfile ? `<button class="post-action-btn delete-btn" data-post-id="${post.id}" style="margin-left:auto;color:var(--danger);">🗑️</button>` : ''}
         </div>
       </div>
     `;
   }).join('');
+
+  // Attach listeners
+  container.querySelectorAll('.comment-link-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      window.location.href = `/comments.html?post=${btn.dataset.postId}`;
+    });
+  });
+
+  container.querySelectorAll('.share-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const url = `${window.location.origin}/post.html?id=${btn.dataset.postId}`;
+      navigator.clipboard.writeText(url).then(() => {
+        btn.textContent = '✅ Copied';
+        setTimeout(() => { btn.textContent = '🔗 Share'; }, 2000);
+      });
+    });
+  });
+
+  container.querySelectorAll('.delete-btn').forEach(btn => {
+    btn.addEventListener('click', () => deletePost(btn.dataset.postId));
+  });
 }
 
 async function deletePost(postId) {
