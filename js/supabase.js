@@ -1,18 +1,18 @@
 const SUPABASE_URL = 'https://vclvqbblcnimzbdwejzl.supabase.co';
-const SUPABASE_ANON_KEY = window.ENV_SUPABASE_ANON_KEY || '';
+
+// Anon key is safe for frontend — RLS policies protect the data
+// Loaded via Netlify environment variable injection
+const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || '';
 
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Auth helpers
 const auth = {
   async signUp(email, password, dateOfBirth) {
     const { data, error } = await db.auth.signUp({
       email,
       password,
-      options: {
-        data: { date_of_birth: dateOfBirth }
-      }
+      options: { data: { date_of_birth: dateOfBirth } }
     });
     return { data, error };
   },
@@ -45,14 +45,13 @@ const auth = {
   }
 };
 
-// Age verification helper
 function isOver18(dateOfBirth) {
   const dob = new Date(dateOfBirth);
   const today = new Date();
-  const age = today.getFullYear() - dob.getFullYear();
+  let age = today.getFullYear() - dob.getFullYear();
   const monthDiff = today.getMonth() - dob.getMonth();
   if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
-    return age - 1 >= 18;
+    age--;
   }
   return age >= 18;
 }
