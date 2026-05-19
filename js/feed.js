@@ -111,7 +111,6 @@ async function loadFeed() {
     }
 
     const { data: posts, error } = await postsQuery;
-
     if (error) throw error;
 
     if (!posts || posts.length === 0) {
@@ -127,11 +126,9 @@ async function loadFeed() {
       .in('user_id', userIds);
 
     const profileMap = {};
-    if (profiles) {
-      profiles.forEach(p => { profileMap[p.user_id] = p; });
-    }
+    if (profiles) profiles.forEach(p => { profileMap[p.user_id] = p; });
 
-    // Fetch communities for posts that have community_id
+    // Fetch communities
     const communityIds = [...new Set(posts.filter(p => p.community_id).map(p => p.community_id))];
     let communityMap = {};
     if (communityIds.length > 0) {
@@ -139,12 +136,57 @@ async function loadFeed() {
         .from('communities')
         .select('id, name, slug')
         .in('id', communityIds);
-      if (communities) {
-        communities.forEach(c => { communityMap[c.id] = c; });
+      if (communities) communities.forEach(c => { communityMap[c.id] = c; });
+    }
+
+    // Fetch reaction counts for all posts
+    const postIds = posts.map(p => p.id);
+    const { data: reactions } = await window.db
+      .from('reactions')
+      .select('target_id, reaction_type')
+      .in('target_id', postIds)
+      .eq('target_type', 'post');
+
+    const reactionMap = {};
+    if (reactions) {
+      reactions.forEach(r => {
+        if (!reactionMap[r.target_id]) reactionMap[r.target_id] = { like: 0, downvote: 0 };
+        reactionMap[r.target_id][r.reaction_type] = (reactionMap[r.target_id][r.reaction_type] || 0) + 1;
+      });
+    }
+
+    // Fetch comment counts for all posts
+    const { data: comments } = await window.db
+      .from('comments')
+      .select('post_id')
+      .in('post_id', postIds)
+      .eq('is_removed', false);
+
+    const commentCountMap = {};
+    if (comments) {
+      comments.forEach(c => {
+        commentCountMap[c.post_id] = (commentCountMap[c.post_id] || 0) + 1;
+      });
+    }
+
+    // Fetch current user's reactions to know which they've already voted
+    let myReactionMap = {};
+    if (currentUser) {
+      const { data: myReactions } = await window.db
+        .from('reactions')
+        .select('target_id, reaction_type')
+        .in('target_id', postIds)
+        .eq('target_type', 'post')
+        .eq('user_id', currentUser.id);
+      if (myReactions) {
+        myReactions.forEach(r => { myReactionMap[r.target_id] = r.reaction_type; });
       }
     }
 
-    container.innerHTML = posts.map(post => renderPost(post, profileMap, communityMap)).join('');
+    container.innerHTML = posts.map(post =>
+      renderPost(post, profileMap, communityMap, reactionMap, commentCountMap, myReactionMap)
+    ).join('');
+
     attachPostListeners();
 
   } catch (err) {
@@ -153,7 +195,7 @@ async function loadFeed() {
   }
 }
 
-function renderPost(post, profileMap, communityMap) {
+function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap, myReactionMap) {
   const profile = profileMap[post.user_id];
   const username = profile?.username || 'unknown';
   const displayName = profile?.display_name || username;
@@ -162,18 +204,26 @@ function renderPost(post, profileMap, communityMap) {
     ? `<span class="post-community">in ${communityMap[post.community_id].name}</span>`
     : '';
   const timestamp = new Date(post.created_at).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
+    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
   });
+
+  const likes = reactionMap[post.id]?.like || 0;
+  const downvotes = reactionMap[post.id]?.downvote || 0;
+  const commentCount = commentCountMap[post.id] || 0;
+  const myReaction = myReactionMap[post.id];
+
+  const likeActive = myReaction === 'like' ? 'style="opacity:1;font-weight:700;"' : '';
+  const downvoteActive = myReaction === 'downvote' ? 'style="opacity:1;font-weight:700;"' : '';
 
   return `
     <div class="post-card" data-post-id="${post.id}">
       <div class="post-header">
-        <div class="post-avatar">${initial}</div>
+        <div class="post-avatar" style="cursor:pointer;" onclick="window.location.href='/profile.html?user=${encodeURIComponent(username)}'">${initial}</div>
         <div class="post-meta">
-          <div class="post-username">${escapeHtml(displayName)} <span style="font-weight:400;color:var(--text-muted);font-size:13px;">@${escapeHtml(username)}</span></div>
+          <div class="post-username">
+            <a href="/profile.html?user=${encodeURIComponent(username)}" style="text-decoration:none;color:inherit;">${escapeHtml(displayName)}</a>
+            <span style="font-weight:400;color:var(--text-muted);font-size:13px;">@${escapeHtml(username)}</span>
+          </div>
           <div style="display:flex;gap:8px;align-items:center;">
             <span class="post-timestamp">${timestamp}</span>
             ${community}
@@ -182,14 +232,14 @@ function renderPost(post, profileMap, communityMap) {
       </div>
       <div class="post-content">${escapeHtml(post.content || '')}</div>
       <div class="post-actions">
-        <button class="post-action-btn like-btn" data-post-id="${post.id}">
-          ❤️ <span class="like-count">0</span>
+        <button class="post-action-btn like-btn" data-post-id="${post.id}" ${likeActive}>
+          ❤️ <span class="like-count">${likes}</span>
         </button>
         <button class="post-action-btn comment-btn" data-post-id="${post.id}">
-          💬 Comment
+          💬 <span>${commentCount > 0 ? commentCount : ''} Comment${commentCount !== 1 ? 's' : ''}</span>
         </button>
-        <button class="post-action-btn downvote-btn" data-post-id="${post.id}">
-          👎 <span class="downvote-count">0</span>
+        <button class="post-action-btn downvote-btn" data-post-id="${post.id}" ${downvoteActive}>
+          👎 <span class="downvote-count">${downvotes}</span>
         </button>
         <button class="post-action-btn share-btn" data-post-id="${post.id}">
           🔗 Share
@@ -226,6 +276,80 @@ function attachPostListeners() {
       });
     });
   });
+
+  document.querySelectorAll('.comment-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      window.location.href = `/comments.html?post=${btn.dataset.postId}`;
+    });
+  });
+}
+
+async function handleReaction(postId, type) {
+  if (!currentUser) return;
+
+  try {
+    const { data: existing } = await window.db
+      .from('reactions')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .eq('target_id', postId)
+      .eq('target_type', 'post')
+      .single();
+
+    if (existing) {
+      if (existing.reaction_type === type) {
+        await window.db.from('reactions').delete().eq('id', existing.id);
+      } else {
+        await window.db.from('reactions').update({ reaction_type: type }).eq('id', existing.id);
+      }
+    } else {
+      await window.db.from('reactions').insert({
+        user_id: currentUser.id,
+        target_id: postId,
+        target_type: 'post',
+        reaction_type: type
+      });
+    }
+
+    // Refresh just this post's counts without full reload
+    await refreshPostReactions(postId);
+
+  } catch (err) {
+    console.error('Reaction error:', err);
+  }
+}
+
+async function refreshPostReactions(postId) {
+  const { data: reactions } = await window.db
+    .from('reactions')
+    .select('reaction_type')
+    .eq('target_id', postId)
+    .eq('target_type', 'post');
+
+  const likes = reactions ? reactions.filter(r => r.reaction_type === 'like').length : 0;
+  const downvotes = reactions ? reactions.filter(r => r.reaction_type === 'downvote').length : 0;
+
+  const card = document.querySelector(`.post-card[data-post-id="${postId}"]`);
+  if (!card) return;
+
+  const likeCount = card.querySelector('.like-count');
+  const downvoteCount = card.querySelector('.downvote-count');
+  if (likeCount) likeCount.textContent = likes;
+  if (downvoteCount) downvoteCount.textContent = downvotes;
+
+  // Update active states
+  const { data: myReaction } = await window.db
+    .from('reactions')
+    .select('reaction_type')
+    .eq('target_id', postId)
+    .eq('target_type', 'post')
+    .eq('user_id', currentUser.id)
+    .single();
+
+  const likeBtn = card.querySelector('.like-btn');
+  const downvoteBtn = card.querySelector('.downvote-btn');
+  if (likeBtn) likeBtn.style.fontWeight = myReaction?.reaction_type === 'like' ? '700' : '';
+  if (downvoteBtn) downvoteBtn.style.fontWeight = myReaction?.reaction_type === 'downvote' ? '700' : '';
 }
 
 async function handleCreatePost() {
@@ -293,37 +417,6 @@ async function handleCreatePost() {
     console.error('Post error:', err);
     btn.textContent = 'Post';
     btn.disabled = false;
-  }
-}
-
-async function handleReaction(postId, type) {
-  if (!currentUser) return;
-
-  try {
-    const { data: existing } = await window.db
-      .from('reactions')
-      .select('*')
-      .eq('user_id', currentUser.id)
-      .eq('target_id', postId)
-      .eq('target_type', 'post')
-      .single();
-
-    if (existing) {
-      if (existing.reaction_type === type) {
-        await window.db.from('reactions').delete().eq('id', existing.id);
-      } else {
-        await window.db.from('reactions').update({ reaction_type: type }).eq('id', existing.id);
-      }
-    } else {
-      await window.db.from('reactions').insert({
-        user_id: currentUser.id,
-        target_id: postId,
-        target_type: 'post',
-        reaction_type: type
-      });
-    }
-  } catch (err) {
-    console.error('Reaction error:', err);
   }
 }
 
