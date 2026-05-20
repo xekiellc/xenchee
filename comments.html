@@ -5,9 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Comments — XenChee</title>
   <link rel="stylesheet" href="/css/main.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-  <nav class="navbar">
+
+  <nav class="nav">
     <a href="/feed.html" class="nav-brand">XenChee</a>
     <div class="nav-actions">
       <a href="/feed.html" class="btn btn-ghost">Feed</a>
@@ -16,47 +18,68 @@
     </div>
   </nav>
 
-  <div class="container" style="max-width:720px;margin:0 auto;padding:24px 16px;">
-
-    <!-- Original Post -->
-    <div id="original-post" class="card" style="margin-bottom:24px;">
-      <div class="loading"><div class="spinner"></div>Loading post...</div>
+  <div class="app-layout">
+    <div class="sidebar-left">
+      <ul class="sidebar-nav">
+        <li><a href="/feed.html"><span class="sidebar-nav-icon">🏠</span>Home</a></li>
+        <li><a href="/search.html"><span class="sidebar-nav-icon">🔍</span>Search</a></li>
+        <li><a href="/communities.html"><span class="sidebar-nav-icon">💬</span>Communities</a></li>
+        <li><a href="/events.html"><span class="sidebar-nav-icon">📅</span>Events</a></li>
+        <li><a href="/messages.html"><span class="sidebar-nav-icon">✉️</span>Messages</a></li>
+        <li><a href="/notifications.html"><span class="sidebar-nav-icon">🔔</span>Notifications</a></li>
+        <li><a href="/profile.html"><span class="sidebar-nav-icon">👤</span>Profile</a></li>
+        <li><a href="/ecosystem.html"><span class="sidebar-nav-icon">🌐</span>Ecosystem</a></li>
+      </ul>
     </div>
 
-    <!-- Comment Composer -->
-    <div class="card" style="margin-bottom:24px;">
-      <div style="display:flex;gap:12px;align-items:flex-start;">
-        <div class="post-avatar" id="current-user-avatar">?</div>
-        <div style="flex:1;">
-          <textarea id="comment-content" class="form-input" rows="3" placeholder="Write a comment..." maxlength="1000" style="resize:vertical;width:100%;"></textarea>
+    <div class="feed-main">
 
-          <!-- GIF Picker -->
-          <div id="gif-picker" style="display:none;margin-top:8px;background:var(--bg-input);border:1px solid var(--border);border-radius:12px;padding:12px;">
-            <div style="display:flex;gap:8px;margin-bottom:10px;">
-              <input type="text" id="gif-search-input" class="form-input" placeholder="Search GIFs..." style="flex:1;font-size:13px;" />
-              <button id="gif-search-btn" class="btn btn-primary" style="font-size:13px;padding:0 14px;">Search</button>
+      <!-- Original Post -->
+      <div id="original-post" class="post-card" style="margin-bottom:20px;">
+        <div class="loading"><div class="spinner"></div>Loading post...</div>
+      </div>
+
+      <!-- Comment Composer -->
+      <div class="create-post" style="margin-bottom:20px;">
+        <div class="create-post-header">
+          <div class="post-avatar" id="current-user-avatar">?</div>
+          <div style="flex:1;">
+            <textarea id="comment-content" class="create-post-input" rows="3" placeholder="Write a comment..." maxlength="1000" style="resize:vertical;width:100%;"></textarea>
+
+            <!-- GIF Picker -->
+            <div id="gif-picker" style="display:none;margin-top:8px;background:var(--bg-input);border:1px solid var(--border);border-radius:12px;padding:12px;">
+              <div style="display:flex;gap:8px;margin-bottom:10px;">
+                <input type="text" id="gif-search-input" class="form-input" placeholder="Search GIFs..." style="flex:1;font-size:13px;" />
+                <button id="gif-search-btn" class="btn btn-primary" style="font-size:13px;padding:0 14px;">Search</button>
+              </div>
+              <div id="gif-results" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-height:240px;overflow-y:auto;"></div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:8px;text-align:right;">Powered by GIPHY</div>
             </div>
-            <div id="gif-results" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-height:240px;overflow-y:auto;"></div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:8px;text-align:right;">Powered by GIPHY</div>
-          </div>
 
-          <!-- Selected GIF Preview -->
-          <div id="gif-preview" style="display:none;margin-top:8px;position:relative;display:none;">
-            <img id="gif-preview-img" src="" alt="Selected GIF" style="max-width:100%;border-radius:8px;max-height:200px;object-fit:cover;" />
-            <button id="gif-remove-btn" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:14px;line-height:24px;text-align:center;">×</button>
-          </div>
+            <!-- Selected GIF Preview -->
+            <div id="gif-preview" style="display:none;margin-top:8px;position:relative;">
+              <img id="gif-preview-img" src="" alt="Selected GIF" style="max-width:100%;border-radius:8px;max-height:200px;object-fit:cover;" />
+              <button id="gif-remove-btn" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:14px;line-height:24px;text-align:center;">×</button>
+            </div>
 
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
-            <button id="gif-toggle-btn" class="btn btn-ghost" style="font-size:13px;">GIF</button>
-            <button id="comment-btn" class="btn btn-primary">Comment</button>
           </div>
         </div>
+        <div class="create-post-footer">
+          <div class="create-post-tools">
+            <button id="gif-toggle-btn" class="tool-btn" title="Add GIF">GIF</button>
+          </div>
+          <button id="comment-btn" class="btn btn-primary">Comment</button>
+        </div>
       </div>
+
+      <!-- Comments List -->
+      <div id="comments-container">
+        <div class="loading"><div class="spinner"></div>Loading comments...</div>
+      </div>
+
     </div>
 
-    <!-- Comments List -->
-    <div id="comments-container">
-      <div class="loading"><div class="spinner"></div>Loading comments...</div>
+    <div class="sidebar-right">
     </div>
 
   </div>
