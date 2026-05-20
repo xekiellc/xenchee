@@ -29,7 +29,25 @@
         <div class="post-avatar" id="current-user-avatar">?</div>
         <div style="flex:1;">
           <textarea id="comment-content" class="form-input" rows="3" placeholder="Write a comment..." maxlength="1000" style="resize:vertical;width:100%;"></textarea>
-          <div style="display:flex;justify-content:flex-end;margin-top:8px;">
+
+          <!-- GIF Picker -->
+          <div id="gif-picker" style="display:none;margin-top:8px;background:var(--bg-input);border:1px solid var(--border);border-radius:12px;padding:12px;">
+            <div style="display:flex;gap:8px;margin-bottom:10px;">
+              <input type="text" id="gif-search-input" class="form-input" placeholder="Search GIFs..." style="flex:1;font-size:13px;" />
+              <button id="gif-search-btn" class="btn btn-primary" style="font-size:13px;padding:0 14px;">Search</button>
+            </div>
+            <div id="gif-results" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-height:240px;overflow-y:auto;"></div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:8px;text-align:right;">Powered by GIPHY</div>
+          </div>
+
+          <!-- Selected GIF Preview -->
+          <div id="gif-preview" style="display:none;margin-top:8px;position:relative;display:none;">
+            <img id="gif-preview-img" src="" alt="Selected GIF" style="max-width:100%;border-radius:8px;max-height:200px;object-fit:cover;" />
+            <button id="gif-remove-btn" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:14px;line-height:24px;text-align:center;">×</button>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
+            <button id="gif-toggle-btn" class="btn btn-ghost" style="font-size:13px;">GIF</button>
             <button id="comment-btn" class="btn btn-primary">Comment</button>
           </div>
         </div>
