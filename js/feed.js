@@ -42,6 +42,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (avatar) avatar.textContent = profile.username.charAt(0).toUpperCase();
   }
 
+  // Init mention autocomplete on post composer
+  initMentionAutocomplete('post-content', 'post-mention-dropdown');
+
   await Promise.all([
     loadFeed(),
     loadSidebarCommunities(),
@@ -245,7 +248,6 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
   const myReaction = myReactionMap[post.id];
   const postReactions = reactionMap[post.id] || {};
 
-  // Build reaction summary — show top 3 emoji + total count
   const totalReactions = Object.values(postReactions).reduce((a, b) => a + b, 0);
   const topEmojis = REACTIONS
     .filter(r => postReactions[r.type] > 0)
@@ -258,7 +260,6 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
     ? `<span class="reaction-summary" style="font-size:13px;color:var(--text-muted);cursor:pointer;">${topEmojis} ${totalReactions}</span>`
     : '';
 
-  // Current user reaction display
   const myReactionObj = REACTIONS.find(r => r.type === myReaction);
   const reactBtnLabel = myReactionObj ? `${myReactionObj.emoji} ${myReactionObj.label}` : '❤️ React';
   const reactBtnStyle = myReaction ? 'font-weight:700;color:var(--primary);' : '';
@@ -278,17 +279,14 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
           </div>
         </div>
       </div>
-      <div class="post-content">${escapeHtml(post.content || '')}</div>
+      <div class="post-content">${renderMentions(post.content || '')}</div>
       ${reactionSummary ? `<div style="padding:4px 0 8px 0;">${reactionSummary}</div>` : ''}
       <div class="post-actions">
-
-        <!-- Reaction button with picker -->
         <div class="reaction-btn-wrapper" style="position:relative;">
           <button class="post-action-btn react-btn" data-post-id="${post.id}" style="${reactBtnStyle}">
             ${reactBtnLabel}
           </button>
-          <!-- Reaction picker popup -->
-          <div class="reaction-picker" data-post-id="${post.id}" style="display:none;position:absolute;bottom:36px;left:0;background:var(--bg-card);border:1px solid var(--border);border-radius:100px;padding:6px 10px;display:none;gap:4px;z-index:100;box-shadow:0 4px 20px rgba(0,0,0,0.3);">
+          <div class="reaction-picker" data-post-id="${post.id}" style="display:none;position:absolute;bottom:36px;left:0;background:var(--bg-card);border:1px solid var(--border);border-radius:100px;padding:6px 10px;gap:4px;z-index:100;box-shadow:0 4px 20px rgba(0,0,0,0.3);">
             ${REACTIONS.map(r => `
               <button class="reaction-option" data-post-id="${post.id}" data-type="${r.type}" title="${r.label}"
                 style="background:none;border:none;cursor:pointer;font-size:22px;padding:2px 4px;border-radius:50%;transition:transform 0.1s ease;${myReaction === r.type ? 'transform:scale(1.3);' : ''}"
@@ -299,7 +297,6 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
             `).join('')}
           </div>
         </div>
-
         <button class="post-action-btn comment-btn" data-post-id="${post.id}">
           💬 <span>${commentCount > 0 ? commentCount : ''} Comment${commentCount !== 1 ? 's' : ''}</span>
         </button>
@@ -317,20 +314,17 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
 }
 
 function attachPostListeners() {
-  // React button — toggle picker
   document.querySelectorAll('.react-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       const postId = btn.dataset.postId;
       const picker = document.querySelector(`.reaction-picker[data-post-id="${postId}"]`);
       const isVisible = picker.style.display === 'flex';
-      // Close all pickers first
       document.querySelectorAll('.reaction-picker').forEach(p => p.style.display = 'none');
       picker.style.display = isVisible ? 'none' : 'flex';
     });
   });
 
-  // Reaction options
   document.querySelectorAll('.reaction-option').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -407,7 +401,6 @@ async function refreshPostReactions(postId) {
   const card = document.querySelector(`.post-card[data-post-id="${postId}"]`);
   if (!card) return;
 
-  // Count by type
   const counts = {};
   if (reactions) {
     reactions.forEach(r => {
@@ -423,7 +416,6 @@ async function refreshPostReactions(postId) {
     .map(r => r.emoji)
     .join('');
 
-  // Update summary
   let summary = card.querySelector('.reaction-summary');
   if (total > 0) {
     if (!summary) {
@@ -438,7 +430,6 @@ async function refreshPostReactions(postId) {
     summary.parentElement.remove();
   }
 
-  // Update react button
   const { data: myReaction } = await window.db
     .from('reactions')
     .select('reaction_type')
