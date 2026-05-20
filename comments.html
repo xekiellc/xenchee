@@ -43,8 +43,11 @@
       <div class="create-post" style="margin-bottom:20px;">
         <div class="create-post-header">
           <div class="post-avatar" id="current-user-avatar">?</div>
-          <div style="flex:1;">
+          <div style="flex:1;position:relative;">
             <textarea id="comment-content" class="create-post-input" rows="3" placeholder="Write a comment..." maxlength="1000" style="resize:vertical;width:100%;"></textarea>
+
+            <!-- Mention dropdown -->
+            <div id="comment-mention-dropdown" style="display:none;position:absolute;left:0;right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.3);z-index:200;max-height:220px;overflow-y:auto;padding:6px;"></div>
 
             <!-- GIF Picker -->
             <div id="gif-picker" style="display:none;margin-top:8px;background:var(--bg-input);border:1px solid var(--border);border-radius:12px;padding:12px;">
@@ -85,6 +88,7 @@
   </div>
 
   <script src="/js/supabase.js"></script>
+  <script src="/js/mentions.js"></script>
   <script src="/js/comments.js"></script>
 </body>
 </html>
