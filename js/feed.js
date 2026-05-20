@@ -42,7 +42,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (avatar) avatar.textContent = profile.username.charAt(0).toUpperCase();
   }
 
-  // Init mention autocomplete on post composer
   initMentionAutocomplete('post-content', 'post-mention-dropdown');
 
   await Promise.all([
@@ -55,10 +54,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   setupEventListeners();
 
-  // Close reaction pickers on outside click
   document.addEventListener('click', (e) => {
     if (!e.target.closest('.reaction-btn-wrapper')) {
       document.querySelectorAll('.reaction-picker').forEach(p => p.style.display = 'none');
+    }
+    if (!e.target.closest('.post-menu-wrapper')) {
+      document.querySelectorAll('.post-menu-dropdown').forEach(m => m.style.display = 'none');
     }
   });
 });
@@ -243,6 +244,9 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
   const timestamp = new Date(post.created_at).toLocaleDateString('en-US', {
     month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
   });
+  const editedLabel = post.is_edited
+    ? `<span style="font-size:11px;color:var(--text-muted);"> · edited</span>`
+    : '';
 
   const commentCount = commentCountMap[post.id] || 0;
   const myReaction = myReactionMap[post.id];
@@ -264,6 +268,8 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
   const reactBtnLabel = myReactionObj ? `${myReactionObj.emoji} ${myReactionObj.label}` : '❤️ React';
   const reactBtnStyle = myReaction ? 'font-weight:700;color:var(--primary);' : '';
 
+  const isOwnPost = post.user_id === currentUser?.id;
+
   return `
     <div class="post-card" data-post-id="${post.id}">
       <div class="post-header">
@@ -275,11 +281,34 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
           </div>
           <div style="display:flex;gap:8px;align-items:center;">
             <span class="post-timestamp">${timestamp}</span>
+            ${editedLabel}
             ${community}
           </div>
         </div>
+        ${isOwnPost ? `
+          <div class="post-menu-wrapper" style="position:relative;margin-left:auto;">
+            <button class="post-menu-btn" data-post-id="${post.id}"
+              style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:18px;padding:4px 8px;border-radius:6px;line-height:1;">•••</button>
+            <div class="post-menu-dropdown" data-post-id="${post.id}"
+              style="display:none;position:absolute;top:28px;right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.3);z-index:200;min-width:140px;overflow:hidden;">
+              <button class="edit-btn" data-post-id="${post.id}" data-content="${escapeHtml(post.content || '')}"
+                style="display:block;width:100%;text-align:left;padding:10px 16px;background:none;border:none;cursor:pointer;font-size:14px;color:var(--text);">
+                ✏️ Edit
+              </button>
+              <button class="delete-btn" data-post-id="${post.id}"
+                style="display:block;width:100%;text-align:left;padding:10px 16px;background:none;border:none;cursor:pointer;font-size:14px;color:var(--danger);">
+                🗑️ Delete
+              </button>
+            </div>
+          </div>
+        ` : ''}
       </div>
-      <div class="post-content">${renderMentions(post.content || '')}</div>
+
+      <!-- Post content — can be replaced with edit form -->
+      <div class="post-content-wrapper">
+        <div class="post-content">${renderMentions(post.content || '')}</div>
+      </div>
+
       ${reactionSummary ? `<div style="padding:4px 0 8px 0;">${reactionSummary}</div>` : ''}
       <div class="post-actions">
         <div class="reaction-btn-wrapper" style="position:relative;">
@@ -303,11 +332,6 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
         <button class="post-action-btn share-btn" data-post-id="${post.id}">
           🔗 Share
         </button>
-        ${post.user_id === currentUser?.id ? `
-          <button class="post-action-btn delete-btn" data-post-id="${post.id}" style="margin-left:auto;color:var(--danger);">
-            🗑️
-          </button>
-        ` : ''}
       </div>
     </div>
   `;
@@ -336,8 +360,35 @@ function attachPostListeners() {
     });
   });
 
+  document.querySelectorAll('.post-menu-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const postId = btn.dataset.postId;
+      const menu = document.querySelector(`.post-menu-dropdown[data-post-id="${postId}"]`);
+      const isVisible = menu.style.display === 'block';
+      document.querySelectorAll('.post-menu-dropdown').forEach(m => m.style.display = 'none');
+      menu.style.display = isVisible ? 'none' : 'block';
+    });
+  });
+
+  document.querySelectorAll('.edit-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const postId = btn.dataset.postId;
+      const content = btn.dataset.content;
+      const menu = document.querySelector(`.post-menu-dropdown[data-post-id="${postId}"]`);
+      menu.style.display = 'none';
+      showEditForm(postId, content);
+    });
+  });
+
   document.querySelectorAll('.delete-btn').forEach(btn => {
-    btn.addEventListener('click', () => handleDeletePost(btn.dataset.postId));
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const menu = document.querySelector(`.post-menu-dropdown[data-post-id="${btn.dataset.postId}"]`);
+      if (menu) menu.style.display = 'none';
+      handleDeletePost(btn.dataset.postId);
+    });
   });
 
   document.querySelectorAll('.share-btn').forEach(btn => {
@@ -355,6 +406,76 @@ function attachPostListeners() {
       window.location.href = `/comments.html?post=${btn.dataset.postId}`;
     });
   });
+}
+
+function showEditForm(postId, currentContent) {
+  const card = document.querySelector(`.post-card[data-post-id="${postId}"]`);
+  if (!card) return;
+
+  const wrapper = card.querySelector('.post-content-wrapper');
+  wrapper.innerHTML = `
+    <div style="margin-top:8px;">
+      <textarea class="form-input edit-post-textarea" data-post-id="${postId}"
+        style="width:100%;resize:vertical;min-height:80px;font-size:15px;"
+        maxlength="2000">${currentContent}</textarea>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;">
+        <button class="btn btn-ghost cancel-edit-btn" data-post-id="${postId}" style="font-size:13px;">Cancel</button>
+        <button class="btn btn-primary save-edit-btn" data-post-id="${postId}" style="font-size:13px;">Save</button>
+      </div>
+    </div>
+  `;
+
+  const textarea = wrapper.querySelector('.edit-post-textarea');
+  textarea.focus();
+  textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+
+  wrapper.querySelector('.cancel-edit-btn').addEventListener('click', () => {
+    wrapper.innerHTML = `<div class="post-content">${renderMentions(currentContent)}</div>`;
+  });
+
+  wrapper.querySelector('.save-edit-btn').addEventListener('click', () => {
+    handleEditPost(postId, textarea.value.trim(), wrapper, currentContent);
+  });
+}
+
+async function handleEditPost(postId, newContent, wrapper, originalContent) {
+  if (!newContent) return;
+  if (newContent === originalContent) {
+    wrapper.innerHTML = `<div class="post-content">${renderMentions(originalContent)}</div>`;
+    return;
+  }
+
+  const saveBtn = wrapper.querySelector('.save-edit-btn');
+  saveBtn.textContent = 'Saving...';
+  saveBtn.disabled = true;
+
+  try {
+    const { error } = await window.db
+      .from('posts')
+      .update({ content: newContent, is_edited: true })
+      .eq('id', postId)
+      .eq('user_id', currentUser.id);
+
+    if (error) throw error;
+
+    wrapper.innerHTML = `<div class="post-content">${renderMentions(newContent)}</div>`;
+
+    // Update edited label
+    const card = document.querySelector(`.post-card[data-post-id="${postId}"]`);
+    const timestampDiv = card?.querySelector('.post-timestamp')?.parentElement;
+    if (timestampDiv && !timestampDiv.querySelector('.edited-label')) {
+      const editedSpan = document.createElement('span');
+      editedSpan.className = 'edited-label';
+      editedSpan.style.cssText = 'font-size:11px;color:var(--text-muted);';
+      editedSpan.textContent = ' · edited';
+      timestampDiv.appendChild(editedSpan);
+    }
+
+  } catch (err) {
+    console.error('Edit error:', err);
+    saveBtn.textContent = 'Save';
+    saveBtn.disabled = false;
+  }
 }
 
 async function handleReaction(postId, type) {
@@ -422,7 +543,7 @@ async function refreshPostReactions(postId) {
       const summaryDiv = document.createElement('div');
       summaryDiv.style.cssText = 'padding:4px 0 8px 0;';
       summaryDiv.innerHTML = `<span class="reaction-summary" style="font-size:13px;color:var(--text-muted);cursor:pointer;"></span>`;
-      card.querySelector('.post-content').after(summaryDiv);
+      card.querySelector('.post-content-wrapper').after(summaryDiv);
       summary = card.querySelector('.reaction-summary');
     }
     summary.textContent = `${topEmojis} ${total}`;
