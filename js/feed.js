@@ -181,6 +181,7 @@ async function loadFeed() {
     }
 
     const postIds = posts.map(p => p.id);
+
     const { data: reactions } = await window.db
       .from('reactions')
       .select('target_id, reaction_type')
@@ -221,11 +222,27 @@ async function loadFeed() {
       }
     }
 
+    // Fetch view counts for all posts
+    const { data: views } = await window.db
+      .from('post_views')
+      .select('post_id')
+      .in('post_id', postIds);
+
+    const viewCountMap = {};
+    if (views) {
+      views.forEach(v => {
+        viewCountMap[v.post_id] = (viewCountMap[v.post_id] || 0) + 1;
+      });
+    }
+
     container.innerHTML = posts.map(post =>
-      renderPost(post, profileMap, communityMap, reactionMap, commentCountMap, myReactionMap)
+      renderPost(post, profileMap, communityMap, reactionMap, commentCountMap, myReactionMap, viewCountMap)
     ).join('');
 
     attachPostListeners();
+
+    // Record views for all posts in feed — fire and forget
+    recordFeedViews(postIds);
 
   } catch (err) {
     console.error('Feed error:', err);
@@ -233,7 +250,29 @@ async function loadFeed() {
   }
 }
 
-function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap, myReactionMap) {
+async function recordFeedViews(postIds) {
+  if (!currentUser || !postIds.length) return;
+  try {
+    // Only record if not already viewed in this session
+    const viewedKey = 'viewed_posts_' + currentUser.id;
+    const viewed = JSON.parse(sessionStorage.getItem(viewedKey) || '[]');
+    const newPostIds = postIds.filter(id => !viewed.includes(id));
+    if (newPostIds.length === 0) return;
+
+    await window.db.from('post_views').insert(
+      newPostIds.map(post_id => ({
+        post_id,
+        user_id: currentUser.id
+      }))
+    );
+
+    sessionStorage.setItem(viewedKey, JSON.stringify([...viewed, ...newPostIds]));
+  } catch (err) {
+    // Silent fail — views are non-critical
+  }
+}
+
+function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap, myReactionMap, viewCountMap) {
   const profile = profileMap[post.user_id];
   const username = profile?.username || 'unknown';
   const displayName = profile?.display_name || username;
@@ -251,6 +290,7 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
   const commentCount = commentCountMap[post.id] || 0;
   const myReaction = myReactionMap[post.id];
   const postReactions = reactionMap[post.id] || {};
+  const viewCount = viewCountMap ? (viewCountMap[post.id] || 0) : 0;
 
   const totalReactions = Object.values(postReactions).reduce((a, b) => a + b, 0);
   const topEmojis = REACTIONS
@@ -269,6 +309,10 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
   const reactBtnStyle = myReaction ? 'font-weight:700;color:var(--primary);' : '';
 
   const isOwnPost = post.user_id === currentUser?.id;
+
+  const viewLabel = viewCount > 0
+    ? `<span style="font-size:12px;color:var(--text-muted);">👁 ${viewCount.toLocaleString()} view${viewCount !== 1 ? 's' : ''}</span>`
+    : '';
 
   return `
     <div class="post-card" data-post-id="${post.id}">
@@ -304,12 +348,17 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
         ` : ''}
       </div>
 
-      <!-- Post content — can be replaced with edit form -->
       <div class="post-content-wrapper">
         <div class="post-content">${renderMentions(post.content || '')}</div>
       </div>
 
-      ${reactionSummary ? `<div style="padding:4px 0 8px 0;">${reactionSummary}</div>` : ''}
+      ${reactionSummary || viewLabel ? `
+        <div style="padding:4px 0 8px 0;display:flex;justify-content:space-between;align-items:center;">
+          ${reactionSummary ? `<span class="reaction-summary" style="font-size:13px;color:var(--text-muted);cursor:pointer;">${topEmojis} ${totalReactions}</span>` : '<span></span>'}
+          ${viewLabel}
+        </div>
+      ` : ''}
+
       <div class="post-actions">
         <div class="reaction-btn-wrapper" style="position:relative;">
           <button class="post-action-btn react-btn" data-post-id="${post.id}" style="${reactBtnStyle}">
@@ -460,7 +509,6 @@ async function handleEditPost(postId, newContent, wrapper, originalContent) {
 
     wrapper.innerHTML = `<div class="post-content">${renderMentions(newContent)}</div>`;
 
-    // Update edited label
     const card = document.querySelector(`.post-card[data-post-id="${postId}"]`);
     const timestampDiv = card?.querySelector('.post-timestamp')?.parentElement;
     if (timestampDiv && !timestampDiv.querySelector('.edited-label')) {
@@ -541,7 +589,7 @@ async function refreshPostReactions(postId) {
   if (total > 0) {
     if (!summary) {
       const summaryDiv = document.createElement('div');
-      summaryDiv.style.cssText = 'padding:4px 0 8px 0;';
+      summaryDiv.style.cssText = 'padding:4px 0 8px 0;display:flex;justify-content:space-between;align-items:center;';
       summaryDiv.innerHTML = `<span class="reaction-summary" style="font-size:13px;color:var(--text-muted);cursor:pointer;"></span>`;
       card.querySelector('.post-content-wrapper').after(summaryDiv);
       summary = card.querySelector('.reaction-summary');
