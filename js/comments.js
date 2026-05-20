@@ -9,6 +9,8 @@ async function waitForDb(timeout = 5000) {
 let currentUser = null;
 let currentProfile = null;
 let postId = null;
+let selectedGifUrl = null;
+let giphyApiKey = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
   await waitForDb();
@@ -40,6 +42,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (avatar) avatar.textContent = profile.username.charAt(0).toUpperCase();
   }
 
+  // Fetch Giphy API key from config
+  try {
+    const res = await fetch('/.netlify/functions/config');
+    const config = await res.json();
+    giphyApiKey = config.GIPHY_API_KEY;
+  } catch (err) {
+    console.error('Could not load Giphy key:', err);
+  }
+
   document.getElementById('logout-btn').addEventListener('click', async () => {
     await window.auth.signOut();
     window.location.href = '/';
@@ -47,9 +58,100 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('comment-btn').addEventListener('click', handleCreateComment);
 
+  // GIF toggle
+  document.getElementById('gif-toggle-btn').addEventListener('click', () => {
+    const picker = document.getElementById('gif-picker');
+    const isVisible = picker.style.display !== 'none';
+    picker.style.display = isVisible ? 'none' : 'block';
+    if (!isVisible) {
+      document.getElementById('gif-search-input').focus();
+      loadTrendingGifs();
+    }
+  });
+
+  // GIF search
+  document.getElementById('gif-search-btn').addEventListener('click', searchGifs);
+  document.getElementById('gif-search-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') searchGifs();
+  });
+
+  // Remove GIF
+  document.getElementById('gif-remove-btn').addEventListener('click', () => {
+    selectedGifUrl = null;
+    document.getElementById('gif-preview').style.display = 'none';
+    document.getElementById('gif-preview-img').src = '';
+    document.getElementById('gif-toggle-btn').style.fontWeight = '';
+  });
+
   await loadPost();
   await loadComments();
 });
+
+async function loadTrendingGifs() {
+  if (!giphyApiKey) return;
+  const container = document.getElementById('gif-results');
+  container.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:8px;">Loading trending GIFs...</div>';
+
+  try {
+    const res = await fetch(`https://api.giphy.com/v1/gifs/trending?api_key=${giphyApiKey}&limit=12&rating=g`);
+    const data = await res.json();
+    renderGifResults(data.data);
+  } catch (err) {
+    container.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:8px;">Could not load GIFs.</div>';
+  }
+}
+
+async function searchGifs() {
+  if (!giphyApiKey) return;
+  const query = document.getElementById('gif-search-input').value.trim();
+  if (!query) return;
+
+  const container = document.getElementById('gif-results');
+  container.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:8px;">Searching...</div>';
+
+  try {
+    const res = await fetch(`https://api.giphy.com/v1/gifs/search?api_key=${giphyApiKey}&q=${encodeURIComponent(query)}&limit=12&rating=g`);
+    const data = await res.json();
+    renderGifResults(data.data);
+  } catch (err) {
+    container.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:8px;">Search failed.</div>';
+  }
+}
+
+function renderGifResults(gifs) {
+  const container = document.getElementById('gif-results');
+
+  if (!gifs || gifs.length === 0) {
+    container.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:8px;">No GIFs found.</div>';
+    return;
+  }
+
+  container.innerHTML = gifs.map(gif => {
+    const preview = gif.images.fixed_height_small.url;
+    const full = gif.images.fixed_height.url;
+    return `
+      <img
+        src="${preview}"
+        data-full="${full}"
+        alt="${escapeHtml(gif.title || 'GIF')}"
+        style="width:100%;height:80px;object-fit:cover;border-radius:6px;cursor:pointer;transition:opacity 0.15s ease;"
+        class="gif-result-item"
+        onmouseover="this.style.opacity='0.8'"
+        onmouseout="this.style.opacity='1'"
+      />
+    `;
+  }).join('');
+
+  container.querySelectorAll('.gif-result-item').forEach(img => {
+    img.addEventListener('click', () => {
+      selectedGifUrl = img.dataset.full;
+      document.getElementById('gif-preview-img').src = selectedGifUrl;
+      document.getElementById('gif-preview').style.display = 'block';
+      document.getElementById('gif-picker').style.display = 'none';
+      document.getElementById('gif-toggle-btn').style.fontWeight = '700';
+    });
+  });
+}
 
 async function loadPost() {
   const container = document.getElementById('original-post');
@@ -146,6 +248,15 @@ function renderComment(comment, profileMap) {
     month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
   });
 
+  // Check if content is a GIF URL
+  const isGif = comment.content && (
+    comment.content.startsWith('https://media') && comment.content.includes('giphy.com')
+  );
+
+  const contentHtml = isGif
+    ? `<img src="${comment.content}" alt="GIF" style="max-width:100%;max-height:200px;border-radius:8px;margin-top:8px;display:block;" />`
+    : `<div class="post-content" style="margin-top:8px;font-size:15px;">${escapeHtml(comment.content || '')}</div>`;
+
   return `
     <div class="post-card" data-comment-id="${comment.id}">
       <div class="post-header">
@@ -158,7 +269,7 @@ function renderComment(comment, profileMap) {
           <span class="post-timestamp">${timestamp}</span>
         </div>
       </div>
-      <div class="post-content" style="margin-top:8px;font-size:15px;">${escapeHtml(comment.content || '')}</div>
+      ${contentHtml}
       <div class="post-actions">
         ${comment.user_id === currentUser?.id ? `
           <button class="post-action-btn delete-comment-btn" data-comment-id="${comment.id}" style="margin-left:auto;color:var(--danger);">
@@ -180,24 +291,46 @@ async function handleCreateComment() {
   if (!currentUser) return;
 
   const content = document.getElementById('comment-content').value.trim();
-  if (!content) return;
+  const hasGif = !!selectedGifUrl;
+
+  if (!content && !hasGif) return;
 
   const btn = document.getElementById('comment-btn');
   btn.textContent = 'Posting...';
   btn.disabled = true;
 
   try {
-    const { error } = await window.db
-      .from('comments')
-      .insert({
-        post_id: postId,
-        user_id: currentUser.id,
-        content: content
-      });
+    // Post text comment
+    if (content) {
+      const { error } = await window.db
+        .from('comments')
+        .insert({
+          post_id: postId,
+          user_id: currentUser.id,
+          content: content
+        });
+      if (error) throw error;
+    }
 
-    if (error) throw error;
+    // Post GIF as separate comment
+    if (hasGif) {
+      const { error } = await window.db
+        .from('comments')
+        .insert({
+          post_id: postId,
+          user_id: currentUser.id,
+          content: selectedGifUrl
+        });
+      if (error) throw error;
+    }
 
+    // Reset
     document.getElementById('comment-content').value = '';
+    selectedGifUrl = null;
+    document.getElementById('gif-preview').style.display = 'none';
+    document.getElementById('gif-preview-img').src = '';
+    document.getElementById('gif-toggle-btn').style.fontWeight = '';
+
     btn.textContent = 'Comment';
     btn.disabled = false;
     await loadComments();
