@@ -51,6 +51,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.error('Could not load Giphy key:', err);
   }
 
+  // Init mention autocomplete
+  initMentionAutocomplete('comment-content', 'comment-mention-dropdown');
+
   document.getElementById('logout-btn').addEventListener('click', async () => {
     await window.auth.signOut();
     window.location.href = '/';
@@ -193,7 +196,7 @@ async function loadPost() {
           <span class="post-timestamp">${timestamp}</span>
         </div>
       </div>
-      <div class="post-content" style="margin-top:12px;">${escapeHtml(post.content || '')}</div>
+      <div class="post-content" style="margin-top:12px;">${renderMentions(post.content || '')}</div>
     `;
 
   } catch (err) {
@@ -248,14 +251,13 @@ function renderComment(comment, profileMap) {
     month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
   });
 
-  // Check if content is a GIF URL
-  const isGif = comment.content && (
-    comment.content.startsWith('https://media') && comment.content.includes('giphy.com')
-  );
+  const isGif = comment.content &&
+    comment.content.startsWith('https://media') &&
+    comment.content.includes('giphy.com');
 
   const contentHtml = isGif
     ? `<img src="${comment.content}" alt="GIF" style="max-width:100%;max-height:200px;border-radius:8px;margin-top:8px;display:block;" />`
-    : `<div class="post-content" style="margin-top:8px;font-size:15px;">${escapeHtml(comment.content || '')}</div>`;
+    : `<div class="post-content" style="margin-top:8px;font-size:15px;">${renderMentions(comment.content || '')}</div>`;
 
   return `
     <div class="post-card" data-comment-id="${comment.id}">
@@ -300,7 +302,6 @@ async function handleCreateComment() {
   btn.disabled = true;
 
   try {
-    // Post text comment
     if (content) {
       const { error } = await window.db
         .from('comments')
@@ -312,7 +313,6 @@ async function handleCreateComment() {
       if (error) throw error;
     }
 
-    // Post GIF as separate comment
     if (hasGif) {
       const { error } = await window.db
         .from('comments')
@@ -324,7 +324,6 @@ async function handleCreateComment() {
       if (error) throw error;
     }
 
-    // Reset
     document.getElementById('comment-content').value = '';
     selectedGifUrl = null;
     document.getElementById('gif-preview').style.display = 'none';
