@@ -11,6 +11,15 @@ let currentProfile = null;
 let feedMode = 'all';
 let pollVisible = false;
 
+const REACTIONS = [
+  { type: 'like', emoji: '❤️', label: 'Like' },
+  { type: 'haha', emoji: '😂', label: 'Haha' },
+  { type: 'wow', emoji: '😮', label: 'Wow' },
+  { type: 'sad', emoji: '😢', label: 'Sad' },
+  { type: 'angry', emoji: '😡', label: 'Angry' },
+  { type: 'downvote', emoji: '👎', label: 'Downvote' }
+];
+
 document.addEventListener('DOMContentLoaded', async () => {
   await waitForDb();
 
@@ -42,6 +51,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   ]);
 
   setupEventListeners();
+
+  // Close reaction pickers on outside click
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.reaction-btn-wrapper')) {
+      document.querySelectorAll('.reaction-picker').forEach(p => p.style.display = 'none');
+    }
+  });
 });
 
 async function loadNotifBadge() {
@@ -141,7 +157,6 @@ async function loadFeed() {
       return;
     }
 
-    // Fetch profiles for post authors
     const userIds = [...new Set(posts.map(p => p.user_id))];
     const { data: profiles } = await window.db
       .from('profiles')
@@ -151,7 +166,6 @@ async function loadFeed() {
     const profileMap = {};
     if (profiles) profiles.forEach(p => { profileMap[p.user_id] = p; });
 
-    // Fetch communities
     const communityIds = [...new Set(posts.filter(p => p.community_id).map(p => p.community_id))];
     let communityMap = {};
     if (communityIds.length > 0) {
@@ -162,7 +176,6 @@ async function loadFeed() {
       if (communities) communities.forEach(c => { communityMap[c.id] = c; });
     }
 
-    // Fetch reaction counts for all posts
     const postIds = posts.map(p => p.id);
     const { data: reactions } = await window.db
       .from('reactions')
@@ -173,12 +186,11 @@ async function loadFeed() {
     const reactionMap = {};
     if (reactions) {
       reactions.forEach(r => {
-        if (!reactionMap[r.target_id]) reactionMap[r.target_id] = { like: 0, downvote: 0 };
+        if (!reactionMap[r.target_id]) reactionMap[r.target_id] = {};
         reactionMap[r.target_id][r.reaction_type] = (reactionMap[r.target_id][r.reaction_type] || 0) + 1;
       });
     }
 
-    // Fetch comment counts for all posts
     const { data: comments } = await window.db
       .from('comments')
       .select('post_id')
@@ -192,7 +204,6 @@ async function loadFeed() {
       });
     }
 
-    // Fetch current user's reactions
     let myReactionMap = {};
     if (currentUser) {
       const { data: myReactions } = await window.db
@@ -230,13 +241,27 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
     month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
   });
 
-  const likes = reactionMap[post.id]?.like || 0;
-  const downvotes = reactionMap[post.id]?.downvote || 0;
   const commentCount = commentCountMap[post.id] || 0;
   const myReaction = myReactionMap[post.id];
+  const postReactions = reactionMap[post.id] || {};
 
-  const likeActive = myReaction === 'like' ? 'style="opacity:1;font-weight:700;"' : '';
-  const downvoteActive = myReaction === 'downvote' ? 'style="opacity:1;font-weight:700;"' : '';
+  // Build reaction summary — show top 3 emoji + total count
+  const totalReactions = Object.values(postReactions).reduce((a, b) => a + b, 0);
+  const topEmojis = REACTIONS
+    .filter(r => postReactions[r.type] > 0)
+    .sort((a, b) => (postReactions[b.type] || 0) - (postReactions[a.type] || 0))
+    .slice(0, 3)
+    .map(r => r.emoji)
+    .join('');
+
+  const reactionSummary = totalReactions > 0
+    ? `<span class="reaction-summary" style="font-size:13px;color:var(--text-muted);cursor:pointer;">${topEmojis} ${totalReactions}</span>`
+    : '';
+
+  // Current user reaction display
+  const myReactionObj = REACTIONS.find(r => r.type === myReaction);
+  const reactBtnLabel = myReactionObj ? `${myReactionObj.emoji} ${myReactionObj.label}` : '❤️ React';
+  const reactBtnStyle = myReaction ? 'font-weight:700;color:var(--primary);' : '';
 
   return `
     <div class="post-card" data-post-id="${post.id}">
@@ -254,15 +279,29 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
         </div>
       </div>
       <div class="post-content">${escapeHtml(post.content || '')}</div>
+      ${reactionSummary ? `<div style="padding:4px 0 8px 0;">${reactionSummary}</div>` : ''}
       <div class="post-actions">
-        <button class="post-action-btn like-btn" data-post-id="${post.id}" ${likeActive}>
-          ❤️ <span class="like-count">${likes}</span>
-        </button>
+
+        <!-- Reaction button with picker -->
+        <div class="reaction-btn-wrapper" style="position:relative;">
+          <button class="post-action-btn react-btn" data-post-id="${post.id}" style="${reactBtnStyle}">
+            ${reactBtnLabel}
+          </button>
+          <!-- Reaction picker popup -->
+          <div class="reaction-picker" data-post-id="${post.id}" style="display:none;position:absolute;bottom:36px;left:0;background:var(--bg-card);border:1px solid var(--border);border-radius:100px;padding:6px 10px;display:none;gap:4px;z-index:100;box-shadow:0 4px 20px rgba(0,0,0,0.3);">
+            ${REACTIONS.map(r => `
+              <button class="reaction-option" data-post-id="${post.id}" data-type="${r.type}" title="${r.label}"
+                style="background:none;border:none;cursor:pointer;font-size:22px;padding:2px 4px;border-radius:50%;transition:transform 0.1s ease;${myReaction === r.type ? 'transform:scale(1.3);' : ''}"
+                onmouseover="this.style.transform='scale(1.3)'"
+                onmouseout="this.style.transform='${myReaction === r.type ? 'scale(1.3)' : 'scale(1)'}'">
+                ${r.emoji}
+              </button>
+            `).join('')}
+          </div>
+        </div>
+
         <button class="post-action-btn comment-btn" data-post-id="${post.id}">
           💬 <span>${commentCount > 0 ? commentCount : ''} Comment${commentCount !== 1 ? 's' : ''}</span>
-        </button>
-        <button class="post-action-btn downvote-btn" data-post-id="${post.id}" ${downvoteActive}>
-          👎 <span class="downvote-count">${downvotes}</span>
         </button>
         <button class="post-action-btn share-btn" data-post-id="${post.id}">
           🔗 Share
@@ -278,12 +317,29 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
 }
 
 function attachPostListeners() {
-  document.querySelectorAll('.like-btn').forEach(btn => {
-    btn.addEventListener('click', () => handleReaction(btn.dataset.postId, 'like'));
+  // React button — toggle picker
+  document.querySelectorAll('.react-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const postId = btn.dataset.postId;
+      const picker = document.querySelector(`.reaction-picker[data-post-id="${postId}"]`);
+      const isVisible = picker.style.display === 'flex';
+      // Close all pickers first
+      document.querySelectorAll('.reaction-picker').forEach(p => p.style.display = 'none');
+      picker.style.display = isVisible ? 'none' : 'flex';
+    });
   });
 
-  document.querySelectorAll('.downvote-btn').forEach(btn => {
-    btn.addEventListener('click', () => handleReaction(btn.dataset.postId, 'downvote'));
+  // Reaction options
+  document.querySelectorAll('.reaction-option').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const postId = btn.dataset.postId;
+      const type = btn.dataset.type;
+      const picker = document.querySelector(`.reaction-picker[data-post-id="${postId}"]`);
+      picker.style.display = 'none';
+      handleReaction(postId, type);
+    });
   });
 
   document.querySelectorAll('.delete-btn').forEach(btn => {
@@ -348,17 +404,41 @@ async function refreshPostReactions(postId) {
     .eq('target_id', postId)
     .eq('target_type', 'post');
 
-  const likes = reactions ? reactions.filter(r => r.reaction_type === 'like').length : 0;
-  const downvotes = reactions ? reactions.filter(r => r.reaction_type === 'downvote').length : 0;
-
   const card = document.querySelector(`.post-card[data-post-id="${postId}"]`);
   if (!card) return;
 
-  const likeCount = card.querySelector('.like-count');
-  const downvoteCount = card.querySelector('.downvote-count');
-  if (likeCount) likeCount.textContent = likes;
-  if (downvoteCount) downvoteCount.textContent = downvotes;
+  // Count by type
+  const counts = {};
+  if (reactions) {
+    reactions.forEach(r => {
+      counts[r.reaction_type] = (counts[r.reaction_type] || 0) + 1;
+    });
+  }
 
+  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+  const topEmojis = REACTIONS
+    .filter(r => counts[r.type] > 0)
+    .sort((a, b) => (counts[b.type] || 0) - (counts[a.type] || 0))
+    .slice(0, 3)
+    .map(r => r.emoji)
+    .join('');
+
+  // Update summary
+  let summary = card.querySelector('.reaction-summary');
+  if (total > 0) {
+    if (!summary) {
+      const summaryDiv = document.createElement('div');
+      summaryDiv.style.cssText = 'padding:4px 0 8px 0;';
+      summaryDiv.innerHTML = `<span class="reaction-summary" style="font-size:13px;color:var(--text-muted);cursor:pointer;"></span>`;
+      card.querySelector('.post-content').after(summaryDiv);
+      summary = card.querySelector('.reaction-summary');
+    }
+    summary.textContent = `${topEmojis} ${total}`;
+  } else if (summary) {
+    summary.parentElement.remove();
+  }
+
+  // Update react button
   const { data: myReaction } = await window.db
     .from('reactions')
     .select('reaction_type')
@@ -367,10 +447,13 @@ async function refreshPostReactions(postId) {
     .eq('user_id', currentUser.id)
     .single();
 
-  const likeBtn = card.querySelector('.like-btn');
-  const downvoteBtn = card.querySelector('.downvote-btn');
-  if (likeBtn) likeBtn.style.fontWeight = myReaction?.reaction_type === 'like' ? '700' : '';
-  if (downvoteBtn) downvoteBtn.style.fontWeight = myReaction?.reaction_type === 'downvote' ? '700' : '';
+  const reactBtn = card.querySelector('.react-btn');
+  if (reactBtn) {
+    const myReactionObj = REACTIONS.find(r => r.type === myReaction?.reaction_type);
+    reactBtn.textContent = myReactionObj ? `${myReactionObj.emoji} ${myReactionObj.label}` : '❤️ React';
+    reactBtn.style.fontWeight = myReaction ? '700' : '';
+    reactBtn.style.color = myReaction ? 'var(--primary)' : '';
+  }
 }
 
 async function handleCreatePost() {
