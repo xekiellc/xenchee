@@ -7,7 +7,8 @@ exports.handler = async () => {
     },
     body: JSON.stringify({
       supabaseUrl: process.env.SUPABASE_URL,
-      supabaseAnonKey: process.env.SUPABASE_ANON_KEY
+      supabaseAnonKey: process.env.SUPABASE_ANON_KEY,
+      GIPHY_API_KEY: process.env.GIPHY_API_KEY
     })
   };
 };
