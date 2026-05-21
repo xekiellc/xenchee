@@ -3,14 +3,33 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Daily Trivia — XenChee</title>
+  <title>Daily Trivia — Voxxee</title>
+
+  <!-- OG Meta Tags -->
+  <meta property="og:title" content="Daily Trivia — Voxxee Games" />
+  <meta property="og:description" content="Play Daily Trivia on Voxxee. 10 questions. One shot per day. Compete with everyone." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://voxxee.com/game-trivia.html" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Daily Trivia — Voxxee Games" />
+  <meta name="twitter:description" content="Play Daily Trivia on Voxxee. 10 questions. One shot per day. Compete with everyone." />
+
+  <!-- GA4 -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-FSCZJEWZ6F"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-FSCZJEWZ6F');
+  </script>
+
   <link rel="stylesheet" href="/css/main.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
   <nav class="nav">
-    <a href="/feed.html" class="nav-brand">XenChee</a>
+    <a href="/feed.html" class="nav-brand">Voxxee</a>
     <div class="nav-actions">
       <a href="/games.html" class="btn btn-ghost">← Games</a>
       <button id="logout-btn" class="btn btn-ghost">Log Out</button>
@@ -36,20 +55,17 @@
     <div class="feed-main">
       <div style="max-width:620px;margin:0 auto;">
 
-        <!-- Game Header -->
         <div style="text-align:center;margin-bottom:32px;">
           <div style="font-size:48px;margin-bottom:8px;">🧠</div>
           <div style="font-size:24px;font-weight:800;color:var(--text);margin-bottom:4px;">Daily Trivia</div>
           <div style="font-size:14px;color:var(--text-muted);">10 questions · One shot per day · Compete with everyone</div>
         </div>
 
-        <!-- Game Area -->
         <div id="game-area"></div>
 
       </div>
     </div>
 
-    <!-- Leaderboard Sidebar -->
     <div class="sidebar-right">
       <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">
         🏆 Today's Leaderboard
