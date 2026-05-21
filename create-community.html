@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Create Community — XenChee</title>
+  <link rel="stylesheet" href="/css/main.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <nav class="nav">
+    <a href="/feed.html" class="nav-brand">XenChee</a>
+    <div class="nav-actions">
+      <a href="/feed.html" class="btn btn-ghost">Feed</a>
+      <a href="/profile.html" class="btn btn-ghost">Profile</a>
+      <button id="logout-btn" class="btn btn-ghost">Log Out</button>
+    </div>
+  </nav>
+
+  <div class="app-layout">
+    <div class="sidebar-left">
+      <ul class="sidebar-nav">
+        <li><a href="/feed.html"><span class="sidebar-nav-icon">🏠</span>Home</a></li>
+        <li><a href="/search.html"><span class="sidebar-nav-icon">🔍</span>Search</a></li>
+        <li><a href="/communities.html" class="active"><span class="sidebar-nav-icon">💬</span>Communities</a></li>
+        <li><a href="/events.html"><span class="sidebar-nav-icon">📅</span>Events</a></li>
+        <li><a href="/messages.html"><span class="sidebar-nav-icon">✉️</span>Messages</a></li>
+        <li><a href="/notifications.html"><span class="sidebar-nav-icon">🔔</span>Notifications</a></li>
+        <li><a href="/profile.html"><span class="sidebar-nav-icon">👤</span>Profile</a></li>
+        <li><a href="/ecosystem.html"><span class="sidebar-nav-icon">🌐</span>Ecosystem</a></li>
+      </ul>
+    </div>
+
+    <div class="feed-main">
+      <div class="post-card" style="max-width:600px;">
+
+        <div style="margin-bottom:24px;">
+          <h1 style="font-size:22px;font-weight:800;color:var(--text);margin:0 0 4px 0;">Create a Community</h1>
+          <p style="font-size:14px;color:var(--text-muted);margin:0;">Build a space for people who share your interests.</p>
+        </div>
+
+        <!-- Community Name -->
+        <div class="form-group">
+          <label class="form-label">Community Name <span style="color:var(--danger);">*</span></label>
+          <input type="text" id="community-name" class="form-input" placeholder="e.g. Northeast Ohio Sports" maxlength="50" autocomplete="off" />
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">50 characters max. No special characters except spaces and hyphens.</div>
+        </div>
+
+        <!-- Slug -->
+        <div class="form-group">
+          <label class="form-label">Community URL <span style="color:var(--danger);">*</span></label>
+          <div style="display:flex;align-items:center;gap:0;">
+            <span style="background:var(--bg-input);border:1px solid var(--border);border-right:none;border-radius:8px 0 0 8px;padding:10px 12px;font-size:14px;color:var(--text-muted);white-space:nowrap;">v/</span>
+            <input type="text" id="community-slug" class="form-input" placeholder="northeast-ohio-sports"
+              maxlength="50" autocomplete="off"
+              style="border-radius:0 8px 8px 0;border-left:none;" />
+          </div>
+          <div id="slug-status" style="font-size:12px;margin-top:4px;color:var(--text-muted);">Lowercase letters, numbers, and hyphens only.</div>
+        </div>
+
+        <!-- Description -->
+        <div class="form-group">
+          <label class="form-label">Description <span style="color:var(--danger);">*</span></label>
+          <textarea id="community-description" class="form-input" rows="3" placeholder="What is this community about?" maxlength="300" style="resize:vertical;"></textarea>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px;"><span id="desc-count">0</span>/300</div>
+        </div>
+
+        <!-- Community Type -->
+        <div class="form-group">
+          <label class="form-label">Type</label>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;color:var(--text);">
+              <input type="radio" name="community-type" value="public" checked style="accent-color:var(--primary);" />
+              🌐 Public — Anyone can view and post
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;color:var(--text);">
+              <input type="radio" name="community-type" value="private" style="accent-color:var(--primary);" />
+              🔒 Private — Members only
+            </label>
+          </div>
+        </div>
+
+        <!-- Rules -->
+        <div class="form-group">
+          <label class="form-label">Community Rules <span style="font-size:12px;color:var(--text-muted);font-weight:400;">(optional)</span></label>
+          <div id="rules-container">
+            <input type="text" class="form-input rule-input" placeholder="Rule 1" maxlength="150" style="margin-bottom:8px;" />
+          </div>
+          <button id="add-rule-btn" class="btn btn-ghost" style="font-size:13px;margin-top:4px;">+ Add Rule</button>
+        </div>
+
+        <!-- Error -->
+        <div id="create-error" style="display:none;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:10px 14px;font-size:14px;color:#ef4444;margin-bottom:16px;"></div>
+
+        <!-- Submit -->
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <a href="/communities.html" class="btn btn-ghost">Cancel</a>
+          <button id="create-btn" class="btn btn-primary">Create Community</button>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="sidebar-right"></div>
+  </div>
+
+  <script src="/js/supabase.js"></script>
+  <script src="/js/create-community.js"></script>
+</body>
+</html>
