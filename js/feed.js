@@ -10,6 +10,7 @@ let currentUser = null;
 let currentProfile = null;
 let feedMode = 'all';
 let pollVisible = false;
+let activeGifPicker = null;
 
 const REACTIONS = [
   { type: 'like', emoji: '❤️', label: 'Like' },
@@ -62,6 +63,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!e.target.closest('.post-menu-wrapper')) {
       document.querySelectorAll('.post-menu-dropdown').forEach(m => m.style.display = 'none');
     }
+    if (!e.target.closest('.gif-picker-wrapper')) {
+      document.querySelectorAll('.gif-picker-panel').forEach(p => p.style.display = 'none');
+      activeGifPicker = null;
+    }
   });
 });
 
@@ -75,8 +80,6 @@ async function loadBirthdays() {
     const month = today.getMonth() + 1;
     const day = today.getDate();
 
-    // Fetch all users with DOB — filter by month/day in JS
-    // since Supabase doesn't support EXTRACT month/day on text fields easily
     const { data: users } = await window.db
       .from('users')
       .select('id, date_of_birth')
@@ -84,7 +87,6 @@ async function loadBirthdays() {
 
     if (!users || users.length === 0) return;
 
-    // Filter to today's birthdays, exclude current user
     const birthdayUserIds = users
       .filter(u => {
         if (u.id === currentUser.id) return false;
@@ -95,7 +97,6 @@ async function loadBirthdays() {
 
     if (birthdayUserIds.length === 0) return;
 
-    // Fetch profiles for birthday users
     const { data: profiles } = await window.db
       .from('profiles')
       .select('user_id, username, display_name')
@@ -103,7 +104,6 @@ async function loadBirthdays() {
 
     if (!profiles || profiles.length === 0) return;
 
-    // Show the sidebar
     sidebar.style.display = 'block';
 
     list.innerHTML = profiles.map(p => {
@@ -514,6 +514,27 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
         <button class="post-action-btn comment-btn" data-post-id="${post.id}">
           💬 <span>${commentCount > 0 ? commentCount : ''} Comment${commentCount !== 1 ? 's' : ''}</span>
         </button>
+
+        <!-- GIF Reaction button -->
+        <div class="gif-picker-wrapper" style="position:relative;">
+          <button class="post-action-btn gif-react-btn" data-post-id="${post.id}">
+            🎞️ GIF
+          </button>
+          <div class="gif-picker-panel" data-post-id="${post.id}"
+            style="display:none;position:absolute;bottom:40px;left:0;width:300px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,0.4);z-index:300;overflow:hidden;">
+            <div style="padding:10px;">
+              <div style="display:flex;gap:6px;margin-bottom:8px;">
+                <input type="text" class="gif-search-input form-input" placeholder="Search GIFs..." style="flex:1;font-size:13px;padding:6px 10px;" />
+                <button class="gif-search-btn" data-post-id="${post.id}" style="background:var(--primary);color:#fff;border:none;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:13px;">Go</button>
+              </div>
+              <div class="gif-results" data-post-id="${post.id}"
+                style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;max-height:200px;overflow-y:auto;">
+                <div style="grid-column:1/-1;font-size:12px;color:var(--text-muted);padding:8px;text-align:center;">Loading GIFs...</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <button class="post-action-btn share-btn" data-post-id="${post.id}">
           🔗 Share
         </button>
@@ -595,6 +616,162 @@ function attachPostListeners() {
   document.querySelectorAll('.poll-vote-btn').forEach(btn => {
     btn.addEventListener('click', () => handlePollVote(btn.dataset.pollId, parseInt(btn.dataset.optionIndex)));
   });
+
+  // GIF react buttons
+  document.querySelectorAll('.gif-react-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const postId = btn.dataset.postId;
+      const panel = document.querySelector(`.gif-picker-panel[data-post-id="${postId}"]`);
+      const isVisible = panel.style.display === 'block';
+
+      // Close all other panels
+      document.querySelectorAll('.gif-picker-panel').forEach(p => p.style.display = 'none');
+
+      if (!isVisible) {
+        panel.style.display = 'block';
+        activeGifPicker = postId;
+        // Load trending GIFs for this panel
+        loadGifPickerTrending(postId);
+        // Focus search
+        panel.querySelector('.gif-search-input').focus();
+      } else {
+        activeGifPicker = null;
+      }
+    });
+  });
+
+  // GIF search buttons
+  document.querySelectorAll('.gif-search-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const postId = btn.dataset.postId;
+      const panel = document.querySelector(`.gif-picker-panel[data-post-id="${postId}"]`);
+      const query = panel.querySelector('.gif-search-input').value.trim();
+      if (query) searchGifsForPost(postId, query);
+    });
+  });
+
+  // GIF search input enter key
+  document.querySelectorAll('.gif-search-input').forEach(input => {
+    input.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') {
+        const panel = input.closest('.gif-picker-panel');
+        const postId = panel.dataset.postId;
+        const query = input.value.trim();
+        if (query) searchGifsForPost(postId, query);
+      }
+    });
+    input.addEventListener('click', (e) => e.stopPropagation());
+  });
+}
+
+async function loadGifPickerTrending(postId) {
+  const resultsEl = document.querySelector(`.gif-results[data-post-id="${postId}"]`);
+  if (!resultsEl) return;
+
+  resultsEl.innerHTML = '<div style="grid-column:1/-1;font-size:12px;color:var(--text-muted);padding:8px;text-align:center;">Loading...</div>';
+
+  try {
+    const key = window.giphyApiKey;
+    if (!key) { resultsEl.innerHTML = '<div style="grid-column:1/-1;font-size:12px;color:var(--text-muted);padding:8px;">GIFs unavailable.</div>'; return; }
+
+    const res = await fetch(`https://api.giphy.com/v1/gifs/trending?api_key=${key}&limit=12&rating=g`);
+    const data = await res.json();
+    renderGifPickerResults(postId, data.data);
+  } catch (err) {
+    resultsEl.innerHTML = '<div style="grid-column:1/-1;font-size:12px;color:var(--text-muted);padding:8px;">Could not load GIFs.</div>';
+  }
+}
+
+async function searchGifsForPost(postId, query) {
+  const resultsEl = document.querySelector(`.gif-results[data-post-id="${postId}"]`);
+  if (!resultsEl) return;
+
+  resultsEl.innerHTML = '<div style="grid-column:1/-1;font-size:12px;color:var(--text-muted);padding:8px;text-align:center;">Searching...</div>';
+
+  try {
+    const key = window.giphyApiKey;
+    if (!key) return;
+    const res = await fetch(`https://api.giphy.com/v1/gifs/search?api_key=${key}&q=${encodeURIComponent(query)}&limit=12&rating=g`);
+    const data = await res.json();
+    renderGifPickerResults(postId, data.data);
+  } catch (err) {
+    resultsEl.innerHTML = '<div style="grid-column:1/-1;font-size:12px;color:var(--text-muted);padding:8px;">Search failed.</div>';
+  }
+}
+
+function renderGifPickerResults(postId, gifs) {
+  const resultsEl = document.querySelector(`.gif-results[data-post-id="${postId}"]`);
+  if (!resultsEl) return;
+
+  if (!gifs || gifs.length === 0) {
+    resultsEl.innerHTML = '<div style="grid-column:1/-1;font-size:12px;color:var(--text-muted);padding:8px;">No GIFs found.</div>';
+    return;
+  }
+
+  resultsEl.innerHTML = gifs.map(gif => {
+    const preview = gif.images.fixed_height_small.url;
+    const full = gif.images.fixed_height.url;
+    return `
+      <img src="${preview}" data-full="${full}"
+        style="width:100%;height:70px;object-fit:cover;border-radius:6px;cursor:pointer;transition:opacity 0.15s ease;"
+        class="gif-pick-item" data-post-id="${postId}"
+        onmouseover="this.style.opacity='0.8'"
+        onmouseout="this.style.opacity='1'" />
+    `;
+  }).join('');
+
+  resultsEl.querySelectorAll('.gif-pick-item').forEach(img => {
+    img.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const gifUrl = img.dataset.full;
+      postGifReaction(postId, gifUrl);
+    });
+  });
+}
+
+async function postGifReaction(postId, gifUrl) {
+  if (!currentUser) return;
+
+  // Close picker
+  document.querySelectorAll('.gif-picker-panel').forEach(p => p.style.display = 'none');
+  activeGifPicker = null;
+
+  try {
+    const { error } = await window.db
+      .from('comments')
+      .insert({
+        post_id: postId,
+        user_id: currentUser.id,
+        content: gifUrl
+      });
+
+    if (error) throw error;
+
+    // Update comment count on the button
+    const commentBtn = document.querySelector(`.comment-btn[data-post-id="${postId}"] span`);
+    if (commentBtn) {
+      const current = parseInt(commentBtn.textContent) || 0;
+      const newCount = current + 1;
+      commentBtn.textContent = `${newCount} Comment${newCount !== 1 ? 's' : ''}`;
+    }
+
+    // Brief flash on GIF button to confirm
+    const gifBtn = document.querySelector(`.gif-react-btn[data-post-id="${postId}"]`);
+    if (gifBtn) {
+      gifBtn.textContent = '✅ Sent!';
+      gifBtn.style.color = '#4caf7d';
+      setTimeout(() => {
+        gifBtn.textContent = '🎞️ GIF';
+        gifBtn.style.color = '';
+      }, 2000);
+    }
+
+  } catch (err) {
+    console.error('GIF reaction error:', err);
+  }
 }
 
 async function handlePollVote(pollId, optionIndex) {
