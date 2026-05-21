@@ -27,6 +27,8 @@
         <li><a href="/events.html"><span class="sidebar-nav-icon">📅</span>Events</a></li>
         <li><a href="/messages.html"><span class="sidebar-nav-icon">✉️</span>Messages</a></li>
         <li><a href="/notifications.html"><span class="sidebar-nav-icon">🔔</span>Notifications</a></li>
+        <li><a href="/memories.html"><span class="sidebar-nav-icon">🕰️</span>Memories</a></li>
+        <li><a href="/games.html"><span class="sidebar-nav-icon">🎮</span>Games</a></li>
         <li><a href="/profile.html"><span class="sidebar-nav-icon">👤</span>Profile</a></li>
         <li><a href="/ecosystem.html"><span class="sidebar-nav-icon">🌐</span>Ecosystem</a></li>
       </ul>
@@ -44,10 +46,13 @@
         <div class="create-post-header">
           <div class="post-avatar" id="current-user-avatar">?</div>
           <div style="flex:1;position:relative;">
-            <textarea id="comment-content" class="create-post-input" rows="3" placeholder="Write a comment..." maxlength="1000" style="resize:vertical;width:100%;"></textarea>
+            <textarea id="comment-content" class="create-post-input" rows="3"
+              placeholder="Write a comment..." maxlength="1000"
+              style="resize:vertical;width:100%;"></textarea>
 
             <!-- Mention dropdown -->
-            <div id="comment-mention-dropdown" style="display:none;position:absolute;left:0;right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.3);z-index:200;max-height:220px;overflow-y:auto;padding:6px;"></div>
+            <div id="comment-mention-dropdown"
+              style="display:none;position:absolute;left:0;right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.3);z-index:200;max-height:220px;overflow-y:auto;padding:6px;"></div>
 
             <!-- GIF Picker -->
             <div id="gif-picker" style="display:none;margin-top:8px;background:var(--bg-input);border:1px solid var(--border);border-radius:12px;padding:12px;">
@@ -61,8 +66,10 @@
 
             <!-- Selected GIF Preview -->
             <div id="gif-preview" style="display:none;margin-top:8px;position:relative;">
-              <img id="gif-preview-img" src="" alt="Selected GIF" style="max-width:100%;border-radius:8px;max-height:200px;object-fit:cover;" />
-              <button id="gif-remove-btn" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:14px;line-height:24px;text-align:center;">×</button>
+              <img id="gif-preview-img" src="" alt="Selected GIF"
+                style="max-width:100%;border-radius:8px;max-height:200px;object-fit:cover;" />
+              <button id="gif-remove-btn"
+                style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:14px;line-height:24px;text-align:center;">×</button>
             </div>
 
           </div>
@@ -83,12 +90,24 @@
     </div>
 
     <div class="sidebar-right">
+      <!-- Reputation legend -->
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px;">
+        <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Reputation Ranks</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="font-size:13px;color:var(--text);">👑 <span style="font-weight:600;">Legend</span> <span style="color:var(--text-muted);">1000+</span></div>
+          <div style="font-size:13px;color:var(--text);">🔥 <span style="font-weight:600;">Veteran</span> <span style="color:var(--text-muted);">500+</span></div>
+          <div style="font-size:13px;color:var(--text);">⭐ <span style="font-weight:600;">Contributor</span> <span style="color:var(--text-muted);">200+</span></div>
+          <div style="font-size:13px;color:var(--text);">💬 <span style="font-weight:600;">Regular</span> <span style="color:var(--text-muted);">50+</span></div>
+          <div style="font-size:13px;color:var(--text);">🌱 <span style="font-weight:600;">Seedling</span> <span style="color:var(--text-muted);">0+</span></div>
+        </div>
+      </div>
     </div>
 
   </div>
 
   <script src="/js/supabase.js"></script>
   <script src="/js/mentions.js"></script>
+  <script src="/js/reputation.js"></script>
   <script src="/js/comments.js"></script>
 </body>
 </html>
