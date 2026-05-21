@@ -23,10 +23,13 @@
     <div class="sidebar-left">
       <ul class="sidebar-nav">
         <li><a href="/feed.html"><span class="sidebar-nav-icon">🏠</span>Home</a></li>
+        <li><a href="/search.html"><span class="sidebar-nav-icon">🔍</span>Search</a></li>
         <li><a href="/communities.html"><span class="sidebar-nav-icon">💬</span>Communities</a></li>
         <li><a href="/events.html"><span class="sidebar-nav-icon">📅</span>Events</a></li>
         <li><a href="/messages.html"><span class="sidebar-nav-icon">✉️</span>Messages</a></li>
         <li><a href="/notifications.html"><span class="sidebar-nav-icon">🔔</span>Notifications</a></li>
+        <li><a href="/memories.html"><span class="sidebar-nav-icon">🕰️</span>Memories</a></li>
+        <li><a href="/games.html"><span class="sidebar-nav-icon">🎮</span>Games</a></li>
         <li><a href="/profile.html" class="active"><span class="sidebar-nav-icon">👤</span>Profile</a></li>
         <li><a href="/ecosystem.html"><span class="sidebar-nav-icon">🌐</span>Ecosystem</a></li>
       </ul>
@@ -47,13 +50,21 @@
         <div style="padding:48px 24px 24px;">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
             <div>
-              <div id="profile-display-name" style="font-size:22px;font-weight:800;margin-bottom:4px;">Loading...</div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div id="profile-display-name" style="font-size:22px;font-weight:800;margin-bottom:4px;">Loading...</div>
+                <span id="verified-badge" style="display:none;font-size:16px;" title="Verified">✅</span>
+              </div>
               <div id="profile-username" style="font-size:15px;color:var(--text-muted);">@...</div>
             </div>
-            <button id="edit-profile-btn" class="btn btn-ghost" style="display:none;">Edit Profile</button>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button id="follow-btn" class="btn btn-primary" style="display:none;">Follow</button>
+              <button id="edit-profile-btn" class="btn btn-ghost" style="display:none;">Edit Profile</button>
+            </div>
           </div>
 
           <div id="profile-bio" style="margin-top:12px;font-size:15px;color:var(--text-secondary);line-height:1.6;"></div>
+
+          <div id="profile-meta" style="display:flex;gap:16px;margin-top:8px;flex-wrap:wrap;font-size:13px;color:var(--text-muted);"></div>
 
           <div style="display:flex;gap:24px;margin-top:16px;flex-wrap:wrap;">
             <div style="font-size:14px;color:var(--text-secondary);">
@@ -94,7 +105,40 @@
           <input type="url" id="edit-website" class="form-input" placeholder="https://yoursite.com" />
         </div>
 
-        <div style="display:flex;gap:12px;margin-top:8px;">
+        <!-- Content Settings -->
+        <div style="border-top:1px solid var(--border);margin-top:20px;padding-top:20px;">
+          <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:16px;">🔞 Content Settings</div>
+
+          <div style="background:var(--bg-input);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:2px;">Show Adult Content</div>
+                <div style="font-size:12px;color:var(--text-muted);">See 18+ posts in your feed. You must be 18+ to enable.</div>
+              </div>
+              <label style="position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;">
+                <input type="checkbox" id="toggle-show-adult" style="opacity:0;width:0;height:0;" />
+                <span style="position:absolute;cursor:pointer;inset:0;background:var(--border);border-radius:100px;transition:0.2s;"
+                  id="toggle-show-adult-track"></span>
+              </label>
+            </div>
+          </div>
+
+          <div style="background:var(--bg-input);border:1px solid var(--border);border-radius:10px;padding:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:2px;">I Create Adult Content</div>
+                <div style="font-size:12px;color:var(--text-muted);">Mark your posts as 18+ by default. Subscribers must have adult content enabled to see them.</div>
+              </div>
+              <label style="position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;">
+                <input type="checkbox" id="toggle-is-adult-creator" style="opacity:0;width:0;height:0;" />
+                <span style="position:absolute;cursor:pointer;inset:0;background:var(--border);border-radius:100px;transition:0.2s;"
+                  id="toggle-is-adult-creator-track"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:12px;margin-top:20px;">
           <button id="save-profile-btn" class="btn btn-primary">Save Profile</button>
           <button id="cancel-edit-btn" class="btn btn-ghost">Cancel</button>
         </div>
