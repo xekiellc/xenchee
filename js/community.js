@@ -91,7 +91,6 @@ async function loadCommunity(slug) {
     }
   }
 
-  // Check membership and moderator status
   const joinBtn = document.getElementById('join-btn');
   joinBtn.style.display = 'block';
 
@@ -100,8 +99,6 @@ async function loadCommunity(slug) {
     .eq('community_id', community.id).eq('user_id', currentUser.id).single();
 
   isModerator = membership?.role === 'moderator' || membership?.role === 'admin';
-
-  // Also treat community creator as moderator
   if (community.created_by === currentUser.id) isModerator = true;
 
   if (membership) {
@@ -112,16 +109,13 @@ async function loadCommunity(slug) {
     joinBtn.addEventListener('click', () => handleJoin(community.id));
   }
 
-  // Wiki button
   const wikiBtn = document.getElementById('wiki-btn');
   if (wikiBtn) {
     wikiBtn.style.display = 'block';
     wikiBtn.addEventListener('click', () => toggleWikiPanel(community));
   }
 
-  // Rules sidebar
   renderRulesSidebar(community.rules || []);
-
   await loadCommunityPosts(community.id);
 }
 
@@ -162,7 +156,6 @@ function renderWikiView(community) {
   const rulesSection = document.getElementById('wiki-rules-section');
   const rulesList = document.getElementById('wiki-rules-list');
 
-  // Switch to view mode
   document.getElementById('wiki-view').style.display = 'block';
   document.getElementById('wiki-edit').style.display = 'none';
 
@@ -175,10 +168,8 @@ function renderWikiView(community) {
     emptyEl.style.display = 'block';
   }
 
-  // Show edit button for moderators
   if (editBtn) editBtn.style.display = isModerator ? 'block' : 'none';
 
-  // Rules section
   const rules = community.rules || [];
   if (rules.length > 0 || isModerator) {
     rulesSection.style.display = 'block';
@@ -196,7 +187,6 @@ function renderWikiView(community) {
     }
 
     if (isModerator) {
-      // Add edit rules button if not already there
       if (!document.getElementById('edit-rules-btn')) {
         const editRulesBtn = document.createElement('button');
         editRulesBtn.id = 'edit-rules-btn';
@@ -219,7 +209,6 @@ function renderWikiView(community) {
 }
 
 function setupWikiListeners(community) {
-  // Prevent re-attaching listeners
   const panel = document.getElementById('wiki-panel');
   if (panel.dataset.listenersAttached) return;
   panel.dataset.listenersAttached = '1';
@@ -323,7 +312,7 @@ async function loadCommunityPosts(communityId) {
 
     const userIds = [...new Set(posts.map(p => p.user_id))];
     const { data: profiles } = await window.db
-      .from('profiles').select('user_id, username, display_name, is_verified, verified_type')
+      .from('profiles').select('user_id, username, display_name, is_verified, verified_type, reputation')
       .in('user_id', userIds);
 
     const profileMap = {};
@@ -418,6 +407,7 @@ function renderPost(post, profileMap, reactionMap, commentCountMap, myReactionMa
   const displayName = profile?.display_name || username;
   const initial = username.charAt(0).toUpperCase();
   const verifiedBadge = getVerifiedBadge(profile);
+  const repBadge = repBadgeHtml(profile?.reputation);
   const timestamp = new Date(post.created_at).toLocaleDateString('en-US', {
     month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
   });
@@ -495,6 +485,7 @@ function renderPost(post, profileMap, reactionMap, commentCountMap, myReactionMa
             <a href="/profile.html?user=${encodeURIComponent(username)}" style="text-decoration:none;color:inherit;">${escapeHtml(displayName)}</a>
             ${verifiedBadge}
             <span style="font-weight:400;color:var(--text-muted);font-size:13px;">@${escapeHtml(username)}</span>
+            ${repBadge}
             ${isModerator && !isOwnPost ? `<span style="font-size:11px;padding:2px 8px;border-radius:100px;background:rgba(99,102,241,0.15);color:var(--primary);font-weight:600;margin-left:6px;">MOD</span>` : ''}
           </div>
           <span class="post-timestamp">${timestamp}</span>
@@ -505,7 +496,7 @@ function renderPost(post, profileMap, reactionMap, commentCountMap, myReactionMa
           <div class="post-menu-dropdown" data-post-id="${post.id}"
             style="display:none;position:absolute;top:28px;right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.3);z-index:200;min-width:150px;overflow:hidden;">
             ${isOwnPost || isModerator ? `
-              <button class="delete-btn" data-post-id="${post.id}"
+              <button class="delete-btn" data-post-id="${post.id}" data-post-owner="${post.user_id}"
                 style="display:block;width:100%;text-align:left;padding:10px 16px;background:none;border:none;cursor:pointer;font-size:14px;color:var(--danger);">
                 🗑️ Delete
               </button>
@@ -612,7 +603,7 @@ function attachPostListeners(communityId) {
       e.stopPropagation();
       const menu = document.querySelector(`.post-menu-dropdown[data-post-id="${btn.dataset.postId}"]`);
       if (menu) menu.style.display = 'none';
-      handleDeletePost(btn.dataset.postId, communityId);
+      handleDeletePost(btn.dataset.postId, btn.dataset.postOwner, communityId);
     });
   });
 
@@ -803,9 +794,24 @@ async function handleReaction(postId, type) {
     const { data: existing } = await window.db
       .from('reactions').select('*')
       .eq('user_id', currentUser.id).eq('target_id', postId).eq('target_type', 'post').single();
+
     if (existing) {
       if (existing.reaction_type === type) {
         await window.db.from('reactions').delete().eq('id', existing.id);
+        // Reverse reputation
+        const { data: post } = await window.db.from('posts').select('user_id').eq('id', postId).single();
+        if (post && post.user_id !== currentUser.id) {
+          const reversePoints = existing.reaction_type === 'downvote' ? 1 : -1;
+          await window.db.from('reputation_events').insert({
+            user_id: post.user_id, source_user_id: currentUser.id,
+            event_type: 'reaction_removed', points: reversePoints,
+            target_id: postId, target_type: 'post'
+          });
+          const { data: ownerProfile } = await window.db
+            .from('profiles').select('reputation').eq('user_id', post.user_id).single();
+          const newRep = Math.max(0, (ownerProfile?.reputation || 0) + reversePoints);
+          await window.db.from('profiles').update({ reputation: newRep }).eq('user_id', post.user_id);
+        }
       } else {
         await window.db.from('reactions').update({ reaction_type: type }).eq('id', existing.id);
       }
@@ -813,6 +819,12 @@ async function handleReaction(postId, type) {
       await window.db.from('reactions').insert({
         user_id: currentUser.id, target_id: postId, target_type: 'post', reaction_type: type
       });
+      // Award reputation to post owner
+      const { data: post } = await window.db.from('posts').select('user_id').eq('id', postId).single();
+      if (post && post.user_id !== currentUser.id) {
+        const eventType = type === 'downvote' ? 'downvote_received' : 'reaction_received';
+        await awardReputation(post.user_id, eventType, postId, 'post', currentUser.id);
+      }
     }
     await refreshPostReactions(postId);
   } catch (err) {
@@ -866,10 +878,14 @@ async function handleCreatePost() {
   btn.textContent = 'Posting...';
   btn.disabled = true;
   try {
-    const { error } = await window.db.from('posts').insert({
+    const { data: post, error } = await window.db.from('posts').insert({
       user_id: currentUser.id, community_id: currentCommunity.id, content
-    });
+    }).select().single();
     if (error) throw error;
+
+    // Award reputation for posting
+    await awardReputation(currentUser.id, 'post_created', post.id, 'post', null);
+
     document.getElementById('post-content').value = '';
     await loadCommunityPosts(currentCommunity.id);
   } catch (err) {
@@ -879,9 +895,13 @@ async function handleCreatePost() {
   btn.disabled = false;
 }
 
-async function handleDeletePost(postId, communityId) {
+async function handleDeletePost(postId, postOwnerId, communityId) {
   if (!confirm('Delete this post?')) return;
   await window.db.from('posts').update({ is_removed: true }).eq('id', postId);
+  // Deduct reputation from post owner
+  if (postOwnerId) {
+    await awardReputation(postOwnerId, 'post_removed', postId, 'post', currentUser.id);
+  }
   await loadCommunityPosts(communityId);
 }
 
@@ -898,6 +918,10 @@ async function handleJoin(communityId) {
       .eq('id', communityId);
     currentCommunity.member_count = (currentCommunity.member_count || 0) + 1;
     document.getElementById('community-member-count').textContent = currentCommunity.member_count.toLocaleString();
+
+    // Award reputation for joining
+    await awardReputation(currentUser.id, 'joined_community', communityId, 'community', null);
+
     btn.textContent = 'Joined ✓';
     btn.className = 'btn btn-ghost';
     btn.disabled = false;
