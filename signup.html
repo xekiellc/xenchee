@@ -6,6 +6,7 @@
   <title>Join XenChee — Sign Up</title>
   <link rel="stylesheet" href="css/main.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 </head>
 <body>
 
@@ -54,6 +55,11 @@
             <a href="/privacy.html">Privacy Policy</a>
           </span>
         </label>
+      </div>
+
+      <!-- reCAPTCHA -->
+      <div class="form-group">
+        <div id="recaptcha-container" class="g-recaptcha" data-sitekey="6LeOqfQsAAAAAF1mZktRAvH850-95HxEzpfVoTZA"></div>
       </div>
 
       <button id="signup-btn" class="btn btn-primary" style="width:100%;justify-content:center;">
