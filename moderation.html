@@ -3,14 +3,33 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Moderation — XenChee</title>
+  <title>Moderation — Voxxee</title>
+
+  <!-- OG Meta Tags -->
+  <meta property="og:title" content="Moderation Policy — Voxxee" />
+  <meta property="og:description" content="Voxxee moderation policy. Transparent by design. No shadowbans. Every action logged publicly. Every decision appealable." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://voxxee.com/moderation.html" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Moderation Policy — Voxxee" />
+  <meta name="twitter:description" content="Voxxee moderation policy. Transparent by design. No shadowbans. Every action logged publicly. Every decision appealable." />
+
+  <!-- GA4 -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-FSCZJEWZ6F"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-FSCZJEWZ6F');
+  </script>
+
   <link rel="stylesheet" href="css/main.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
   <nav class="nav">
-    <a href="/" class="nav-brand">XenChee</a>
+    <a href="/" class="nav-brand">Voxxee</a>
     <div class="nav-actions">
       <a href="/login.html" class="btn btn-ghost">Log In</a>
       <a href="/signup.html" class="btn btn-primary">Join Free</a>
@@ -26,7 +45,7 @@
 
       <div style="background:rgba(108,99,255,0.1);border:1px solid rgba(108,99,255,0.3);border-radius:12px;padding:20px;margin-bottom:32px;">
         <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px;">Our Commitment</div>
-        <p style="margin:0;">XenChee does not shadowban. Every moderation action is logged publicly below. If content is removed you are told why. Every decision can be appealed.</p>
+        <p style="margin:0;">Voxxee does not shadowban. Every moderation action is logged publicly below. If content is removed you are told why. Every decision can be appealed.</p>
       </div>
 
       <h2 style="font-size:20px;font-weight:700;color:var(--text);margin:32px 0 12px;">What Gets Removed</h2>
@@ -51,7 +70,7 @@
       </ul>
 
       <h2 style="font-size:20px;font-weight:700;color:var(--text);margin:32px 0 12px;">Appeals</h2>
-      <p>Every moderation decision can be appealed. Email info@xenchee.com with your username and the content in question. Appeals are reviewed within 72 hours. Appeal outcomes are final and logged publicly.</p>
+      <p>Every moderation decision can be appealed. Email info@voxxee.com with your username and the content in question. Appeals are reviewed within 72 hours. Appeal outcomes are final and logged publicly.</p>
 
       <h2 style="font-size:20px;font-weight:700;color:var(--text);margin:32px 0 12px;">Public Moderation Log</h2>
       <p>Every moderation action is logged below. No shadowbanning. No secret suppression. Full transparency.</p>
@@ -64,7 +83,7 @@
   </div>
 
   <footer class="footer">
-    <div class="footer-brand">XenChee</div>
+    <div class="footer-brand">Voxxee</div>
     <div class="footer-tagline">Say Exactly What You Mean</div>
     <div class="footer-links">
       <a href="/about.html">About</a>
@@ -72,7 +91,7 @@
       <a href="/privacy.html">Privacy</a>
       <a href="/moderation.html">Moderation</a>
     </div>
-    <div class="footer-legal">© 2026 XenChee. All rights reserved. 18+ only.</div>
+    <div class="footer-legal">© 2026 Voxxee. All rights reserved. 18+ only.</div>
   </footer>
 
   <script src="js/supabase.js"></script>
