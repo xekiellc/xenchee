@@ -3,31 +3,45 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Log In — XenChee</title>
+  <title>Log In — Voxxee</title>
+
+  <!-- OG Meta Tags -->
+  <meta property="og:title" content="Log In — Voxxee" />
+  <meta property="og:description" content="Log in to your Voxxee account. Say exactly what you mean." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://voxxee.com/login.html" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Log In — Voxxee" />
+  <meta name="twitter:description" content="Log in to your Voxxee account. Say exactly what you mean." />
+
+  <!-- GA4 -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-FSCZJEWZ6F"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-FSCZJEWZ6F');
+  </script>
+
   <link rel="stylesheet" href="css/main.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-
   <nav class="nav">
-    <a href="/" class="nav-brand">XenChee</a>
+    <a href="/" class="nav-brand">Voxxee</a>
     <div class="nav-actions">
       <a href="/signup.html" class="btn btn-primary">Join Free</a>
     </div>
   </nav>
-
   <div class="form-container">
     <div class="form-card">
       <div class="form-title">Welcome Back</div>
-      <div class="form-subtitle">Log in to your XenChee account</div>
-
+      <div class="form-subtitle">Log in to your Voxxee account</div>
       <div id="alert-container"></div>
-
       <div class="form-group">
         <label class="form-label">Email</label>
         <input type="email" id="email" class="form-input" placeholder="you@example.com" />
       </div>
-
       <div class="form-group">
         <label class="form-label">Password</label>
         <div style="position:relative;">
@@ -35,17 +49,14 @@
           <button id="password-toggle" type="button" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-muted);">👁️</button>
         </div>
       </div>
-
       <button id="login-btn" class="btn btn-primary" style="width:100%;justify-content:center;">
         Log In
       </button>
-
       <div class="form-footer">
         Don't have an account? <a href="/signup.html">Join free</a>
       </div>
     </div>
   </div>
-
   <script src="js/supabase.js"></script>
   <script src="js/login.js"></script>
 </body>
