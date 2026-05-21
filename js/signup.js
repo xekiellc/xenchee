@@ -9,7 +9,6 @@ async function waitForDb(timeout = 5000) {
 document.addEventListener('DOMContentLoaded', async () => {
   await waitForDb();
 
-  // Password toggle
   const passwordInput = document.getElementById('password');
   const toggleBtn = document.getElementById('password-toggle');
   if (toggleBtn) {
@@ -20,8 +19,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  const signupBtn = document.getElementById('signup-btn');
-  signupBtn.addEventListener('click', handleSignup);
+  document.getElementById('signup-btn').addEventListener('click', handleSignup);
 });
 
 async function handleSignup() {
@@ -59,11 +57,35 @@ async function handleSignup() {
     return;
   }
 
+  // reCAPTCHA check
+  const recaptchaResponse = grecaptcha.getResponse();
+  if (!recaptchaResponse) {
+    showAlert('Please complete the reCAPTCHA verification.', 'error');
+    return;
+  }
+
   const btn = document.getElementById('signup-btn');
   btn.textContent = 'Creating account...';
   btn.disabled = true;
 
   try {
+    // Verify reCAPTCHA via Netlify function
+    const verifyRes = await fetch('/.netlify/functions/verify-recaptcha', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: recaptchaResponse })
+    });
+
+    const verifyData = await verifyRes.json();
+    if (!verifyData.success) {
+      showAlert('reCAPTCHA verification failed. Please try again.', 'error');
+      grecaptcha.reset();
+      btn.textContent = 'Create Account';
+      btn.disabled = false;
+      return;
+    }
+
+    // Check username availability
     const { data: existing } = await window.db
       .from('profiles')
       .select('username')
@@ -72,6 +94,7 @@ async function handleSignup() {
 
     if (existing) {
       showAlert('That username is already taken. Please choose another.', 'error');
+      grecaptcha.reset();
       btn.textContent = 'Create Account';
       btn.disabled = false;
       return;
@@ -81,6 +104,7 @@ async function handleSignup() {
 
     if (error) {
       showAlert(error.message, 'error');
+      grecaptcha.reset();
       btn.textContent = 'Create Account';
       btn.disabled = false;
       return;
@@ -100,17 +124,18 @@ async function handleSignup() {
         is_18_verified: true,
       });
 
-      showAlert('Account created! Please check your email to confirm your account.', 'success');
+      showAlert('Account created! Redirecting to login...', 'success');
       btn.textContent = 'Account Created';
 
       setTimeout(() => {
         window.location.href = '/login.html';
-      }, 3000);
+      }, 2000);
     }
 
   } catch (err) {
     console.error('Signup error:', err);
     showAlert('Something went wrong. Please try again.', 'error');
+    grecaptcha.reset();
     btn.textContent = 'Create Account';
     btn.disabled = false;
   }
