@@ -24,6 +24,7 @@
     <div class="sidebar-left">
       <ul class="sidebar-nav">
         <li><a href="/feed.html"><span class="sidebar-nav-icon">🏠</span>Home</a></li>
+        <li><a href="/search.html"><span class="sidebar-nav-icon">🔍</span>Search</a></li>
         <li><a href="/communities.html" class="active"><span class="sidebar-nav-icon">💬</span>Communities</a></li>
         <li><a href="/events.html"><span class="sidebar-nav-icon">📅</span>Events</a></li>
         <li><a href="/messages.html"><span class="sidebar-nav-icon">✉️</span>Messages</a></li>
@@ -36,13 +37,16 @@
     <!-- Main Content -->
     <div class="feed-main">
 
-      <div style="margin-bottom:24px;">
-        <div style="font-size:24px;font-weight:800;margin-bottom:8px;">Communities</div>
-        <div style="color:var(--text-muted);font-size:15px;">Find your people. Say exactly what you mean.</div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+        <div>
+          <div style="font-size:24px;font-weight:800;margin-bottom:4px;">Communities</div>
+          <div style="color:var(--text-muted);font-size:15px;">Find your people. Say exactly what you mean.</div>
+        </div>
+        <a href="/create-community.html" class="btn btn-primary" style="flex-shrink:0;">+ Create Community</a>
       </div>
 
       <!-- Search -->
-      <div style="margin-bottom:24px;">
+      <div style="margin-bottom:20px;">
         <input type="text" id="community-search" class="form-input" placeholder="Search communities..." style="max-width:400px;" />
       </div>
 
@@ -50,8 +54,8 @@
       <div style="display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap;">
         <button class="btn btn-primary community-filter-btn" data-filter="all">All</button>
         <button class="btn btn-ghost community-filter-btn" data-filter="portfolio">Portfolio Sites</button>
-        <button class="btn btn-ghost community-filter-btn" data-filter="advocacy">Advocacy</button>
-        <button class="btn btn-ghost community-filter-btn" data-filter="general">General</button>
+        <button class="btn btn-ghost community-filter-btn" data-filter="public">Public</button>
+        <button class="btn btn-ghost community-filter-btn" data-filter="private">Private</button>
       </div>
 
       <!-- Communities Grid -->
@@ -63,6 +67,8 @@
 
     <!-- Right Sidebar -->
     <div class="sidebar-right">
+      <a href="/create-community.html" class="btn btn-primary" style="display:block;text-align:center;margin-bottom:24px;text-decoration:none;">+ Create Community</a>
+
       <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">Most Active</div>
       <div id="active-communities"></div>
     </div>
@@ -128,13 +134,16 @@
               <div class="community-avatar">${c.name.charAt(0)}</div>
               <div>
                 <div class="community-name">${c.name}</div>
-                <div class="community-type">${c.community_type || 'Community'}</div>
+                <div class="community-type">v/${c.slug}</div>
               </div>
             </div>
             <div class="community-description">${c.description || ''}</div>
             <div class="community-footer">
               <span class="community-members">${c.member_count > 0 ? c.member_count.toLocaleString() + ' members' : 'Be the first to join'}</span>
-              ${c.is_official ? '<span class="community-badge badge-official">Official</span>' : ''}
+              <div style="display:flex;gap:6px;">
+                ${c.is_official ? '<span class="community-badge badge-official">Official</span>' : ''}
+                ${c.community_type === 'private' ? '<span style="font-size:11px;padding:2px 8px;border-radius:100px;background:rgba(245,166,35,0.2);color:#f5a623;font-weight:600;">Private</span>' : ''}
+              </div>
             </div>
           </div>
         </a>
@@ -172,8 +181,12 @@
       const search = document.getElementById('community-search').value.toLowerCase();
       let filtered = allCommunities;
 
-      if (currentFilter !== 'all') {
-        filtered = filtered.filter(c => c.community_type === currentFilter);
+      if (currentFilter === 'portfolio') {
+        filtered = filtered.filter(c => c.is_official);
+      } else if (currentFilter === 'public') {
+        filtered = filtered.filter(c => c.community_type !== 'private');
+      } else if (currentFilter === 'private') {
+        filtered = filtered.filter(c => c.community_type === 'private');
       }
 
       if (search) {
