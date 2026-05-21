@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Word Scramble — XenChee</title>
+  <link rel="stylesheet" href="/css/main.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <nav class="nav">
+    <a href="/feed.html" class="nav-brand">XenChee</a>
+    <div class="nav-actions">
+      <a href="/games.html" class="btn btn-ghost">← Games</a>
+      <button id="logout-btn" class="btn btn-ghost">Log Out</button>
+    </div>
+  </nav>
+
+  <div class="app-layout">
+    <div class="sidebar-left">
+      <ul class="sidebar-nav">
+        <li><a href="/feed.html"><span class="sidebar-nav-icon">🏠</span>Home</a></li>
+        <li><a href="/search.html"><span class="sidebar-nav-icon">🔍</span>Search</a></li>
+        <li><a href="/communities.html"><span class="sidebar-nav-icon">💬</span>Communities</a></li>
+        <li><a href="/events.html"><span class="sidebar-nav-icon">📅</span>Events</a></li>
+        <li><a href="/messages.html"><span class="sidebar-nav-icon">✉️</span>Messages</a></li>
+        <li><a href="/notifications.html"><span class="sidebar-nav-icon">🔔</span>Notifications</a></li>
+        <li><a href="/memories.html"><span class="sidebar-nav-icon">🕰️</span>Memories</a></li>
+        <li><a href="/games.html" class="active"><span class="sidebar-nav-icon">🎮</span>Games</a></li>
+        <li><a href="/profile.html"><span class="sidebar-nav-icon">👤</span>Profile</a></li>
+        <li><a href="/ecosystem.html"><span class="sidebar-nav-icon">🌐</span>Ecosystem</a></li>
+      </ul>
+    </div>
+
+    <div class="feed-main">
+      <div style="max-width:560px;margin:0 auto;">
+
+        <div style="text-align:center;margin-bottom:32px;">
+          <div style="font-size:48px;margin-bottom:8px;">🔤</div>
+          <div style="font-size:24px;font-weight:800;color:var(--text);margin-bottom:4px;">Word Scramble</div>
+          <div style="font-size:14px;color:var(--text-muted);">Unscramble the daily word · New word every day at midnight</div>
+        </div>
+
+        <div id="game-area"></div>
+
+      </div>
+    </div>
+
+    <div class="sidebar-right">
+      <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">
+        📖 How to Play
+      </div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.7;">
+        <div style="margin-bottom:8px;">🔤 A word has been scrambled for you.</div>
+        <div style="margin-bottom:8px;">💡 Use the hint if you're stuck.</div>
+        <div style="margin-bottom:8px;">✅ Type your answer and submit.</div>
+        <div style="margin-bottom:8px;">🔥 Come back every day to keep your streak.</div>
+      </div>
+
+      <div style="margin-top:32px;font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">
+        📅 Today's Stats
+      </div>
+      <div id="scramble-stats">
+        <div class="loading"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="/js/supabase.js"></script>
+  <script src="/js/game-scramble.js"></script>
+</body>
+</html>
