@@ -20,7 +20,6 @@
 
   <div class="app-layout">
 
-    <!-- Left Sidebar -->
     <div class="sidebar-left">
       <ul class="sidebar-nav">
         <li><a href="/feed.html"><span class="sidebar-nav-icon">🏠</span>Home</a></li>
@@ -36,19 +35,14 @@
       </ul>
     </div>
 
-    <!-- Main Content -->
     <div class="feed-main">
 
       <!-- Community Header -->
       <div id="community-header" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:20px;overflow:hidden;">
-        <div style="height:120px;background:linear-gradient(135deg,var(--primary),#a78bfa);position:relative;">
-          <!-- Banner gradient stays, logo overlaps bottom -->
-        </div>
+        <div style="height:120px;background:linear-gradient(135deg,var(--primary),#a78bfa);position:relative;"></div>
         <div style="padding:0 24px 24px;">
-          <!-- Logo + Name row -->
           <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:-32px;margin-bottom:12px;flex-wrap:wrap;gap:12px;">
             <div style="display:flex;align-items:flex-end;gap:16px;">
-              <!-- Logo avatar -->
               <div id="community-logo"
                 style="width:64px;height:64px;border-radius:12px;background:var(--primary);border:3px solid var(--bg-card);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:#fff;flex-shrink:0;overflow:hidden;">
               </div>
@@ -57,7 +51,10 @@
                 <div id="community-slug" style="font-size:13px;color:var(--text-muted);"></div>
               </div>
             </div>
-            <button id="join-btn" class="btn btn-primary" style="display:none;">Join Community</button>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <button id="wiki-btn" class="btn btn-ghost" style="display:none;font-size:13px;">📖 Wiki</button>
+              <button id="join-btn" class="btn btn-primary" style="display:none;">Join Community</button>
+            </div>
           </div>
 
           <div id="community-description" style="font-size:15px;color:var(--text-secondary);line-height:1.6;margin-bottom:16px;"></div>
@@ -73,7 +70,63 @@
         </div>
       </div>
 
-      <!-- Create Post in Community -->
+      <!-- Wiki Panel (hidden by default) -->
+      <div id="wiki-panel" style="display:none;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;margin-bottom:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+          <div style="font-size:18px;font-weight:700;color:var(--text);">📖 Community Wiki</div>
+          <div style="display:flex;gap:8px;">
+            <button id="wiki-edit-btn" class="btn btn-ghost" style="display:none;font-size:13px;">✏️ Edit</button>
+            <button id="wiki-close-btn" class="btn btn-ghost" style="font-size:13px;">✕ Close</button>
+          </div>
+        </div>
+
+        <!-- View mode -->
+        <div id="wiki-view">
+          <div id="wiki-content" style="font-size:15px;color:var(--text-secondary);line-height:1.7;white-space:pre-wrap;"></div>
+          <div id="wiki-empty" style="display:none;text-align:center;padding:40px 0;">
+            <div style="font-size:36px;margin-bottom:12px;">📝</div>
+            <div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:8px;">No wiki yet</div>
+            <div style="font-size:14px;color:var(--text-muted);">Moderators can add a wiki to help members understand this community.</div>
+          </div>
+        </div>
+
+        <!-- Edit mode (moderators/admins only) -->
+        <div id="wiki-edit" style="display:none;">
+          <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px;">Supports plain text. Use blank lines to separate sections.</div>
+          <textarea id="wiki-textarea" class="form-input"
+            style="width:100%;min-height:300px;resize:vertical;font-size:14px;line-height:1.6;font-family:inherit;"
+            placeholder="Write your community wiki here...&#10;&#10;You can cover:&#10;• What this community is about&#10;• Posting guidelines&#10;• Frequently asked questions&#10;• Useful resources and links"
+            maxlength="10000"></textarea>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;">
+            <span id="wiki-char-count" style="font-size:12px;color:var(--text-muted);">0 / 10,000</span>
+            <div style="display:flex;gap:8px;">
+              <button id="wiki-cancel-edit-btn" class="btn btn-ghost">Cancel</button>
+              <button id="wiki-save-btn" class="btn btn-primary">Save Wiki</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rules section inside wiki panel -->
+        <div id="wiki-rules-section" style="margin-top:24px;border-top:1px solid var(--border);padding-top:20px;display:none;">
+          <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:12px;">📋 Community Rules</div>
+          <div id="wiki-rules-list"></div>
+
+          <!-- Add/edit rules (moderators only) -->
+          <div id="wiki-rules-editor" style="display:none;margin-top:16px;">
+            <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px;">One rule per line.</div>
+            <textarea id="rules-textarea" class="form-input"
+              style="width:100%;min-height:120px;resize:vertical;font-size:14px;"
+              placeholder="Be respectful&#10;No spam&#10;Stay on topic"
+              maxlength="2000"></textarea>
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;">
+              <button id="rules-cancel-btn" class="btn btn-ghost">Cancel</button>
+              <button id="rules-save-btn" class="btn btn-primary">Save Rules</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Create Post -->
       <div class="create-post" style="margin-bottom:20px;">
         <div class="create-post-header">
           <div class="post-avatar" id="user-avatar">?</div>
@@ -92,7 +145,6 @@
 
     </div>
 
-    <!-- Right Sidebar -->
     <div class="sidebar-right">
       <div id="community-rules-sidebar"></div>
       <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-top:24px;margin-bottom:16px;">Other Communities</div>
