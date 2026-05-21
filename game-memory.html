@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Memory Match — XenChee</title>
+  <link rel="stylesheet" href="/css/main.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <nav class="nav">
+    <a href="/feed.html" class="nav-brand">XenChee</a>
+    <div class="nav-actions">
+      <a href="/games.html" class="btn btn-ghost">← Games</a>
+      <button id="logout-btn" class="btn btn-ghost">Log Out</button>
+    </div>
+  </nav>
+
+  <div class="app-layout">
+    <div class="sidebar-left">
+      <ul class="sidebar-nav">
+        <li><a href="/feed.html"><span class="sidebar-nav-icon">🏠</span>Home</a></li>
+        <li><a href="/search.html"><span class="sidebar-nav-icon">🔍</span>Search</a></li>
+        <li><a href="/communities.html"><span class="sidebar-nav-icon">💬</span>Communities</a></li>
+        <li><a href="/events.html"><span class="sidebar-nav-icon">📅</span>Events</a></li>
+        <li><a href="/messages.html"><span class="sidebar-nav-icon">✉️</span>Messages</a></li>
+        <li><a href="/notifications.html"><span class="sidebar-nav-icon">🔔</span>Notifications</a></li>
+        <li><a href="/memories.html"><span class="sidebar-nav-icon">🕰️</span>Memories</a></li>
+        <li><a href="/games.html" class="active"><span class="sidebar-nav-icon">🎮</span>Games</a></li>
+        <li><a href="/profile.html"><span class="sidebar-nav-icon">👤</span>Profile</a></li>
+        <li><a href="/ecosystem.html"><span class="sidebar-nav-icon">🌐</span>Ecosystem</a></li>
+      </ul>
+    </div>
+
+    <div class="feed-main">
+      <div style="max-width:560px;margin:0 auto;">
+
+        <div style="text-align:center;margin-bottom:24px;">
+          <div style="font-size:48px;margin-bottom:8px;">🃏</div>
+          <div style="font-size:24px;font-weight:800;color:var(--text);margin-bottom:4px;">Memory Match</div>
+          <div style="font-size:14px;color:var(--text-muted);">Flip cards · Find matching pairs · Clear the board</div>
+        </div>
+
+        <!-- Stats Bar -->
+        <div style="display:flex;gap:12px;margin-bottom:16px;">
+          <div style="flex:1;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;">
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Moves</div>
+            <div id="moves" style="font-size:20px;font-weight:800;color:var(--primary);">0</div>
+          </div>
+          <div style="flex:1;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;">
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Pairs</div>
+            <div id="pairs" style="font-size:20px;font-weight:800;color:var(--primary);">0 / 0</div>
+          </div>
+          <div style="flex:1;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;">
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Time</div>
+            <div id="timer" style="font-size:20px;font-weight:800;color:var(--primary);">0s</div>
+          </div>
+          <button id="new-game-btn" style="background:var(--primary);color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;flex-shrink:0;">
+            New
+          </button>
+        </div>
+
+        <!-- Difficulty -->
+        <div style="display:flex;gap:8px;margin-bottom:16px;">
+          <button class="diff-btn btn btn-primary" data-size="4">4×4 Easy</button>
+          <button class="diff-btn btn btn-ghost" data-size="6">6×4 Medium</button>
+        </div>
+
+        <!-- Board -->
+        <div id="memory-board" style="display:grid;gap:10px;"></div>
+
+        <!-- Win Message -->
+        <div id="win-message" style="display:none;margin-top:20px;">
+          <div class="post-card" style="text-align:center;padding:32px 24px;">
+            <div style="font-size:48px;margin-bottom:12px;">🎉</div>
+            <div style="font-size:22px;font-weight:800;color:var(--text);margin-bottom:8px;">You cleared the board!</div>
+            <div id="win-stats" style="font-size:15px;color:var(--text-muted);margin-bottom:20px;"></div>
+            <div style="display:flex;gap:8px;justify-content:center;">
+              <button id="play-again-btn" class="btn btn-primary">Play Again</button>
+              <a href="/games.html" class="btn btn-ghost" style="text-decoration:none;">← Games</a>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="sidebar-right">
+      <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">
+        🃏 How to Play
+      </div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.8;margin-bottom:32px;">
+        <div>👆 Click any card to flip it</div>
+        <div>🔍 Flip a second card</div>
+        <div>✅ Match = cards stay face up</div>
+        <div>❌ No match = both flip back</div>
+        <div>🏆 Clear all pairs to win</div>
+      </div>
+
+      <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">
+        ⭐ Best Scores
+      </div>
+      <div id="best-scores" style="font-size:13px;color:var(--text-muted);line-height:1.8;">
+        <div>4×4: <span id="best-4x4">—</span></div>
+        <div>6×4: <span id="best-6x4">—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/supabase.js"></script>
+  <script>
+    async function waitForDb(timeout = 5000) {
+      const start = Date.now();
+      while (!window.db) {
+        if (Date.now() - start > timeout) throw new Error('timeout');
+        await new Promise(r => setTimeout(r, 50));
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      await waitForDb();
+      const user = await window.auth.getUser();
+      if (!user) { window.location.href = '/login.html'; return; }
+      document.getElementById('logout-btn').addEventListener('click', async () => {
+        await window.auth.signOut(); window.location.href = '/';
+      });
+      initMemory();
+    });
+
+    function initMemory() {
+      const EMOJIS = [
+        '🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯',
+        '🦁','🐮','🐷','🐸','🐙','🦄','🐝','🦋','🐬','🦅',
+        '🌈','⭐','🔥','💎','🎯','🎸','🚀','🌺','🍕','🎮'
+      ];
+
+      let cards = [];
+      let flipped = [];
+      let matched = 0;
+      let moves = 0;
+      let totalPairs = 0;
+      let locked = false;
+      let timerInterval = null;
+      let seconds = 0;
+      let gridSize = 4;
+      let started = false;
+
+      // Load best scores
+      function loadBest() {
+        const b4 = localStorage.getItem('memory_best_4');
+        const b6 = localStorage.getItem('memory_best_6');
+        document.getElementById('best-4x4').textContent = b4 ? `${b4} moves` : '—';
+        document.getElementById('best-6x4').textContent = b6 ? `${b6} moves` : '—';
+      }
+      loadBest();
+
+      function startTimer() {
+        clearInterval(timerInterval);
+        seconds = 0;
+        document.getElementById('timer').textContent = '0s';
+        timerInterval = setInterval(() => {
+          seconds++;
+          document.getElementById('timer').textContent = `${seconds}s`;
+        }, 1000);
+      }
+
+      function stopTimer() {
+        clearInterval(timerInterval);
+      }
+
+      function newGame() {
+        const cols = gridSize === 4 ? 4 : 6;
+        const rows = 4;
+        totalPairs = (cols * rows) / 2;
+        matched = 0;
+        moves = 0;
+        flipped = [];
+        locked = false;
+        started = false;
+        seconds = 0;
+
+        document.getElementById('moves').textContent = 0;
+        document.getElementById('pairs').textContent = `0 / ${totalPairs}`;
+        document.getElementById('timer').textContent = '0s';
+        document.getElementById('win-message').style.display = 'none';
+        clearInterval(timerInterval);
+
+        // Build card set
+        const pool = EMOJIS.slice(0, totalPairs);
+        const doubled = [...pool, ...pool];
+        // Shuffle
+        for (let i = doubled.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [doubled[i], doubled[j]] = [doubled[j], doubled[i]];
+        }
+
+        cards = doubled.map((emoji, idx) => ({
+          id: idx, emoji, flipped: false, matched: false
+        }));
+
+        const board = document.getElementById('memory-board');
+        board.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+        renderBoard();
+      }
+
+      function renderBoard() {
+        const board = document.getElementById('memory-board');
+        board.innerHTML = '';
+        cards.forEach(card => {
+          const el = document.createElement('div');
+          el.dataset.id = card.id;
+          el.style.cssText = `
+            height:80px;
+            border-radius:10px;
+            cursor:pointer;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            font-size:32px;
+            border:2px solid var(--border);
+            transition:all 0.2s ease;
+            user-select:none;
+            ${card.matched ? 'background:rgba(76,175,125,0.2);border-color:#4caf7d;' :
+              card.flipped ? 'background:var(--bg-card);' :
+              'background:var(--bg-input);'}
+          `;
+          el.textContent = (card.flipped || card.matched) ? card.emoji : '?';
+          if (!card.matched) {
+            el.addEventListener('click', () => handleFlip(card.id));
+            if (!card.flipped && !card.matched) {
+              el.addEventListener('mouseover', () => { el.style.borderColor = 'var(--primary)'; });
+              el.addEventListener('mouseout', () => { el.style.borderColor = 'var(--border)'; });
+            }
+          }
+          board.appendChild(el);
+        });
+      }
+
+      function handleFlip(id) {
+        if (locked) return;
+        const card = cards[id];
+        if (card.flipped || card.matched) return;
+
+        if (!started) {
+          started = true;
+          startTimer();
+        }
+
+        card.flipped = true;
+        flipped.push(id);
+        renderBoard();
+
+        if (flipped.length === 2) {
+          locked = true;
+          moves++;
+          document.getElementById('moves').textContent = moves;
+
+          const [a, b] = flipped;
+          if (cards[a].emoji === cards[b].emoji) {
+            // Match
+            cards[a].matched = true;
+            cards[b].matched = true;
+            matched++;
+            document.getElementById('pairs').textContent = `${matched} / ${totalPairs}`;
+            flipped = [];
+            locked = false;
+            renderBoard();
+
+            if (matched === totalPairs) {
+              stopTimer();
+              showWin();
+            }
+          } else {
+            // No match — flip back after delay
+            setTimeout(() => {
+              cards[a].flipped = false;
+              cards[b].flipped = false;
+              flipped = [];
+              locked = false;
+              renderBoard();
+            }, 900);
+          }
+        }
+      }
+
+      function showWin() {
+        const key = gridSize === 4 ? 'memory_best_4' : 'memory_best_6';
+        const prev = parseInt(localStorage.getItem(key) || '9999');
+        const isNew = moves < prev;
+        if (isNew) localStorage.setItem(key, moves);
+        loadBest();
+
+        const stars = moves <= totalPairs + 2 ? '⭐⭐⭐' : moves <= totalPairs * 2 ? '⭐⭐' : '⭐';
+        document.getElementById('win-stats').innerHTML = `
+          ${stars}<br>
+          ${moves} moves · ${seconds}s
+          ${isNew ? '<br><span style="color:#4caf7d;font-weight:700;">🏆 New best!</span>' : ''}
+        `;
+        document.getElementById('win-message').style.display = 'block';
+        document.getElementById('win-message').scrollIntoView({ behavior: 'smooth' });
+      }
+
+      // Difficulty buttons
+      document.querySelectorAll('.diff-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          gridSize = parseInt(btn.dataset.size);
+          document.querySelectorAll('.diff-btn').forEach(b => b.className = 'diff-btn btn btn-ghost');
+          btn.className = 'diff-btn btn btn-primary';
+          newGame();
+        });
+      });
+
+      document.getElementById('new-game-btn').addEventListener('click', newGame);
+      document.getElementById('play-again-btn').addEventListener('click', newGame);
+
+      newGame();
+    }
+  </script>
+</body>
+</html>
