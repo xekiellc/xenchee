@@ -3,14 +3,33 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Memory Match — XenChee</title>
+  <title>Memory Match — Voxxee</title>
+
+  <!-- OG Meta Tags -->
+  <meta property="og:title" content="Memory Match — Voxxee Games" />
+  <meta property="og:description" content="Play Memory Match on Voxxee. Flip cards and find matching pairs. Test your memory." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://voxxee.com/game-memory.html" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Memory Match — Voxxee Games" />
+  <meta name="twitter:description" content="Play Memory Match on Voxxee. Flip cards and find matching pairs. Test your memory." />
+
+  <!-- GA4 -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-FSCZJEWZ6F"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-FSCZJEWZ6F');
+  </script>
+
   <link rel="stylesheet" href="/css/main.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
   <nav class="nav">
-    <a href="/feed.html" class="nav-brand">XenChee</a>
+    <a href="/feed.html" class="nav-brand">Voxxee</a>
     <div class="nav-actions">
       <a href="/games.html" class="btn btn-ghost">← Games</a>
       <button id="logout-btn" class="btn btn-ghost">Log Out</button>
@@ -146,7 +165,6 @@
       let gridSize = 4;
       let started = false;
 
-      // Load best scores
       function loadBest() {
         const b4 = localStorage.getItem('memory_best_4');
         const b6 = localStorage.getItem('memory_best_6');
@@ -186,10 +204,8 @@
         document.getElementById('win-message').style.display = 'none';
         clearInterval(timerInterval);
 
-        // Build card set
         const pool = EMOJIS.slice(0, totalPairs);
         const doubled = [...pool, ...pool];
-        // Shuffle
         for (let i = doubled.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
           [doubled[i], doubled[j]] = [doubled[j], doubled[i]];
@@ -258,7 +274,6 @@
 
           const [a, b] = flipped;
           if (cards[a].emoji === cards[b].emoji) {
-            // Match
             cards[a].matched = true;
             cards[b].matched = true;
             matched++;
@@ -266,13 +281,11 @@
             flipped = [];
             locked = false;
             renderBoard();
-
             if (matched === totalPairs) {
               stopTimer();
               showWin();
             }
           } else {
-            // No match — flip back after delay
             setTimeout(() => {
               cards[a].flipped = false;
               cards[b].flipped = false;
@@ -301,7 +314,6 @@
         document.getElementById('win-message').scrollIntoView({ behavior: 'smooth' });
       }
 
-      // Difficulty buttons
       document.querySelectorAll('.diff-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           gridSize = parseInt(btn.dataset.size);
