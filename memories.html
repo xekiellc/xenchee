@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Memories — XenChee</title>
+  <link rel="stylesheet" href="/css/main.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <nav class="nav">
+    <a href="/feed.html" class="nav-brand">XenChee</a>
+    <div class="nav-actions">
+      <a href="/feed.html" class="btn btn-ghost">Feed</a>
+      <a href="/profile.html" class="btn btn-ghost">Profile</a>
+      <button id="logout-btn" class="btn btn-ghost">Log Out</button>
+    </div>
+  </nav>
+
+  <div class="app-layout">
+    <div class="sidebar-left">
+      <ul class="sidebar-nav">
+        <li><a href="/feed.html"><span class="sidebar-nav-icon">🏠</span>Home</a></li>
+        <li><a href="/search.html"><span class="sidebar-nav-icon">🔍</span>Search</a></li>
+        <li><a href="/communities.html"><span class="sidebar-nav-icon">💬</span>Communities</a></li>
+        <li><a href="/events.html"><span class="sidebar-nav-icon">📅</span>Events</a></li>
+        <li><a href="/messages.html"><span class="sidebar-nav-icon">✉️</span>Messages</a></li>
+        <li><a href="/notifications.html"><span class="sidebar-nav-icon">🔔</span>Notifications</a></li>
+        <li><a href="/memories.html" class="active"><span class="sidebar-nav-icon">📅</span>Memories</a></li>
+        <li><a href="/profile.html"><span class="sidebar-nav-icon">👤</span>Profile</a></li>
+        <li><a href="/ecosystem.html"><span class="sidebar-nav-icon">🌐</span>Ecosystem</a></li>
+      </ul>
+    </div>
+
+    <div class="feed-main">
+
+      <!-- Header -->
+      <div style="margin-bottom:24px;">
+        <div style="font-size:24px;font-weight:800;color:var(--text);margin-bottom:4px;">📅 Memories</div>
+        <div style="font-size:15px;color:var(--text-muted);">Look back on what you posted on this day in previous years.</div>
+      </div>
+
+      <!-- Date Filter -->
+      <div class="post-card" style="margin-bottom:24px;">
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+          <div style="flex:1;">
+            <label class="form-label" style="margin-bottom:6px;display:block;">Browse a specific date</label>
+            <input type="date" id="memory-date" class="form-input" style="max-width:220px;" />
+          </div>
+          <button id="browse-btn" class="btn btn-primary" style="align-self:flex-end;">Browse</button>
+          <button id="today-btn" class="btn btn-ghost" style="align-self:flex-end;">Today</button>
+        </div>
+      </div>
+
+      <!-- On This Day Header -->
+      <div id="memory-date-label" style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:16px;"></div>
+
+      <!-- Memories Feed -->
+      <div id="memories-container">
+        <div class="loading"><div class="spinner"></div>Loading memories...</div>
+      </div>
+
+    </div>
+
+    <div class="sidebar-right">
+      <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">
+        On This Day
+      </div>
+      <div id="memory-years-sidebar" style="font-size:14px;color:var(--text-muted);">Loading...</div>
+    </div>
+  </div>
+
+  <script src="/js/supabase.js"></script>
+  <script src="/js/memories.js"></script>
+</body>
+</html>
