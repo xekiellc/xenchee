@@ -6,6 +6,10 @@ async function initSupabase() {
   const { createClient } = supabase;
   window.db = createClient(config.supabaseUrl, config.supabaseAnonKey);
 
+  // Expose API keys globally so all pages can use them
+  window.giphyApiKey = config.GIPHY_API_KEY;
+  window.recaptchaSiteKey = config.RECAPTCHA_SITE_KEY;
+
   window.auth = {
     async signUp(email, password, dateOfBirth) {
       const { data, error } = await window.db.auth.signUp({
