@@ -107,7 +107,6 @@
               placeholder="Say exactly what you mean..."
               maxlength="2000"
             ></textarea>
-            <!-- Mention dropdown -->
             <div id="post-mention-dropdown" style="display:none;position:absolute;left:0;right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.3);z-index:200;max-height:220px;overflow-y:auto;padding:6px;"></div>
           </div>
         </div>
@@ -145,10 +144,12 @@
         </div>
       </div>
 
-      <!-- Feed Toggle -->
-      <div style="display:flex;gap:8px;margin-bottom:20px;">
-        <button class="btn btn-primary" id="feed-all-btn" style="font-size:13px;">All Posts</button>
-        <button class="btn btn-ghost" id="feed-following-btn" style="font-size:13px;">Following</button>
+      <!-- Feed Tabs -->
+      <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
+        <button class="btn btn-primary feed-tab-btn" data-mode="latest" style="font-size:13px;">⏱ Latest</button>
+        <button class="btn btn-ghost feed-tab-btn" data-mode="top" style="font-size:13px;">🔥 Top Today</button>
+        <button class="btn btn-ghost feed-tab-btn" data-mode="hot" style="font-size:13px;">📈 Hot This Week</button>
+        <button class="btn btn-ghost feed-tab-btn" data-mode="following" style="font-size:13px;">👥 Following</button>
       </div>
 
       <!-- Posts Feed -->
