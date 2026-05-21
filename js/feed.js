@@ -145,7 +145,6 @@ function setupEventListeners() {
     window.location.href = '/';
   });
 
-  // Feed tab buttons
   document.querySelectorAll('.feed-tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       feedMode = btn.dataset.mode;
@@ -205,7 +204,6 @@ async function loadFeed() {
       posts = data || [];
 
     } else if (feedMode === 'top') {
-      // Top Today — fetch recent posts then sort by reaction count
       const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       let q = window.db.from('posts').select('*').eq('is_removed', false)
         .gte('created_at', since).limit(200);
@@ -213,7 +211,6 @@ async function loadFeed() {
       const { data, error } = await q;
       if (error) throw error;
       const allPosts = data || [];
-
       if (allPosts.length > 0) {
         const postIds = allPosts.map(p => p.id);
         const { data: reactions } = await window.db
@@ -228,7 +225,6 @@ async function loadFeed() {
       }
 
     } else if (feedMode === 'hot') {
-      // Hot This Week — fetch last 7 days, sort by reactions + comments combined
       const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
       let q = window.db.from('posts').select('*').eq('is_removed', false)
         .gte('created_at', since).limit(200);
@@ -236,7 +232,6 @@ async function loadFeed() {
       const { data, error } = await q;
       if (error) throw error;
       const allPosts = data || [];
-
       if (allPosts.length > 0) {
         const postIds = allPosts.map(p => p.id);
         const [reactionsRes, commentsRes] = await Promise.all([
@@ -298,6 +293,23 @@ async function loadFeed() {
     }
 
     const postIds = posts.map(p => p.id);
+
+    // Fetch original posts for reposts
+    const sharedPostIds = [...new Set(posts.filter(p => p.shared_post_id).map(p => p.shared_post_id))];
+    let sharedPostMap = {};
+    let sharedProfileMap = {};
+    if (sharedPostIds.length > 0) {
+      const { data: sharedPosts } = await window.db
+        .from('posts').select('*').in('id', sharedPostIds);
+      if (sharedPosts) {
+        sharedPosts.forEach(p => { sharedPostMap[p.id] = p; });
+        const sharedUserIds = [...new Set(sharedPosts.map(p => p.user_id))];
+        const { data: sharedProfiles } = await window.db
+          .from('profiles').select('user_id, username, display_name, is_verified, verified_type')
+          .in('user_id', sharedUserIds);
+        if (sharedProfiles) sharedProfiles.forEach(p => { sharedProfileMap[p.user_id] = p; });
+      }
+    }
 
     const { data: reactions } = await window.db
       .from('reactions').select('target_id, reaction_type')
@@ -365,7 +377,7 @@ async function loadFeed() {
     }
 
     container.innerHTML = posts.map(post =>
-      renderPost(post, profileMap, communityMap, reactionMap, commentCountMap, myReactionMap, viewCountMap, pollMap, shareCountMap)
+      renderPost(post, profileMap, communityMap, reactionMap, commentCountMap, myReactionMap, viewCountMap, pollMap, shareCountMap, sharedPostMap, sharedProfileMap)
     ).join('');
 
     // Share modal
@@ -447,6 +459,43 @@ async function loadFeed() {
     console.error('Feed error:', err);
     container.innerHTML = '<div class="loading">Could not load feed. Please refresh.</div>';
   }
+}
+
+function renderSharedPost(sharedPost, sharedProfileMap) {
+  if (!sharedPost) {
+    return `
+      <div style="margin-top:12px;padding:14px;background:var(--bg-input);border:1px solid var(--border);border-radius:12px;">
+        <div style="font-size:13px;color:var(--text-muted);font-style:italic;">Original post unavailable.</div>
+      </div>
+    `;
+  }
+  const profile = sharedProfileMap[sharedPost.user_id];
+  const username = profile?.username || 'unknown';
+  const displayName = profile?.display_name || username;
+  const initial = username.charAt(0).toUpperCase();
+  const verifiedBadge = getVerifiedBadge(profile);
+  const timestamp = new Date(sharedPost.created_at).toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+  });
+  const content = sharedPost.is_removed
+    ? '<em style="color:var(--text-muted);">This post has been deleted.</em>'
+    : escapeHtml(sharedPost.content || '');
+
+  return `
+    <div style="margin-top:12px;padding:14px;background:var(--bg-input);border:1px solid var(--border);border-radius:12px;cursor:pointer;"
+      onclick="window.location.href='/comments.html?post=${sharedPost.id}'">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">${initial}</div>
+        <div>
+          <span style="font-size:13px;font-weight:700;color:var(--text);">${escapeHtml(displayName)}</span>
+          ${verifiedBadge}
+          <span style="font-size:12px;color:var(--text-muted);"> @${escapeHtml(username)}</span>
+        </div>
+        <span style="font-size:12px;color:var(--text-muted);margin-left:auto;">${timestamp}</span>
+      </div>
+      <div style="font-size:14px;color:var(--text);line-height:1.5;">${content}</div>
+    </div>
+  `;
 }
 
 function openReportModal(postId) {
@@ -573,7 +622,7 @@ async function recordFeedViews(postIds) {
   } catch (err) {}
 }
 
-function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap, myReactionMap, viewCountMap, pollMap, shareCountMap) {
+function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap, myReactionMap, viewCountMap, pollMap, shareCountMap, sharedPostMap, sharedProfileMap) {
   const profile = profileMap[post.user_id];
   const username = profile?.username || 'unknown';
   const displayName = profile?.display_name || username;
@@ -607,6 +656,16 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
   const isOwnPost = post.user_id === currentUser?.id;
   const viewLabel = viewCount > 0
     ? `<span style="font-size:12px;color:var(--text-muted);">👁 ${viewCount.toLocaleString()} view${viewCount !== 1 ? 's' : ''}</span>` : '';
+
+  // Repost embedded original
+  const sharedPostHtml = post.shared_post_id && sharedPostMap
+    ? renderSharedPost(sharedPostMap[post.shared_post_id] || null, sharedProfileMap || {})
+    : '';
+
+  // Strip [Reposted] label from repost content for cleaner display
+  const postContent = post.shared_post_id
+    ? (post.content || '').replace(/\n\n🔁 \[Reposted\]$/, '').trim()
+    : (post.content || '');
 
   const poll = pollMap ? pollMap[post.id] : null;
   let pollHtml = '';
@@ -652,7 +711,6 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
       </div>`;
   }
 
-  // Hot/Top mode label
   const modeLabel = (feedMode === 'top' || feedMode === 'hot') ? (() => {
     const total = totalReactions + commentCount;
     if (total === 0) return '';
@@ -702,7 +760,8 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
       </div>
 
       <div class="post-content-wrapper">
-        <div class="post-content">${renderMentions(post.content || '')}</div>
+        ${postContent ? `<div class="post-content">${renderMentions(postContent)}</div>` : ''}
+        ${sharedPostHtml}
       </div>
 
       ${pollHtml}
