@@ -296,6 +296,19 @@ async function loadFeed() {
       });
     }
 
+    // Fetch share counts
+    const { data: shares } = await window.db
+      .from('shares')
+      .select('post_id')
+      .in('post_id', postIds);
+
+    const shareCountMap = {};
+    if (shares) {
+      shares.forEach(s => {
+        shareCountMap[s.post_id] = (shareCountMap[s.post_id] || 0) + 1;
+      });
+    }
+
     const { data: polls } = await window.db
       .from('polls')
       .select('*')
@@ -337,8 +350,39 @@ async function loadFeed() {
     }
 
     container.innerHTML = posts.map(post =>
-      renderPost(post, profileMap, communityMap, reactionMap, commentCountMap, myReactionMap, viewCountMap, pollMap)
+      renderPost(post, profileMap, communityMap, reactionMap, commentCountMap, myReactionMap, viewCountMap, pollMap, shareCountMap)
     ).join('');
+
+    // Share modal container — one global modal
+    if (!document.getElementById('share-modal')) {
+      const modal = document.createElement('div');
+      modal.id = 'share-modal';
+      modal.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;padding:20px;';
+      modal.innerHTML = `
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:16px;width:100%;max-width:520px;overflow:hidden;">
+          <div style="padding:20px 24px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+            <div style="font-size:17px;font-weight:700;color:var(--text);">🔁 Repost to Feed</div>
+            <button id="share-modal-close" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--text-muted);line-height:1;">×</button>
+          </div>
+          <div style="padding:20px 24px;">
+            <textarea id="share-comment" class="form-input" rows="3"
+              placeholder="Add your thoughts... (optional)"
+              maxlength="500"
+              style="width:100%;resize:none;margin-bottom:16px;font-size:15px;"></textarea>
+            <div id="share-post-preview" style="background:var(--bg-input);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px;font-size:14px;color:var(--text-muted);"></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;">
+              <button id="share-modal-cancel" class="btn btn-ghost">Cancel</button>
+              <button id="share-modal-submit" class="btn btn-primary">🔁 Repost</button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+
+      document.getElementById('share-modal-close').addEventListener('click', closeShareModal);
+      document.getElementById('share-modal-cancel').addEventListener('click', closeShareModal);
+      modal.addEventListener('click', (e) => { if (e.target === modal) closeShareModal(); });
+    }
 
     attachPostListeners();
     recordFeedViews(postIds);
@@ -346,6 +390,88 @@ async function loadFeed() {
   } catch (err) {
     console.error('Feed error:', err);
     container.innerHTML = '<div class="loading">Could not load feed. Please refresh.</div>';
+  }
+}
+
+function openShareModal(postId, postContent, postUsername) {
+  const modal = document.getElementById('share-modal');
+  if (!modal) return;
+
+  document.getElementById('share-comment').value = '';
+  document.getElementById('share-post-preview').innerHTML = `
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">@${escapeHtml(postUsername)} wrote:</div>
+    <div style="font-size:14px;color:var(--text);line-height:1.5;">${escapeHtml((postContent || '').slice(0, 200))}${(postContent || '').length > 200 ? '...' : ''}</div>
+  `;
+
+  const submitBtn = document.getElementById('share-modal-submit');
+  submitBtn.onclick = () => handleShare(postId);
+
+  modal.style.display = 'flex';
+  document.getElementById('share-comment').focus();
+}
+
+function closeShareModal() {
+  const modal = document.getElementById('share-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function handleShare(postId) {
+  if (!currentUser) return;
+
+  const comment = document.getElementById('share-comment').value.trim();
+  const submitBtn = document.getElementById('share-modal-submit');
+  submitBtn.textContent = 'Reposting...';
+  submitBtn.disabled = true;
+
+  try {
+    // Insert into shares table
+    const { error: shareError } = await window.db
+      .from('shares')
+      .insert({
+        post_id: postId,
+        user_id: currentUser.id,
+        comment: comment
+      });
+
+    if (shareError) throw shareError;
+
+    // Also create a post in the feed referencing the share
+    const shareContent = comment
+      ? `${comment}\n\n🔁 [Reposted]`
+      : '🔁 [Reposted]';
+
+    await window.db
+      .from('posts')
+      .insert({
+        user_id: currentUser.id,
+        content: shareContent,
+        shared_post_id: postId
+      });
+
+    closeShareModal();
+
+    // Update share count on button
+    const shareBtn = document.querySelector(`.share-btn[data-post-id="${postId}"]`);
+    if (shareBtn) {
+      const current = parseInt(shareBtn.dataset.shareCount || '0');
+      const newCount = current + 1;
+      shareBtn.dataset.shareCount = newCount;
+      shareBtn.textContent = `🔁 ${newCount}`;
+      shareBtn.style.color = 'var(--primary)';
+      shareBtn.style.fontWeight = '700';
+      setTimeout(() => {
+        shareBtn.style.color = '';
+        shareBtn.style.fontWeight = '';
+      }, 2000);
+    }
+
+  } catch (err) {
+    console.error('Share error:', err);
+    // If shared_post_id column doesn't exist yet, still record the share
+    closeShareModal();
+  } finally {
+    submitBtn.textContent = '🔁 Repost';
+    submitBtn.disabled = false;
   }
 }
 
@@ -363,7 +489,7 @@ async function recordFeedViews(postIds) {
   } catch (err) {}
 }
 
-function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap, myReactionMap, viewCountMap, pollMap) {
+function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap, myReactionMap, viewCountMap, pollMap, shareCountMap) {
   const profile = profileMap[post.user_id];
   const username = profile?.username || 'unknown';
   const displayName = profile?.display_name || username;
@@ -382,6 +508,7 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
   const myReaction = myReactionMap[post.id];
   const postReactions = reactionMap[post.id] || {};
   const viewCount = viewCountMap ? (viewCountMap[post.id] || 0) : 0;
+  const shareCount = shareCountMap ? (shareCountMap[post.id] || 0) : 0;
 
   const totalReactions = Object.values(postReactions).reduce((a, b) => a + b, 0);
   const topEmojis = REACTIONS
@@ -535,8 +662,18 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
           </div>
         </div>
 
-        <button class="post-action-btn share-btn" data-post-id="${post.id}">
-          🔗 Share
+        <!-- Share / Repost button -->
+        <button class="post-action-btn share-btn"
+          data-post-id="${post.id}"
+          data-post-content="${escapeHtml(post.content || '')}"
+          data-post-username="${escapeHtml(username)}"
+          data-share-count="${shareCount}">
+          🔁 ${shareCount > 0 ? shareCount : 'Repost'}
+        </button>
+
+        <!-- Copy link button -->
+        <button class="post-action-btn copy-link-btn" data-post-id="${post.id}">
+          🔗
         </button>
       </div>
     </div>
@@ -597,16 +734,6 @@ function attachPostListeners() {
     });
   });
 
-  document.querySelectorAll('.share-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const url = `${window.location.origin}/post.html?id=${btn.dataset.postId}`;
-      navigator.clipboard.writeText(url).then(() => {
-        btn.textContent = '✅ Copied';
-        setTimeout(() => { btn.textContent = '🔗 Share'; }, 2000);
-      });
-    });
-  });
-
   document.querySelectorAll('.comment-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       window.location.href = `/comments.html?post=${btn.dataset.postId}`;
@@ -617,6 +744,27 @@ function attachPostListeners() {
     btn.addEventListener('click', () => handlePollVote(btn.dataset.pollId, parseInt(btn.dataset.optionIndex)));
   });
 
+  // Share / Repost buttons
+  document.querySelectorAll('.share-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const postId = btn.dataset.postId;
+      const content = btn.dataset.postContent;
+      const username = btn.dataset.postUsername;
+      openShareModal(postId, content, username);
+    });
+  });
+
+  // Copy link buttons
+  document.querySelectorAll('.copy-link-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const url = `${window.location.origin}/comments.html?post=${btn.dataset.postId}`;
+      navigator.clipboard.writeText(url).then(() => {
+        btn.textContent = '✅';
+        setTimeout(() => { btn.textContent = '🔗'; }, 2000);
+      });
+    });
+  });
+
   // GIF react buttons
   document.querySelectorAll('.gif-react-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
@@ -624,16 +772,11 @@ function attachPostListeners() {
       const postId = btn.dataset.postId;
       const panel = document.querySelector(`.gif-picker-panel[data-post-id="${postId}"]`);
       const isVisible = panel.style.display === 'block';
-
-      // Close all other panels
       document.querySelectorAll('.gif-picker-panel').forEach(p => p.style.display = 'none');
-
       if (!isVisible) {
         panel.style.display = 'block';
         activeGifPicker = postId;
-        // Load trending GIFs for this panel
         loadGifPickerTrending(postId);
-        // Focus search
         panel.querySelector('.gif-search-input').focus();
       } else {
         activeGifPicker = null;
@@ -641,7 +784,6 @@ function attachPostListeners() {
     });
   });
 
-  // GIF search buttons
   document.querySelectorAll('.gif-search-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -652,7 +794,6 @@ function attachPostListeners() {
     });
   });
 
-  // GIF search input enter key
   document.querySelectorAll('.gif-search-input').forEach(input => {
     input.addEventListener('keydown', (e) => {
       e.stopPropagation();
@@ -670,13 +811,10 @@ function attachPostListeners() {
 async function loadGifPickerTrending(postId) {
   const resultsEl = document.querySelector(`.gif-results[data-post-id="${postId}"]`);
   if (!resultsEl) return;
-
   resultsEl.innerHTML = '<div style="grid-column:1/-1;font-size:12px;color:var(--text-muted);padding:8px;text-align:center;">Loading...</div>';
-
   try {
     const key = window.giphyApiKey;
     if (!key) { resultsEl.innerHTML = '<div style="grid-column:1/-1;font-size:12px;color:var(--text-muted);padding:8px;">GIFs unavailable.</div>'; return; }
-
     const res = await fetch(`https://api.giphy.com/v1/gifs/trending?api_key=${key}&limit=12&rating=g`);
     const data = await res.json();
     renderGifPickerResults(postId, data.data);
@@ -688,9 +826,7 @@ async function loadGifPickerTrending(postId) {
 async function searchGifsForPost(postId, query) {
   const resultsEl = document.querySelector(`.gif-results[data-post-id="${postId}"]`);
   if (!resultsEl) return;
-
   resultsEl.innerHTML = '<div style="grid-column:1/-1;font-size:12px;color:var(--text-muted);padding:8px;text-align:center;">Searching...</div>';
-
   try {
     const key = window.giphyApiKey;
     if (!key) return;
@@ -705,12 +841,10 @@ async function searchGifsForPost(postId, query) {
 function renderGifPickerResults(postId, gifs) {
   const resultsEl = document.querySelector(`.gif-results[data-post-id="${postId}"]`);
   if (!resultsEl) return;
-
   if (!gifs || gifs.length === 0) {
     resultsEl.innerHTML = '<div style="grid-column:1/-1;font-size:12px;color:var(--text-muted);padding:8px;">No GIFs found.</div>';
     return;
   }
-
   resultsEl.innerHTML = gifs.map(gif => {
     const preview = gif.images.fixed_height_small.url;
     const full = gif.images.fixed_height.url;
@@ -722,53 +856,35 @@ function renderGifPickerResults(postId, gifs) {
         onmouseout="this.style.opacity='1'" />
     `;
   }).join('');
-
   resultsEl.querySelectorAll('.gif-pick-item').forEach(img => {
     img.addEventListener('click', (e) => {
       e.stopPropagation();
-      const gifUrl = img.dataset.full;
-      postGifReaction(postId, gifUrl);
+      postGifReaction(postId, img.dataset.full);
     });
   });
 }
 
 async function postGifReaction(postId, gifUrl) {
   if (!currentUser) return;
-
-  // Close picker
   document.querySelectorAll('.gif-picker-panel').forEach(p => p.style.display = 'none');
   activeGifPicker = null;
-
   try {
     const { error } = await window.db
       .from('comments')
-      .insert({
-        post_id: postId,
-        user_id: currentUser.id,
-        content: gifUrl
-      });
-
+      .insert({ post_id: postId, user_id: currentUser.id, content: gifUrl });
     if (error) throw error;
-
-    // Update comment count on the button
     const commentBtn = document.querySelector(`.comment-btn[data-post-id="${postId}"] span`);
     if (commentBtn) {
       const current = parseInt(commentBtn.textContent) || 0;
       const newCount = current + 1;
       commentBtn.textContent = `${newCount} Comment${newCount !== 1 ? 's' : ''}`;
     }
-
-    // Brief flash on GIF button to confirm
     const gifBtn = document.querySelector(`.gif-react-btn[data-post-id="${postId}"]`);
     if (gifBtn) {
       gifBtn.textContent = '✅ Sent!';
       gifBtn.style.color = '#4caf7d';
-      setTimeout(() => {
-        gifBtn.textContent = '🎞️ GIF';
-        gifBtn.style.color = '';
-      }, 2000);
+      setTimeout(() => { gifBtn.textContent = '🎞️ GIF'; gifBtn.style.color = ''; }, 2000);
     }
-
   } catch (err) {
     console.error('GIF reaction error:', err);
   }
@@ -778,15 +894,10 @@ async function handlePollVote(pollId, optionIndex) {
   if (!currentUser) return;
   try {
     const { data: existing } = await window.db
-      .from('poll_votes')
-      .select('id')
-      .eq('poll_id', pollId)
-      .eq('user_id', currentUser.id)
-      .single();
+      .from('poll_votes').select('id').eq('poll_id', pollId).eq('user_id', currentUser.id).single();
     if (existing) return;
     const { error } = await window.db
-      .from('poll_votes')
-      .insert({ poll_id: pollId, user_id: currentUser.id, option_index: optionIndex });
+      .from('poll_votes').insert({ poll_id: pollId, user_id: currentUser.id, option_index: optionIndex });
     if (error) throw error;
     await refreshPollResults(pollId);
   } catch (err) {
@@ -867,10 +978,8 @@ async function handleEditPost(postId, newContent, wrapper, originalContent) {
   saveBtn.disabled = true;
   try {
     const { error } = await window.db
-      .from('posts')
-      .update({ content: newContent, is_edited: true })
-      .eq('id', postId)
-      .eq('user_id', currentUser.id);
+      .from('posts').update({ content: newContent, is_edited: true })
+      .eq('id', postId).eq('user_id', currentUser.id);
     if (error) throw error;
     wrapper.innerHTML = `<div class="post-content">${renderMentions(newContent)}</div>`;
     const card = document.querySelector(`.post-card[data-post-id="${postId}"]`);
@@ -893,12 +1002,8 @@ async function handleReaction(postId, type) {
   if (!currentUser) return;
   try {
     const { data: existing } = await window.db
-      .from('reactions')
-      .select('*')
-      .eq('user_id', currentUser.id)
-      .eq('target_id', postId)
-      .eq('target_type', 'post')
-      .single();
+      .from('reactions').select('*')
+      .eq('user_id', currentUser.id).eq('target_id', postId).eq('target_type', 'post').single();
     if (existing) {
       if (existing.reaction_type === type) {
         await window.db.from('reactions').delete().eq('id', existing.id);
@@ -907,10 +1012,7 @@ async function handleReaction(postId, type) {
       }
     } else {
       await window.db.from('reactions').insert({
-        user_id: currentUser.id,
-        target_id: postId,
-        target_type: 'post',
-        reaction_type: type
+        user_id: currentUser.id, target_id: postId, target_type: 'post', reaction_type: type
       });
     }
     await refreshPostReactions(postId);
@@ -921,10 +1023,8 @@ async function handleReaction(postId, type) {
 
 async function refreshPostReactions(postId) {
   const { data: reactions } = await window.db
-    .from('reactions')
-    .select('reaction_type')
-    .eq('target_id', postId)
-    .eq('target_type', 'post');
+    .from('reactions').select('reaction_type')
+    .eq('target_id', postId).eq('target_type', 'post');
   const card = document.querySelector(`.post-card[data-post-id="${postId}"]`);
   if (!card) return;
   const counts = {};
@@ -933,9 +1033,7 @@ async function refreshPostReactions(postId) {
   const topEmojis = REACTIONS
     .filter(r => counts[r.type] > 0)
     .sort((a, b) => (counts[b.type] || 0) - (counts[a.type] || 0))
-    .slice(0, 3)
-    .map(r => r.emoji)
-    .join('');
+    .slice(0, 3).map(r => r.emoji).join('');
   let summary = card.querySelector('.reaction-summary');
   if (total > 0) {
     if (!summary) {
@@ -950,12 +1048,8 @@ async function refreshPostReactions(postId) {
     summary.parentElement.remove();
   }
   const { data: myReaction } = await window.db
-    .from('reactions')
-    .select('reaction_type')
-    .eq('target_id', postId)
-    .eq('target_type', 'post')
-    .eq('user_id', currentUser.id)
-    .single();
+    .from('reactions').select('reaction_type')
+    .eq('target_id', postId).eq('target_type', 'post').eq('user_id', currentUser.id).single();
   const reactBtn = card.querySelector('.react-btn');
   if (reactBtn) {
     const myReactionObj = REACTIONS.find(r => r.type === myReaction?.reaction_type);
@@ -975,10 +1069,7 @@ async function handleCreatePost() {
   btn.disabled = true;
   try {
     const { data: post, error: postError } = await window.db
-      .from('posts')
-      .insert({ user_id: currentUser.id, content: content })
-      .select()
-      .single();
+      .from('posts').insert({ user_id: currentUser.id, content }).select().single();
     if (postError) throw postError;
     if (hasPoll && post) {
       const question = document.getElementById('poll-question').value.trim();
@@ -989,27 +1080,19 @@ async function handleCreatePost() {
         const expiresAt = new Date();
         expiresAt.setHours(expiresAt.getHours() + duration);
         await window.db.from('polls').insert({
-          post_id: post.id,
-          user_id: currentUser.id,
-          question,
-          options,
-          duration_hours: duration,
-          expires_at: expiresAt.toISOString()
+          post_id: post.id, user_id: currentUser.id, question, options,
+          duration_hours: duration, expires_at: expiresAt.toISOString()
         });
       }
     }
-    await window.db
-      .from('profiles')
+    await window.db.from('profiles')
       .update({ post_count: (currentProfile?.post_count || 0) + 1 })
       .eq('user_id', currentUser.id);
     document.getElementById('post-content').value = '';
     if (hasPoll) {
       document.getElementById('poll-creator').style.display = 'none';
       document.getElementById('poll-question').value = '';
-      document.querySelectorAll('.poll-option').forEach((el, i) => {
-        if (i < 2) el.value = '';
-        else el.remove();
-      });
+      document.querySelectorAll('.poll-option').forEach((el, i) => { if (i < 2) el.value = ''; else el.remove(); });
       pollVisible = false;
     }
     btn.textContent = 'Post';
@@ -1033,11 +1116,7 @@ async function loadSidebarCommunities() {
   const container = document.getElementById('sidebar-communities');
   if (!container) return;
   const { data: communities } = await window.db
-    .from('communities')
-    .select('name, slug')
-    .eq('is_official', true)
-    .order('name')
-    .limit(8);
+    .from('communities').select('name, slug').eq('is_official', true).order('name').limit(8);
   if (!communities) return;
   container.innerHTML = communities.map(c => `
     <a href="/community.html?slug=${c.slug}" style="display:block;padding:8px 16px;border-radius:8px;color:var(--text-secondary);font-size:14px;text-decoration:none;transition:all 0.15s ease;">
@@ -1054,11 +1133,8 @@ async function loadTrendingCommunities() {
   const container = document.getElementById('trending-communities');
   if (!container) return;
   const { data: communities } = await window.db
-    .from('communities')
-    .select('name, slug, member_count')
-    .eq('is_official', true)
-    .order('member_count', { ascending: false })
-    .limit(5);
+    .from('communities').select('name, slug, member_count').eq('is_official', true)
+    .order('member_count', { ascending: false }).limit(5);
   if (!communities) return;
   container.innerHTML = communities.map(c => `
     <a href="/community.html?slug=${c.slug}" style="display:block;padding:12px;border-radius:8px;margin-bottom:8px;background:var(--bg-card);border:1px solid var(--border);text-decoration:none;transition:all 0.15s ease;">
@@ -1072,9 +1148,7 @@ async function loadEcosystemSidebar() {
   const container = document.getElementById('ecosystem-sidebar');
   if (!container) return;
   const { data: cards } = await window.db
-    .from('ecosystem_cards')
-    .select('name, tagline, status')
-    .order('display_order');
+    .from('ecosystem_cards').select('name, tagline, status').order('display_order');
   if (!cards) return;
   container.innerHTML = cards.map(card => `
     <div style="padding:12px;border-radius:8px;margin-bottom:8px;background:var(--bg-card);border:1px solid var(--border);">
