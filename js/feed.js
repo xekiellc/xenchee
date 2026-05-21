@@ -215,7 +215,12 @@ async function loadFeed() {
       postsQuery = postsQuery.in('user_id', followingIds);
     }
 
-    const { data: posts, error } = await postsQuery;
+    // Filter adult content at query level
+    if (!currentProfile?.show_adult_content) {
+      postsQuery = postsQuery.eq('is_adult', false);
+    }
+
+    let { data: posts, error } = await postsQuery;
     if (error) throw error;
 
     if (!posts || posts.length === 0) {
@@ -296,7 +301,6 @@ async function loadFeed() {
       });
     }
 
-    // Fetch share counts
     const { data: shares } = await window.db
       .from('shares')
       .select('post_id')
@@ -353,7 +357,6 @@ async function loadFeed() {
       renderPost(post, profileMap, communityMap, reactionMap, commentCountMap, myReactionMap, viewCountMap, pollMap, shareCountMap)
     ).join('');
 
-    // Share modal container — one global modal
     if (!document.getElementById('share-modal')) {
       const modal = document.createElement('div');
       modal.id = 'share-modal';
@@ -378,7 +381,6 @@ async function loadFeed() {
         </div>
       `;
       document.body.appendChild(modal);
-
       document.getElementById('share-modal-close').addEventListener('click', closeShareModal);
       document.getElementById('share-modal-cancel').addEventListener('click', closeShareModal);
       modal.addEventListener('click', (e) => { if (e.target === modal) closeShareModal(); });
@@ -396,16 +398,13 @@ async function loadFeed() {
 function openShareModal(postId, postContent, postUsername) {
   const modal = document.getElementById('share-modal');
   if (!modal) return;
-
   document.getElementById('share-comment').value = '';
   document.getElementById('share-post-preview').innerHTML = `
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">@${escapeHtml(postUsername)} wrote:</div>
     <div style="font-size:14px;color:var(--text);line-height:1.5;">${escapeHtml((postContent || '').slice(0, 200))}${(postContent || '').length > 200 ? '...' : ''}</div>
   `;
-
   const submitBtn = document.getElementById('share-modal-submit');
   submitBtn.onclick = () => handleShare(postId);
-
   modal.style.display = 'flex';
   document.getElementById('share-comment').focus();
 }
@@ -417,40 +416,26 @@ function closeShareModal() {
 
 async function handleShare(postId) {
   if (!currentUser) return;
-
   const comment = document.getElementById('share-comment').value.trim();
   const submitBtn = document.getElementById('share-modal-submit');
   submitBtn.textContent = 'Reposting...';
   submitBtn.disabled = true;
 
   try {
-    // Insert into shares table
     const { error: shareError } = await window.db
       .from('shares')
-      .insert({
-        post_id: postId,
-        user_id: currentUser.id,
-        comment: comment
-      });
-
+      .insert({ post_id: postId, user_id: currentUser.id, comment });
     if (shareError) throw shareError;
 
-    // Also create a post in the feed referencing the share
-    const shareContent = comment
-      ? `${comment}\n\n🔁 [Reposted]`
-      : '🔁 [Reposted]';
-
-    await window.db
-      .from('posts')
-      .insert({
-        user_id: currentUser.id,
-        content: shareContent,
-        shared_post_id: postId
-      });
+    const shareContent = comment ? `${comment}\n\n🔁 [Reposted]` : '🔁 [Reposted]';
+    await window.db.from('posts').insert({
+      user_id: currentUser.id,
+      content: shareContent,
+      shared_post_id: postId
+    });
 
     closeShareModal();
 
-    // Update share count on button
     const shareBtn = document.querySelector(`.share-btn[data-post-id="${postId}"]`);
     if (shareBtn) {
       const current = parseInt(shareBtn.dataset.shareCount || '0');
@@ -459,15 +444,10 @@ async function handleShare(postId) {
       shareBtn.textContent = `🔁 ${newCount}`;
       shareBtn.style.color = 'var(--primary)';
       shareBtn.style.fontWeight = '700';
-      setTimeout(() => {
-        shareBtn.style.color = '';
-        shareBtn.style.fontWeight = '';
-      }, 2000);
+      setTimeout(() => { shareBtn.style.color = ''; shareBtn.style.fontWeight = ''; }, 2000);
     }
-
   } catch (err) {
     console.error('Share error:', err);
-    // If shared_post_id column doesn't exist yet, still record the share
     closeShareModal();
   } finally {
     submitBtn.textContent = '🔁 Repost';
@@ -502,6 +482,9 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
   });
   const editedLabel = post.is_edited
     ? `<span style="font-size:11px;color:var(--text-muted);"> · edited</span>`
+    : '';
+  const adultBadge = post.is_adult
+    ? `<span style="font-size:11px;padding:2px 6px;border-radius:100px;background:rgba(239,68,68,0.15);color:#ef4444;font-weight:600;">🔞</span>`
     : '';
 
   const commentCount = commentCountMap[post.id] || 0;
@@ -583,6 +566,7 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
           <div class="post-username">
             <a href="/profile.html?user=${encodeURIComponent(username)}" style="text-decoration:none;color:inherit;">${escapeHtml(displayName)}</a>
             <span style="font-weight:400;color:var(--text-muted);font-size:13px;">@${escapeHtml(username)}</span>
+            ${adultBadge}
           </div>
           <div style="display:flex;gap:8px;align-items:center;">
             <span class="post-timestamp">${timestamp}</span>
@@ -642,7 +626,6 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
           💬 <span>${commentCount > 0 ? commentCount : ''} Comment${commentCount !== 1 ? 's' : ''}</span>
         </button>
 
-        <!-- GIF Reaction button -->
         <div class="gif-picker-wrapper" style="position:relative;">
           <button class="post-action-btn gif-react-btn" data-post-id="${post.id}">
             🎞️ GIF
@@ -662,7 +645,6 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
           </div>
         </div>
 
-        <!-- Share / Repost button -->
         <button class="post-action-btn share-btn"
           data-post-id="${post.id}"
           data-post-content="${escapeHtml(post.content || '')}"
@@ -671,7 +653,6 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
           🔁 ${shareCount > 0 ? shareCount : 'Repost'}
         </button>
 
-        <!-- Copy link button -->
         <button class="post-action-btn copy-link-btn" data-post-id="${post.id}">
           🔗
         </button>
@@ -744,17 +725,12 @@ function attachPostListeners() {
     btn.addEventListener('click', () => handlePollVote(btn.dataset.pollId, parseInt(btn.dataset.optionIndex)));
   });
 
-  // Share / Repost buttons
   document.querySelectorAll('.share-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      const postId = btn.dataset.postId;
-      const content = btn.dataset.postContent;
-      const username = btn.dataset.postUsername;
-      openShareModal(postId, content, username);
+      openShareModal(btn.dataset.postId, btn.dataset.postContent, btn.dataset.postUsername);
     });
   });
 
-  // Copy link buttons
   document.querySelectorAll('.copy-link-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const url = `${window.location.origin}/comments.html?post=${btn.dataset.postId}`;
@@ -765,7 +741,6 @@ function attachPostListeners() {
     });
   });
 
-  // GIF react buttons
   document.querySelectorAll('.gif-react-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -1069,7 +1044,11 @@ async function handleCreatePost() {
   btn.disabled = true;
   try {
     const { data: post, error: postError } = await window.db
-      .from('posts').insert({ user_id: currentUser.id, content }).select().single();
+      .from('posts').insert({
+        user_id: currentUser.id,
+        content,
+        is_adult: currentProfile?.is_adult_creator || false
+      }).select().single();
     if (postError) throw postError;
     if (hasPoll && post) {
       const question = document.getElementById('poll-question').value.trim();
