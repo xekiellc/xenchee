@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Snake — XenChee</title>
+  <link rel="stylesheet" href="/css/main.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <nav class="nav">
+    <a href="/feed.html" class="nav-brand">XenChee</a>
+    <div class="nav-actions">
+      <a href="/games.html" class="btn btn-ghost">← Games</a>
+      <button id="logout-btn" class="btn btn-ghost">Log Out</button>
+    </div>
+  </nav>
+
+  <div class="app-layout">
+    <div class="sidebar-left">
+      <ul class="sidebar-nav">
+        <li><a href="/feed.html"><span class="sidebar-nav-icon">🏠</span>Home</a></li>
+        <li><a href="/search.html"><span class="sidebar-nav-icon">🔍</span>Search</a></li>
+        <li><a href="/communities.html"><span class="sidebar-nav-icon">💬</span>Communities</a></li>
+        <li><a href="/events.html"><span class="sidebar-nav-icon">📅</span>Events</a></li>
+        <li><a href="/messages.html"><span class="sidebar-nav-icon">✉️</span>Messages</a></li>
+        <li><a href="/notifications.html"><span class="sidebar-nav-icon">🔔</span>Notifications</a></li>
+        <li><a href="/memories.html"><span class="sidebar-nav-icon">🕰️</span>Memories</a></li>
+        <li><a href="/games.html" class="active"><span class="sidebar-nav-icon">🎮</span>Games</a></li>
+        <li><a href="/profile.html"><span class="sidebar-nav-icon">👤</span>Profile</a></li>
+        <li><a href="/ecosystem.html"><span class="sidebar-nav-icon">🌐</span>Ecosystem</a></li>
+      </ul>
+    </div>
+
+    <div class="feed-main">
+      <div style="max-width:560px;margin:0 auto;">
+
+        <div style="text-align:center;margin-bottom:24px;">
+          <div style="font-size:48px;margin-bottom:8px;">🐍</div>
+          <div style="font-size:24px;font-weight:800;color:var(--text);margin-bottom:4px;">Snake</div>
+          <div style="font-size:14px;color:var(--text-muted);">Arrow keys or WASD to move · Don't crash!</div>
+        </div>
+
+        <!-- Score Bar -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <div style="font-size:15px;font-weight:700;color:var(--text);">Score: <span id="score">0</span></div>
+          <div style="font-size:15px;font-weight:700;color:var(--text);">Best: <span id="best-score">0</span></div>
+          <div style="font-size:13px;color:var(--text-muted);">Level: <span id="level">1</span></div>
+        </div>
+
+        <!-- Canvas -->
+        <div style="position:relative;border:2px solid var(--border);border-radius:12px;overflow:hidden;background:#0f1117;">
+          <canvas id="snake-canvas" width="500" height="500"></canvas>
+
+          <!-- Overlay -->
+          <div id="game-overlay" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,0.85);border-radius:10px;">
+            <div style="font-size:40px;margin-bottom:12px;">🐍</div>
+            <div style="font-size:20px;font-weight:800;color:#fff;margin-bottom:8px;">Snake</div>
+            <div style="font-size:13px;color:rgba(255,255,255,0.6);margin-bottom:24px;text-align:center;padding:0 20px;">Use arrow keys or WASD to move.<br>Eat food to grow. Don't hit the walls or yourself.</div>
+            <button id="start-btn" style="background:var(--primary);color:#fff;border:none;padding:12px 32px;border-radius:100px;font-size:15px;font-weight:700;cursor:pointer;">
+              Start Game
+            </button>
+          </div>
+        </div>
+
+        <!-- Mobile Controls -->
+        <div style="display:grid;grid-template-columns:repeat(3,56px);grid-template-rows:repeat(2,56px);gap:8px;justify-content:center;margin-top:20px;">
+          <div></div>
+          <button class="dpad-btn" id="btn-up" style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;">↑</button>
+          <div></div>
+          <button class="dpad-btn" id="btn-left" style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;">←</button>
+          <button class="dpad-btn" id="btn-down" style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;">↓</button>
+          <button class="dpad-btn" id="btn-right" style="background:var(--bg-card);border:1000solid var(--border);border-radius:10px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;">→</button>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="sidebar-right">
+      <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">
+        🎮 How to Play
+      </div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.8;margin-bottom:32px;">
+        <div>⬆️⬇️⬅️➡️ Arrow keys or WASD</div>
+        <div>🍎 Eat food to grow and score</div>
+        <div>💀 Don't hit walls or yourself</div>
+        <div>⚡ Speed increases as you grow</div>
+      </div>
+
+      <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">
+        📊 Scoring
+      </div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.8;">
+        <div>🍎 Normal food = 10 pts</div>
+        <div>⭐ Bonus food = 30 pts</div>
+        <div>🔥 Streak bonus x2</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/supabase.js"></script>
+  <script>
+    // Auth check
+    async function waitForDb(timeout = 5000) {
+      const start = Date.now();
+      while (!window.db) {
+        if (Date.now() - start > timeout) throw new Error('timeout');
+        await new Promise(r => setTimeout(r, 50));
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      await waitForDb();
+      const user = await window.auth.getUser();
+      if (!user) { window.location.href = '/login.html'; return; }
+      document.getElementById('logout-btn').addEventListener('click', async () => {
+        await window.auth.signOut(); window.location.href = '/';
+      });
+      initSnake();
+    });
+
+    function initSnake() {
+      const canvas = document.getElementById('snake-canvas');
+      const ctx = canvas.getContext('2d');
+      const GRID = 20;
+      const COLS = canvas.width / GRID;
+      const ROWS = canvas.height / GRID;
+
+      let snake, dir, nextDir, food, bonusFood, score, gameLoop, running, streak;
+      let bestScore = parseInt(localStorage.getItem('snake_best') || '0');
+      document.getElementById('best-score').textContent = bestScore;
+
+      function reset() {
+        snake = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
+        dir = { x: 1, y: 0 };
+        nextDir = { x: 1, y: 0 };
+        score = 0;
+        streak = 0;
+        bonusFood = null;
+        food = randomFood();
+        document.getElementById('score').textContent = 0;
+        document.getElementById('level').textContent = 1;
+      }
+
+      function randomFood() {
+        let pos;
+        do {
+          pos = { x: Math.floor(Math.random() * COLS), y: Math.floor(Math.random() * ROWS) };
+        } while (snake.some(s => s.x === pos.x && s.y === pos.y));
+        return pos;
+      }
+
+      function getSpeed() {
+        const level = Math.floor(snake.length / 5) + 1;
+        document.getElementById('level').textContent = level;
+        return Math.max(60, 150 - (level * 12));
+      }
+
+      function draw() {
+        ctx.fillStyle = '#0f1117';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Grid dots
+        ctx.fillStyle = 'rgba(255,255,255,0.03)';
+        for (let x = 0; x < COLS; x++) {
+          for (let y = 0; y < ROWS; y++) {
+            ctx.fillRect(x * GRID + GRID/2 - 1, y * GRID + GRID/2 - 1, 2, 2);
+          }
+        }
+
+        // Food
+        ctx.fillStyle = '#ef4444';
+        ctx.beginPath();
+        ctx.arc(food.x * GRID + GRID/2, food.y * GRID + GRID/2, GRID/2 - 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Bonus food
+        if (bonusFood) {
+          ctx.fillStyle = '#f5a623';
+          ctx.beginPath();
+          ctx.arc(bonusFood.x * GRID + GRID/2, bonusFood.y * GRID + GRID/2, GRID/2 - 1, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#fff';
+          ctx.font = 'bold 10px Arial';
+          ctx.textAlign = 'center';
+          ctx.fillText('★', bonusFood.x * GRID + GRID/2, bonusFood.y * GRID + GRID/2 + 4);
+        }
+
+        // Snake
+        snake.forEach((seg, i) => {
+          const ratio = 1 - (i / snake.length) * 0.4;
+          ctx.fillStyle = i === 0 ? '#6366f1' : `rgba(99,102,241,${ratio})`;
+          const padding = i === 0 ? 1 : 2;
+          ctx.beginPath();
+          ctx.roundRect(seg.x * GRID + padding, seg.y * GRID + padding, GRID - padding*2, GRID - padding*2, i === 0 ? 4 : 3);
+          ctx.fill();
+        });
+
+        // Eyes on head
+        const head = snake[0];
+        ctx.fillStyle = '#fff';
+        const eyeOffset = dir.x !== 0 ? { e1: {x:4,y:4}, e2: {x:4,y:12} } : { e1: {x:4,y:4}, e2: {x:12,y:4} };
+        ctx.beginPath();
+        ctx.arc(head.x * GRID + eyeOffset.e1.x + (dir.x > 0 ? 8 : 0), head.y * GRID + eyeOffset.e1.y + (dir.y > 0 ? 8 : 0), 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(head.x * GRID + eyeOffset.e2.x + (dir.x > 0 ? 8 : 0), head.y * GRID + eyeOffset.e2.y + (dir.y > 0 ? 8 : 0), 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      function tick() {
+        dir = nextDir;
+        const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+
+        // Wall collision
+        if (head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS) {
+          endGame(); return;
+        }
+
+        // Self collision
+        if (snake.some(s => s.x === head.x && s.y === head.y)) {
+          endGame(); return;
+        }
+
+        snake.unshift(head);
+
+        // Eat food
+        if (head.x === food.x && head.y === food.y) {
+          streak++;
+          score += 10 * (streak >= 3 ? 2 : 1);
+          document.getElementById('score').textContent = score;
+          food = randomFood();
+          // Spawn bonus food every 5 foods
+          if (streak % 5 === 0) bonusFood = randomFood();
+        } else if (bonusFood && head.x === bonusFood.x && head.y === bonusFood.y) {
+          score += 30;
+          document.getElementById('score').textContent = score;
+          bonusFood = null;
+        } else {
+          snake.pop();
+        }
+
+        draw();
+
+        clearTimeout(gameLoop);
+        gameLoop = setTimeout(tick, getSpeed());
+      }
+
+      function endGame() {
+        running = false;
+        clearTimeout(gameLoop);
+
+        if (score > bestScore) {
+          bestScore = score;
+          localStorage.setItem('snake_best', bestScore);
+          document.getElementById('best-score').textContent = bestScore;
+        }
+
+        const overlay = document.getElementById('game-overlay');
+        overlay.style.display = 'flex';
+        overlay.innerHTML = `
+          <div style="font-size:36px;margin-bottom:12px;">💀</div>
+          <div style="font-size:20px;font-weight:800;color:#fff;margin-bottom:4px;">Game Over</div>
+          <div style="font-size:28px;font-weight:800;color:var(--primary);margin-bottom:4px;">${score}</div>
+          <div style="font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:4px;">Best: ${bestScore}</div>
+          <div style="font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:24px;">Length: ${snake.length}</div>
+          <button id="restart-btn" style="background:var(--primary);color:#fff;border:none;padding:12px 32px;border-radius:100px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;">
+            Play Again
+          </button>
+          <a href="/games.html" style="font-size:13px;color:rgba(255,255,255,0.5);text-decoration:none;">← Back to Games</a>
+        `;
+        document.getElementById('restart-btn').addEventListener('click', startGame);
+      }
+
+      function startGame() {
+        reset();
+        const overlay = document.getElementById('game-overlay');
+        overlay.style.display = 'none';
+        running = true;
+        draw();
+        gameLoop = setTimeout(tick, getSpeed());
+      }
+
+      document.getElementById('start-btn').addEventListener('click', startGame);
+
+      // Keyboard controls
+      document.addEventListener('keydown', (e) => {
+        if (!running) return;
+        const moves = {
+          ArrowUp: {x:0,y:-1}, ArrowDown: {x:0,y:1},
+          ArrowLeft: {x:-1,y:0}, ArrowRight: {x:1,y:0},
+          w: {x:0,y:-1}, s: {x:0,y:1}, a: {x:-1,y:0}, d: {x:1,y:0},
+          W: {x:0,y:-1}, S: {x:0,y:1}, A: {x:-1,y:0}, D: {x:1,y:0}
+        };
+        const move = moves[e.key];
+        if (move) {
+          e.preventDefault();
+          // Prevent reversing
+          if (move.x !== -dir.x || move.y !== -dir.y) nextDir = move;
+        }
+      });
+
+      // D-pad controls
+      document.getElementById('btn-up').addEventListener('click', () => { if (dir.y !== 1) nextDir = {x:0,y:-1}; });
+      document.getElementById('btn-down').addEventListener('click', () => { if (dir.y !== -1) nextDir = {x:0,y:1}; });
+      document.getElementById('btn-left').addEventListener('click', () => { if (dir.x !== 1) nextDir = {x:-1,y:0}; });
+      document.getElementById('btn-right').addEventListener('click', () => { if (dir.x !== -1) nextDir = {x:1,y:0}; });
+    }
+  </script>
+</body>
+</html>
