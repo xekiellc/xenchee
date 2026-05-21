@@ -3,14 +3,33 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>XenChee — Feed</title>
+  <title>Voxxee — Feed</title>
+
+  <!-- OG Meta Tags -->
+  <meta property="og:title" content="Voxxee — Feed" />
+  <meta property="og:description" content="Your Voxxee feed. No algorithm. No shadowbans. Just real people saying exactly what they mean." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://voxxee.com/feed.html" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Voxxee — Feed" />
+  <meta name="twitter:description" content="Your Voxxee feed. No algorithm. No shadowbans. Just real people saying exactly what they mean." />
+
+  <!-- GA4 -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-FSCZJEWZ6F"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-FSCZJEWZ6F');
+  </script>
+
   <link rel="stylesheet" href="css/main.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
   <nav class="nav">
-    <a href="/feed.html" class="nav-brand">XenChee</a>
+    <a href="/feed.html" class="nav-brand">Voxxee</a>
     <div class="nav-actions">
       <a href="/profile.html" class="btn btn-ghost" id="profile-link">Profile</a>
       <button class="btn btn-ghost" id="logout-btn">Log Out</button>
@@ -179,7 +198,7 @@
       <div id="trending-communities"></div>
 
       <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-top:32px;margin-bottom:16px;">
-        XenChee Ecosystem
+        Voxxee Ecosystem
       </div>
       <div id="ecosystem-sidebar"></div>
 
