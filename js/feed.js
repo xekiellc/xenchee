@@ -203,6 +203,15 @@ async function loadFeed() {
     let { data: posts, error } = await postsQuery;
     if (error) throw error;
 
+    // Filter muted keywords client-side
+    if (posts && currentProfile?.muted_keywords?.length > 0) {
+      const keywords = currentProfile.muted_keywords.map(k => k.toLowerCase());
+      posts = posts.filter(post => {
+        const content = (post.content || '').toLowerCase();
+        return !keywords.some(kw => content.includes(kw));
+      });
+    }
+
     if (!posts || posts.length === 0) {
       container.innerHTML = '<div class="loading">No posts yet. Be the first to say something.</div>';
       return;
@@ -379,7 +388,6 @@ async function loadFeed() {
 function openReportModal(postId) {
   const modal = document.getElementById('report-modal');
   if (!modal) return;
-  // Clear previous state
   document.querySelectorAll('input[name="report-reason"]').forEach(r => r.checked = false);
   document.getElementById('report-error').style.display = 'none';
   const submitBtn = document.getElementById('report-modal-submit');
@@ -395,27 +403,18 @@ function closeReportModal() {
 async function handleReport(postId) {
   const reason = document.querySelector('input[name="report-reason"]:checked')?.value;
   const errorEl = document.getElementById('report-error');
-
   if (!reason) {
     errorEl.textContent = 'Please select a reason.';
     errorEl.style.display = 'block';
     return;
   }
-
   const submitBtn = document.getElementById('report-modal-submit');
   submitBtn.textContent = 'Submitting...';
   submitBtn.disabled = true;
-
   try {
-    // Check if already reported
     const { data: existing } = await window.db
-      .from('reports')
-      .select('id')
-      .eq('reporter_id', currentUser.id)
-      .eq('target_id', postId)
-      .eq('target_type', 'post')
-      .single();
-
+      .from('reports').select('id')
+      .eq('reporter_id', currentUser.id).eq('target_id', postId).eq('target_type', 'post').single();
     if (existing) {
       errorEl.textContent = 'You have already reported this post.';
       errorEl.style.display = 'block';
@@ -423,32 +422,22 @@ async function handleReport(postId) {
       submitBtn.disabled = false;
       return;
     }
-
     const { error } = await window.db.from('reports').insert({
-      reporter_id: currentUser.id,
-      target_id: postId,
-      target_type: 'post',
-      reason,
-      status: 'pending'
+      reporter_id: currentUser.id, target_id: postId,
+      target_type: 'post', reason, status: 'pending'
     });
-
     if (error) throw error;
-
     closeReportModal();
-
-    // Brief confirmation on the ••• button
     const menuBtn = document.querySelector(`.post-menu-btn[data-post-id="${postId}"]`);
     if (menuBtn) {
       menuBtn.textContent = '✅';
       setTimeout(() => { menuBtn.textContent = '•••'; }, 2000);
     }
-
   } catch (err) {
     console.error('Report error:', err);
     errorEl.textContent = 'Something went wrong. Please try again.';
     errorEl.style.display = 'block';
   }
-
   submitBtn.textContent = 'Submit Report';
   submitBtn.disabled = false;
 }
