@@ -3,14 +3,33 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Snake — XenChee</title>
+  <title>Snake — Voxxee</title>
+
+  <!-- OG Meta Tags -->
+  <meta property="og:title" content="Snake — Voxxee Games" />
+  <meta property="og:description" content="Play Snake on Voxxee. Eat, grow, don't crash. How long can you last?" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://voxxee.com/game-snake.html" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Snake — Voxxee Games" />
+  <meta name="twitter:description" content="Play Snake on Voxxee. Eat, grow, don't crash. How long can you last?" />
+
+  <!-- GA4 -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-FSCZJEWZ6F"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-FSCZJEWZ6F');
+  </script>
+
   <link rel="stylesheet" href="/css/main.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
   <nav class="nav">
-    <a href="/feed.html" class="nav-brand">XenChee</a>
+    <a href="/feed.html" class="nav-brand">Voxxee</a>
     <div class="nav-actions">
       <a href="/games.html" class="btn btn-ghost">← Games</a>
       <button id="logout-btn" class="btn btn-ghost">Log Out</button>
@@ -71,7 +90,7 @@
           <div></div>
           <button class="dpad-btn" id="btn-left" style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;">←</button>
           <button class="dpad-btn" id="btn-down" style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;">↓</button>
-          <button class="dpad-btn" id="btn-right" style="background:var(--bg-card);border:1000solid var(--border);border-radius:10px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;">→</button>
+          <button class="dpad-btn" id="btn-right" style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;">→</button>
         </div>
 
       </div>
@@ -101,7 +120,6 @@
 
   <script src="/js/supabase.js"></script>
   <script>
-    // Auth check
     async function waitForDb(timeout = 5000) {
       const start = Date.now();
       while (!window.db) {
@@ -161,7 +179,6 @@
         ctx.fillStyle = '#0f1117';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Grid dots
         ctx.fillStyle = 'rgba(255,255,255,0.03)';
         for (let x = 0; x < COLS; x++) {
           for (let y = 0; y < ROWS; y++) {
@@ -169,13 +186,11 @@
           }
         }
 
-        // Food
         ctx.fillStyle = '#ef4444';
         ctx.beginPath();
         ctx.arc(food.x * GRID + GRID/2, food.y * GRID + GRID/2, GRID/2 - 2, 0, Math.PI * 2);
         ctx.fill();
 
-        // Bonus food
         if (bonusFood) {
           ctx.fillStyle = '#f5a623';
           ctx.beginPath();
@@ -187,7 +202,6 @@
           ctx.fillText('★', bonusFood.x * GRID + GRID/2, bonusFood.y * GRID + GRID/2 + 4);
         }
 
-        // Snake
         snake.forEach((seg, i) => {
           const ratio = 1 - (i / snake.length) * 0.4;
           ctx.fillStyle = i === 0 ? '#6366f1' : `rgba(99,102,241,${ratio})`;
@@ -197,7 +211,6 @@
           ctx.fill();
         });
 
-        // Eyes on head
         const head = snake[0];
         ctx.fillStyle = '#fff';
         const eyeOffset = dir.x !== 0 ? { e1: {x:4,y:4}, e2: {x:4,y:12} } : { e1: {x:4,y:4}, e2: {x:12,y:4} };
@@ -213,25 +226,21 @@
         dir = nextDir;
         const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
 
-        // Wall collision
         if (head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS) {
           endGame(); return;
         }
 
-        // Self collision
         if (snake.some(s => s.x === head.x && s.y === head.y)) {
           endGame(); return;
         }
 
         snake.unshift(head);
 
-        // Eat food
         if (head.x === food.x && head.y === food.y) {
           streak++;
           score += 10 * (streak >= 3 ? 2 : 1);
           document.getElementById('score').textContent = score;
           food = randomFood();
-          // Spawn bonus food every 5 foods
           if (streak % 5 === 0) bonusFood = randomFood();
         } else if (bonusFood && head.x === bonusFood.x && head.y === bonusFood.y) {
           score += 30;
@@ -242,7 +251,6 @@
         }
 
         draw();
-
         clearTimeout(gameLoop);
         gameLoop = setTimeout(tick, getSpeed());
       }
@@ -284,7 +292,6 @@
 
       document.getElementById('start-btn').addEventListener('click', startGame);
 
-      // Keyboard controls
       document.addEventListener('keydown', (e) => {
         if (!running) return;
         const moves = {
@@ -296,12 +303,10 @@
         const move = moves[e.key];
         if (move) {
           e.preventDefault();
-          // Prevent reversing
           if (move.x !== -dir.x || move.y !== -dir.y) nextDir = move;
         }
       });
 
-      // D-pad controls
       document.getElementById('btn-up').addEventListener('click', () => { if (dir.y !== 1) nextDir = {x:0,y:-1}; });
       document.getElementById('btn-down').addEventListener('click', () => { if (dir.y !== -1) nextDir = {x:0,y:1}; });
       document.getElementById('btn-left').addEventListener('click', () => { if (dir.x !== 1) nextDir = {x:-1,y:0}; });
