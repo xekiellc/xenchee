@@ -89,6 +89,7 @@ function renderProfile(profile) {
 
   if (profile.bio) document.getElementById('profile-bio').textContent = profile.bio;
 
+  // Meta row
   const metaEl = document.getElementById('profile-meta');
   if (metaEl) {
     const parts = [];
@@ -97,9 +98,23 @@ function renderProfile(profile) {
     metaEl.innerHTML = parts.join('<span style="margin:0 4px;">·</span>');
   }
 
+  // Verified badge
   const badge = document.getElementById('verified-badge');
   if (badge && profile.is_verified) badge.style.display = 'inline';
 
+  // Reputation display
+  const repEl = document.getElementById('profile-reputation');
+  if (repEl) {
+    const rep = profile.reputation || 0;
+    const label = getRepLabel(rep);
+    const color = getRepColor(rep);
+    repEl.innerHTML = `
+      <span style="font-size:15px;font-weight:700;color:${color};">${rep.toLocaleString()}</span>
+      <span style="font-size:13px;color:var(--text-muted);margin-left:6px;">${label}</span>
+    `;
+  }
+
+  // Adult creator badge
   if (profile.is_adult_creator && !isOwnProfile) {
     const nameEl = document.getElementById('profile-display-name');
     if (nameEl && !document.querySelector('.adult-badge')) {
@@ -165,16 +180,6 @@ async function handleFollowToggle() {
   btn.disabled = false;
 }
 
-function setToggle(checkboxId, trackId, value) {
-  const checkbox = document.getElementById(checkboxId);
-  const track = document.getElementById(trackId);
-  if (!checkbox || !track) return;
-  checkbox.checked = value;
-  track.style.background = value ? 'var(--primary)' : 'var(--border)';
-  const knob = track.querySelector('span');
-  if (knob) knob.style.transform = value ? 'translateX(20px)' : 'translateX(0)';
-}
-
 function initToggle(checkboxId, trackId) {
   const checkbox = document.getElementById(checkboxId);
   const track = document.getElementById(trackId);
@@ -198,6 +203,16 @@ function initToggle(checkboxId, trackId) {
     update();
   });
   update();
+}
+
+function setToggle(checkboxId, trackId, value) {
+  const checkbox = document.getElementById(checkboxId);
+  const track = document.getElementById(trackId);
+  if (!checkbox || !track) return;
+  checkbox.checked = value;
+  track.style.background = value ? 'var(--primary)' : 'var(--border)';
+  const knob = track.querySelector('span');
+  if (knob) knob.style.transform = value ? 'translateX(20px)' : 'translateX(0)';
 }
 
 function renderKeywordTags() {
@@ -239,14 +254,11 @@ function showEditForm(profile) {
 
   initToggle('toggle-show-adult', 'toggle-show-adult-track');
   initToggle('toggle-is-adult-creator', 'toggle-is-adult-creator-track');
-
   setToggle('toggle-show-adult', 'toggle-show-adult-track', !!profile.show_adult_content);
   setToggle('toggle-is-adult-creator', 'toggle-is-adult-creator-track', !!profile.is_adult_creator);
 
-  // Add keyword button
   const addBtn = document.getElementById('add-keyword-btn');
   const keywordInput = document.getElementById('keyword-input');
-
   addBtn.onclick = () => addKeyword();
   keywordInput.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); addKeyword(); } };
 
@@ -260,14 +272,8 @@ function addKeyword() {
   const input = document.getElementById('keyword-input');
   const kw = input.value.trim().toLowerCase();
   if (!kw) return;
-  if (mutedKeywords.length >= 50) {
-    alert('Maximum 50 muted keywords.');
-    return;
-  }
-  if (mutedKeywords.includes(kw)) {
-    input.value = '';
-    return;
-  }
+  if (mutedKeywords.length >= 50) { alert('Maximum 50 muted keywords.'); return; }
+  if (mutedKeywords.includes(kw)) { input.value = ''; return; }
   mutedKeywords.push(kw);
   input.value = '';
   renderKeywordTags();
@@ -286,18 +292,12 @@ async function saveProfile() {
   btn.disabled = true;
 
   try {
-    const { error } = await window.db
-      .from('profiles')
-      .update({
-        display_name: displayName,
-        bio,
-        location,
-        website,
-        show_adult_content: showAdultContent,
-        is_adult_creator: isAdultCreator,
-        muted_keywords: mutedKeywords
-      })
-      .eq('user_id', currentUser.id);
+    const { error } = await window.db.from('profiles').update({
+      display_name: displayName, bio, location, website,
+      show_adult_content: showAdultContent,
+      is_adult_creator: isAdultCreator,
+      muted_keywords: mutedKeywords
+    }).eq('user_id', currentUser.id);
 
     if (error) throw error;
 
@@ -344,7 +344,8 @@ async function loadProfilePosts(userId) {
   }
 
   const { data: profile } = await window.db
-    .from('profiles').select('username, display_name').eq('user_id', userId).single();
+    .from('profiles').select('username, display_name, is_verified, verified_type, reputation')
+    .eq('user_id', userId).single();
 
   const postIds = posts.map(p => p.id);
 
@@ -371,6 +372,11 @@ async function loadProfilePosts(userId) {
   const username = profile?.username || 'unknown';
   const displayName = profile?.display_name || username;
   const initial = username.charAt(0).toUpperCase();
+  const verifiedBadge = profile?.is_verified ? (() => {
+    const badges = { staff: '🟣', notable: '⭐', identity: '🔵' };
+    return `<span style="font-size:14px;">${badges[profile.verified_type] || '🔵'}</span>`;
+  })() : '';
+  const repBadge = repBadgeHtml(profile?.reputation);
 
   container.innerHTML = posts.map(post => {
     const timestamp = new Date(post.created_at).toLocaleDateString('en-US', {
@@ -390,7 +396,9 @@ async function loadProfilePosts(userId) {
           <div class="post-meta">
             <div class="post-username">
               ${escapeHtml(displayName)}
+              ${verifiedBadge}
               <span style="font-weight:400;color:var(--text-muted);font-size:13px;">@${escapeHtml(username)}</span>
+              ${repBadge}
               ${adultBadge}
             </div>
             <span class="post-timestamp">${timestamp}</span>
