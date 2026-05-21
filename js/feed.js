@@ -8,7 +8,7 @@ async function waitForDb(timeout = 5000) {
 
 let currentUser = null;
 let currentProfile = null;
-let feedMode = 'all';
+let feedMode = 'latest';
 let pollVisible = false;
 let activeGifPicker = null;
 
@@ -41,10 +41,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   const { data: profile } = await window.db
-    .from('profiles')
-    .select('*')
-    .eq('user_id', currentUser.id)
-    .single();
+    .from('profiles').select('*').eq('user_id', currentUser.id).single();
 
   currentProfile = profile;
 
@@ -142,26 +139,27 @@ async function loadNotifBadge() {
 
 function setupEventListeners() {
   document.getElementById('post-btn').addEventListener('click', handleCreatePost);
+
   document.getElementById('logout-btn').addEventListener('click', async () => {
     await window.auth.signOut();
     window.location.href = '/';
   });
-  document.getElementById('feed-all-btn').addEventListener('click', () => {
-    feedMode = 'all';
-    document.getElementById('feed-all-btn').className = 'btn btn-primary';
-    document.getElementById('feed-following-btn').className = 'btn btn-ghost';
-    loadFeed();
+
+  // Feed tab buttons
+  document.querySelectorAll('.feed-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      feedMode = btn.dataset.mode;
+      document.querySelectorAll('.feed-tab-btn').forEach(b => b.className = 'btn btn-ghost feed-tab-btn');
+      btn.className = 'btn btn-primary feed-tab-btn';
+      loadFeed();
+    });
   });
-  document.getElementById('feed-following-btn').addEventListener('click', () => {
-    feedMode = 'following';
-    document.getElementById('feed-all-btn').className = 'btn btn-ghost';
-    document.getElementById('feed-following-btn').className = 'btn btn-primary';
-    loadFeed();
-  });
+
   document.getElementById('poll-toggle-btn').addEventListener('click', () => {
     pollVisible = !pollVisible;
     document.getElementById('poll-creator').style.display = pollVisible ? 'block' : 'none';
   });
+
   document.getElementById('add-option-btn').addEventListener('click', () => {
     const container = document.getElementById('poll-options').querySelector('.form-group');
     const options = container.querySelectorAll('.poll-option');
@@ -181,11 +179,17 @@ async function loadFeed() {
   container.innerHTML = '<div class="loading"><div class="spinner"></div>Loading feed...</div>';
 
   try {
-    let postsQuery = window.db
-      .from('posts').select('*').eq('is_removed', false)
-      .order('created_at', { ascending: false }).limit(50);
+    let posts = [];
 
-    if (feedMode === 'following' && currentUser) {
+    if (feedMode === 'latest') {
+      let q = window.db.from('posts').select('*').eq('is_removed', false)
+        .order('created_at', { ascending: false }).limit(50);
+      if (!currentProfile?.show_adult_content) q = q.eq('is_adult', false);
+      const { data, error } = await q;
+      if (error) throw error;
+      posts = data || [];
+
+    } else if (feedMode === 'following') {
       const { data: follows } = await window.db
         .from('follows').select('following_id').eq('follower_id', currentUser.id);
       const followingIds = follows ? follows.map(f => f.following_id) : [];
@@ -193,17 +197,71 @@ async function loadFeed() {
         container.innerHTML = '<div class="loading">Follow some people to see their posts here.</div>';
         return;
       }
-      postsQuery = postsQuery.in('user_id', followingIds);
+      let q = window.db.from('posts').select('*').eq('is_removed', false)
+        .in('user_id', followingIds).order('created_at', { ascending: false }).limit(50);
+      if (!currentProfile?.show_adult_content) q = q.eq('is_adult', false);
+      const { data, error } = await q;
+      if (error) throw error;
+      posts = data || [];
+
+    } else if (feedMode === 'top') {
+      // Top Today — fetch recent posts then sort by reaction count
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      let q = window.db.from('posts').select('*').eq('is_removed', false)
+        .gte('created_at', since).limit(200);
+      if (!currentProfile?.show_adult_content) q = q.eq('is_adult', false);
+      const { data, error } = await q;
+      if (error) throw error;
+      const allPosts = data || [];
+
+      if (allPosts.length > 0) {
+        const postIds = allPosts.map(p => p.id);
+        const { data: reactions } = await window.db
+          .from('reactions').select('target_id').in('target_id', postIds).eq('target_type', 'post');
+        const reactionCounts = {};
+        if (reactions) reactions.forEach(r => {
+          reactionCounts[r.target_id] = (reactionCounts[r.target_id] || 0) + 1;
+        });
+        posts = allPosts
+          .sort((a, b) => (reactionCounts[b.id] || 0) - (reactionCounts[a.id] || 0))
+          .slice(0, 50);
+      }
+
+    } else if (feedMode === 'hot') {
+      // Hot This Week — fetch last 7 days, sort by reactions + comments combined
+      const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      let q = window.db.from('posts').select('*').eq('is_removed', false)
+        .gte('created_at', since).limit(200);
+      if (!currentProfile?.show_adult_content) q = q.eq('is_adult', false);
+      const { data, error } = await q;
+      if (error) throw error;
+      const allPosts = data || [];
+
+      if (allPosts.length > 0) {
+        const postIds = allPosts.map(p => p.id);
+        const [reactionsRes, commentsRes] = await Promise.all([
+          window.db.from('reactions').select('target_id').in('target_id', postIds).eq('target_type', 'post'),
+          window.db.from('comments').select('post_id').in('post_id', postIds).eq('is_removed', false)
+        ]);
+        const reactionCounts = {};
+        if (reactionsRes.data) reactionsRes.data.forEach(r => {
+          reactionCounts[r.target_id] = (reactionCounts[r.target_id] || 0) + 1;
+        });
+        const commentCounts = {};
+        if (commentsRes.data) commentsRes.data.forEach(c => {
+          commentCounts[c.post_id] = (commentCounts[c.post_id] || 0) + 1;
+        });
+        posts = allPosts
+          .sort((a, b) => {
+            const scoreA = (reactionCounts[a.id] || 0) + (commentCounts[a.id] || 0) * 2;
+            const scoreB = (reactionCounts[b.id] || 0) + (commentCounts[b.id] || 0) * 2;
+            return scoreB - scoreA;
+          })
+          .slice(0, 50);
+      }
     }
 
-    if (!currentProfile?.show_adult_content) {
-      postsQuery = postsQuery.eq('is_adult', false);
-    }
-
-    let { data: posts, error } = await postsQuery;
-    if (error) throw error;
-
-    // Filter muted keywords client-side
+    // Filter muted keywords
     if (posts && currentProfile?.muted_keywords?.length > 0) {
       const keywords = currentProfile.muted_keywords.map(k => k.toLowerCase());
       posts = posts.filter(post => {
@@ -213,7 +271,13 @@ async function loadFeed() {
     }
 
     if (!posts || posts.length === 0) {
-      container.innerHTML = '<div class="loading">No posts yet. Be the first to say something.</div>';
+      const emptyMessages = {
+        latest: 'No posts yet. Be the first to say something.',
+        following: 'Follow some people to see their posts here.',
+        top: 'No posts in the last 24 hours yet.',
+        hot: 'No posts this week yet.'
+      };
+      container.innerHTML = `<div class="loading">${emptyMessages[feedMode] || 'No posts found.'}</div>`;
       return;
     }
 
@@ -588,6 +652,13 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
       </div>`;
   }
 
+  // Hot/Top mode label
+  const modeLabel = (feedMode === 'top' || feedMode === 'hot') ? (() => {
+    const total = totalReactions + commentCount;
+    if (total === 0) return '';
+    return `<span style="font-size:11px;padding:2px 8px;border-radius:100px;background:rgba(245,166,35,0.15);color:#f5a623;font-weight:600;margin-left:6px;">🔥 ${total} interactions</span>`;
+  })() : '';
+
   return `
     <div class="post-card" data-post-id="${post.id}">
       <div class="post-header">
@@ -598,6 +669,7 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
             ${verifiedBadge}
             <span style="font-weight:400;color:var(--text-muted);font-size:13px;">@${escapeHtml(username)}</span>
             ${adultBadge}
+            ${modeLabel}
           </div>
           <div style="display:flex;gap:8px;align-items:center;">
             <span class="post-timestamp">${timestamp}</span>
