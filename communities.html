@@ -20,7 +20,6 @@
 
   <div class="app-layout">
 
-    <!-- Left Sidebar -->
     <div class="sidebar-left">
       <ul class="sidebar-nav">
         <li><a href="/feed.html"><span class="sidebar-nav-icon">🏠</span>Home</a></li>
@@ -36,7 +35,6 @@
       </ul>
     </div>
 
-    <!-- Main Content -->
     <div class="feed-main">
 
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
@@ -55,9 +53,25 @@
       <!-- Filter tabs -->
       <div style="display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap;">
         <button class="btn btn-primary community-filter-btn" data-filter="all">All</button>
+        <button class="btn btn-ghost community-filter-btn" data-filter="local">📍 Near Me</button>
         <button class="btn btn-ghost community-filter-btn" data-filter="portfolio">Portfolio Sites</button>
         <button class="btn btn-ghost community-filter-btn" data-filter="public">Public</button>
         <button class="btn btn-ghost community-filter-btn" data-filter="private">Private</button>
+      </div>
+
+      <!-- Local discovery banner — shown when Near Me is active -->
+      <div id="local-banner" style="display:none;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px;">
+        <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px;">📍 Communities Near You</div>
+        <div style="font-size:14px;color:var(--text-muted);margin-bottom:16px;">
+          Set your location in your profile to discover local communities.
+          Your current location: <span id="local-location-display" style="font-weight:600;color:var(--text);">Not set</span>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <input type="text" id="local-city-input" class="form-input" placeholder="City (e.g. Akron)" style="flex:1;max-width:200px;" />
+          <input type="text" id="local-state-input" class="form-input" placeholder="State (e.g. OH)" style="width:80px;" />
+          <button id="local-search-btn" class="btn btn-primary" style="flex-shrink:0;">Find Communities</button>
+          <button id="local-save-btn" class="btn btn-ghost" style="flex-shrink:0;">Save to Profile</button>
+        </div>
       </div>
 
       <!-- Communities Grid -->
@@ -67,9 +81,14 @@
 
     </div>
 
-    <!-- Right Sidebar -->
     <div class="sidebar-right">
       <a href="/create-community.html" class="btn btn-primary" style="display:block;text-align:center;margin-bottom:24px;text-decoration:none;">+ Create Community</a>
+
+      <!-- Local communities widget -->
+      <div id="local-sidebar" style="display:none;margin-bottom:32px;">
+        <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">📍 Local Communities</div>
+        <div id="local-sidebar-list"></div>
+      </div>
 
       <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">Most Active</div>
       <div id="active-communities"></div>
@@ -89,12 +108,16 @@
 
     let allCommunities = [];
     let currentFilter = 'all';
+    let currentUser = null;
+    let currentProfile = null;
+    let localCity = '';
+    let localState = '';
 
     document.addEventListener('DOMContentLoaded', async () => {
       await waitForDb();
 
-      const user = await window.auth.getUser();
-      if (!user) {
+      currentUser = await window.auth.getUser();
+      if (!currentUser) {
         window.location.href = '/login.html';
         return;
       }
@@ -104,27 +127,46 @@
         window.location.href = '/';
       });
 
+      // Load user profile for location
+      const { data: profile } = await window.db
+        .from('profiles').select('*').eq('user_id', currentUser.id).single();
+      currentProfile = profile;
+
+      if (profile?.location_city) {
+        localCity = profile.location_city;
+        localState = profile.location_state || '';
+        document.getElementById('local-city-input').value = localCity;
+        document.getElementById('local-state-input').value = localState;
+        document.getElementById('local-location-display').textContent =
+          localState ? `${localCity}, ${localState}` : localCity;
+      }
+
       await loadCommunities();
       setupFilters();
       setupSearch();
+      setupLocalDiscovery();
     });
 
     async function loadCommunities() {
       const { data: communities } = await window.db
-        .from('communities')
-        .select('*')
-        .order('name');
+        .from('communities').select('*').order('name');
 
       if (!communities) return;
       allCommunities = communities;
       renderCommunities(communities);
       renderActiveSidebar(communities);
+      renderLocalSidebar(communities);
     }
 
     function communityLogoHtml(c, size = 48) {
       if (c.logo_url) {
-        return `<img src="${c.logo_url}" alt="${c.name}" style="width:${size}px;height:${size}px;border-radius:10px;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
-        <div style="display:none;width:${size}px;height:${size}px;border-radius:10px;background:var(--primary);color:#fff;align-items:center;justify-content:center;font-size:${Math.round(size*0.4)}px;font-weight:800;flex-shrink:0;">${c.name.charAt(0)}</div>`;
+        return `
+          <img src="${c.logo_url}" alt="${escapeHtml(c.name)}"
+            style="width:${size}px;height:${size}px;border-radius:10px;object-fit:cover;flex-shrink:0;"
+            onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
+          <div style="display:none;width:${size}px;height:${size}px;border-radius:10px;background:var(--primary);color:#fff;align-items:center;justify-content:center;font-size:${Math.round(size*0.4)}px;font-weight:800;flex-shrink:0;">
+            ${c.name.charAt(0)}
+          </div>`;
       }
       return `<div style="width:${size}px;height:${size}px;border-radius:10px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:${Math.round(size*0.4)}px;font-weight:800;flex-shrink:0;">${c.name.charAt(0)}</div>`;
     }
@@ -133,43 +175,88 @@
       const grid = document.getElementById('communities-grid');
 
       if (!communities || communities.length === 0) {
-        grid.innerHTML = '<div class="loading">No communities found.</div>';
+        const isLocal = currentFilter === 'local';
+        grid.innerHTML = `
+          <div style="grid-column:1/-1;text-align:center;padding:40px 20px;">
+            <div style="font-size:40px;margin-bottom:12px;">${isLocal ? '📍' : '💬'}</div>
+            <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:8px;">
+              ${isLocal ? 'No local communities found' : 'No communities found'}
+            </div>
+            <div style="font-size:14px;color:var(--text-muted);">
+              ${isLocal
+                ? 'Try a different city or <a href="/create-community.html" style="color:var(--primary);">create one</a> for your area.'
+                : 'Try a different search or filter.'}
+            </div>
+          </div>
+        `;
         return;
       }
 
-      grid.innerHTML = communities.map(c => `
-        <a href="/community.html?slug=${c.slug}" style="text-decoration:none;">
-          <div class="community-card" style="height:100%;">
-            <div class="community-card-header">
-              ${communityLogoHtml(c, 48)}
-              <div>
-                <div class="community-name">${c.name}</div>
-                <div class="community-type">v/${c.slug}</div>
+      grid.innerHTML = communities.map(c => {
+        const locationBadge = c.is_local && c.location
+          ? `<span style="font-size:11px;padding:2px 8px;border-radius:100px;background:rgba(76,175,125,0.15);color:#4caf7d;font-weight:600;">📍 ${escapeHtml(c.location)}</span>`
+          : '';
+
+        return `
+          <a href="/community.html?slug=${c.slug}" style="text-decoration:none;">
+            <div class="community-card" style="height:100%;">
+              <div class="community-card-header">
+                ${communityLogoHtml(c, 48)}
+                <div>
+                  <div class="community-name">${escapeHtml(c.name)}</div>
+                  <div class="community-type">v/${c.slug}</div>
+                </div>
+              </div>
+              <div class="community-description">${escapeHtml(c.description || '')}</div>
+              <div class="community-footer">
+                <span class="community-members">${c.member_count > 0 ? c.member_count.toLocaleString() + ' members' : 'Be the first to join'}</span>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                  ${c.is_official ? '<span class="community-badge badge-official">Official</span>' : ''}
+                  ${locationBadge}
+                  ${c.community_type === 'private' ? '<span style="font-size:11px;padding:2px 8px;border-radius:100px;background:rgba(245,166,35,0.2);color:#f5a623;font-weight:600;">Private</span>' : ''}
+                </div>
               </div>
             </div>
-            <div class="community-description">${c.description || ''}</div>
-            <div class="community-footer">
-              <span class="community-members">${c.member_count > 0 ? c.member_count.toLocaleString() + ' members' : 'Be the first to join'}</span>
-              <div style="display:flex;gap:6px;">
-                ${c.is_official ? '<span class="community-badge badge-official">Official</span>' : ''}
-                ${c.community_type === 'private' ? '<span style="font-size:11px;padding:2px 8px;border-radius:100px;background:rgba(245,166,35,0.2);color:#f5a623;font-weight:600;">Private</span>' : ''}
-              </div>
-            </div>
-          </div>
-        </a>
-      `).join('');
+          </a>
+        `;
+      }).join('');
     }
 
     function renderActiveSidebar(communities) {
       const container = document.getElementById('active-communities');
-      const sorted = [...communities].sort((a, b) => (b.member_count || 0) - (a.member_count || 0)).slice(0, 6);
+      const sorted = [...communities]
+        .sort((a, b) => (b.member_count || 0) - (a.member_count || 0))
+        .slice(0, 6);
 
       container.innerHTML = sorted.map(c => `
         <a href="/community.html?slug=${c.slug}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;margin-bottom:6px;background:var(--bg-card);border:1px solid var(--border);text-decoration:none;transition:all 0.15s ease;">
           ${communityLogoHtml(c, 32)}
           <div style="min-width:0;">
-            <div style="font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.name}</div>
+            <div style="font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(c.name)}</div>
             <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">${c.member_count > 0 ? c.member_count.toLocaleString() + ' members' : 'New'}</div>
+          </div>
+        </a>
+      `).join('');
+    }
+
+    function renderLocalSidebar(communities) {
+      const container = document.getElementById('local-sidebar-list');
+      const sidebar = document.getElementById('local-sidebar');
+      if (!container || !sidebar) return;
+
+      const localCommunities = communities.filter(c => c.is_local).slice(0, 5);
+      if (localCommunities.length === 0) {
+        sidebar.style.display = 'none';
+        return;
+      }
+
+      sidebar.style.display = 'block';
+      container.innerHTML = localCommunities.map(c => `
+        <a href="/community.html?slug=${c.slug}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;margin-bottom:6px;background:var(--bg-card);border:1px solid var(--border);text-decoration:none;">
+          ${communityLogoHtml(c, 28)}
+          <div style="min-width:0;">
+            <div style="font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(c.name)}</div>
+            ${c.location ? `<div style="font-size:11px;color:#4caf7d;">📍 ${escapeHtml(c.location)}</div>` : ''}
           </div>
         </a>
       `).join('');
@@ -181,13 +268,103 @@
           currentFilter = btn.dataset.filter;
           document.querySelectorAll('.community-filter-btn').forEach(b => b.className = 'btn btn-ghost community-filter-btn');
           btn.className = 'btn btn-primary community-filter-btn';
-          applyFilters();
+
+          const banner = document.getElementById('local-banner');
+          if (currentFilter === 'local') {
+            banner.style.display = 'block';
+            applyLocalFilter();
+          } else {
+            banner.style.display = 'none';
+            applyFilters();
+          }
         });
       });
     }
 
     function setupSearch() {
-      document.getElementById('community-search').addEventListener('input', applyFilters);
+      document.getElementById('community-search').addEventListener('input', () => {
+        if (currentFilter === 'local') {
+          applyLocalFilter();
+        } else {
+          applyFilters();
+        }
+      });
+    }
+
+    function setupLocalDiscovery() {
+      document.getElementById('local-search-btn').addEventListener('click', applyLocalFilter);
+
+      document.getElementById('local-city-input').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') applyLocalFilter();
+      });
+
+      document.getElementById('local-save-btn').addEventListener('click', async () => {
+        const city = document.getElementById('local-city-input').value.trim();
+        const state = document.getElementById('local-state-input').value.trim();
+        if (!city) return;
+
+        const btn = document.getElementById('local-save-btn');
+        btn.textContent = 'Saving...';
+        btn.disabled = true;
+
+        try {
+          await window.db.from('profiles').update({
+            location_city: city,
+            location_state: state
+          }).eq('user_id', currentUser.id);
+
+          localCity = city;
+          localState = state;
+          document.getElementById('local-location-display').textContent =
+            state ? `${city}, ${state}` : city;
+
+          btn.textContent = '✅ Saved';
+          setTimeout(() => {
+            btn.textContent = 'Save to Profile';
+            btn.disabled = false;
+          }, 2000);
+        } catch (err) {
+          console.error('Save location error:', err);
+          btn.textContent = 'Save to Profile';
+          btn.disabled = false;
+        }
+      });
+    }
+
+    function applyLocalFilter() {
+      const city = document.getElementById('local-city-input').value.trim().toLowerCase();
+      const state = document.getElementById('local-state-input').value.trim().toLowerCase();
+      const search = document.getElementById('community-search').value.toLowerCase();
+
+      let filtered = allCommunities;
+
+      if (city) {
+        filtered = filtered.filter(c => {
+          if (!c.location) return false;
+          const loc = c.location.toLowerCase();
+          if (state) return loc.includes(city) && loc.includes(state);
+          return loc.includes(city);
+        });
+      } else {
+        // No city set — show all local communities
+        filtered = filtered.filter(c => c.is_local);
+      }
+
+      if (search) {
+        filtered = filtered.filter(c =>
+          c.name.toLowerCase().includes(search) ||
+          (c.description || '').toLowerCase().includes(search) ||
+          (c.location || '').toLowerCase().includes(search)
+        );
+      }
+
+      // Update location display
+      if (city) {
+        document.getElementById('local-location-display').textContent =
+          state ? `${city}, ${state}` : city;
+      }
+
+      renderCommunities(filtered);
     }
 
     function applyFilters() {
@@ -210,6 +387,12 @@
       }
 
       renderCommunities(filtered);
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.appendChild(document.createTextNode(text || ''));
+      return div.innerHTML;
     }
   </script>
 
