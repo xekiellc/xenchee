@@ -49,7 +49,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadSidebarCommunities(),
     loadTrendingCommunities(),
     loadEcosystemSidebar(),
-    loadNotifBadge()
+    loadNotifBadge(),
+    loadBirthdays()
   ]);
 
   setupEventListeners();
@@ -63,6 +64,67 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 });
+
+async function loadBirthdays() {
+  const sidebar = document.getElementById('birthdays-sidebar');
+  const list = document.getElementById('birthdays-list');
+  if (!sidebar || !list) return;
+
+  try {
+    const today = new Date();
+    const month = today.getMonth() + 1;
+    const day = today.getDate();
+
+    // Fetch all users with DOB — filter by month/day in JS
+    // since Supabase doesn't support EXTRACT month/day on text fields easily
+    const { data: users } = await window.db
+      .from('users')
+      .select('id, date_of_birth')
+      .not('date_of_birth', 'is', null);
+
+    if (!users || users.length === 0) return;
+
+    // Filter to today's birthdays, exclude current user
+    const birthdayUserIds = users
+      .filter(u => {
+        if (u.id === currentUser.id) return false;
+        const dob = new Date(u.date_of_birth);
+        return dob.getMonth() + 1 === month && dob.getDate() === day;
+      })
+      .map(u => u.id);
+
+    if (birthdayUserIds.length === 0) return;
+
+    // Fetch profiles for birthday users
+    const { data: profiles } = await window.db
+      .from('profiles')
+      .select('user_id, username, display_name')
+      .in('user_id', birthdayUserIds);
+
+    if (!profiles || profiles.length === 0) return;
+
+    // Show the sidebar
+    sidebar.style.display = 'block';
+
+    list.innerHTML = profiles.map(p => {
+      const displayName = p.display_name || p.username;
+      const initial = p.username.charAt(0).toUpperCase();
+      return `
+        <a href="/profile.html?user=${encodeURIComponent(p.username)}" style="display:flex;align-items:center;gap:10px;padding:8px 0;text-decoration:none;transition:opacity 0.15s ease;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+          <div style="width:36px;height:36px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0;">${initial}</div>
+          <div>
+            <div style="font-size:14px;font-weight:600;color:var(--text);">${escapeHtml(displayName)}</div>
+            <div style="font-size:12px;color:var(--text-muted);">@${escapeHtml(p.username)}</div>
+          </div>
+          <div style="margin-left:auto;font-size:18px;">🎂</div>
+        </a>
+      `;
+    }).join('');
+
+  } catch (err) {
+    console.error('Birthdays error:', err);
+  }
+}
 
 async function loadNotifBadge() {
   const badge = document.getElementById('notif-badge');
@@ -222,7 +284,6 @@ async function loadFeed() {
       }
     }
 
-    // Fetch view counts
     const { data: views } = await window.db
       .from('post_views')
       .select('post_id')
@@ -235,7 +296,6 @@ async function loadFeed() {
       });
     }
 
-    // Fetch polls for all posts
     const { data: polls } = await window.db
       .from('polls')
       .select('*')
@@ -244,7 +304,6 @@ async function loadFeed() {
     const pollMap = {};
     if (polls) polls.forEach(p => { pollMap[p.post_id] = p; });
 
-    // Fetch current user's poll votes
     let myVoteMap = {};
     if (polls && polls.length > 0) {
       const pollIds = polls.map(p => p.id);
@@ -257,7 +316,6 @@ async function loadFeed() {
         myVotes.forEach(v => { myVoteMap[v.poll_id] = v.option_index; });
       }
 
-      // Fetch all votes for vote counts
       const { data: allVotes } = await window.db
         .from('poll_votes')
         .select('poll_id, option_index')
@@ -271,7 +329,6 @@ async function loadFeed() {
         });
       }
 
-      // Attach vote counts to pollMap
       polls.forEach(p => {
         p.voteCounts = pollVoteCountMap[p.id] || {};
         p.totalVotes = Object.values(p.voteCounts).reduce((a, b) => a + b, 0);
@@ -342,7 +399,6 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
     ? `<span style="font-size:12px;color:var(--text-muted);">👁 ${viewCount.toLocaleString()} view${viewCount !== 1 ? 's' : ''}</span>`
     : '';
 
-  // Poll rendering
   const poll = pollMap ? pollMap[post.id] : null;
   let pollHtml = '';
   if (poll) {
@@ -360,7 +416,6 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
             const voteCount = poll.voteCounts[idx] || 0;
             const pct = totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0;
             const isMyVote = poll.myVote === idx;
-
             if (showResults) {
               return `
                 <div style="margin-bottom:8px;">
@@ -537,7 +592,6 @@ function attachPostListeners() {
     });
   });
 
-  // Poll vote buttons
   document.querySelectorAll('.poll-vote-btn').forEach(btn => {
     btn.addEventListener('click', () => handlePollVote(btn.dataset.pollId, parseInt(btn.dataset.optionIndex)));
   });
@@ -545,31 +599,19 @@ function attachPostListeners() {
 
 async function handlePollVote(pollId, optionIndex) {
   if (!currentUser) return;
-
   try {
-    // Check if already voted
     const { data: existing } = await window.db
       .from('poll_votes')
       .select('id')
       .eq('poll_id', pollId)
       .eq('user_id', currentUser.id)
       .single();
-
-    if (existing) return; // Already voted — no changes
-
+    if (existing) return;
     const { error } = await window.db
       .from('poll_votes')
-      .insert({
-        poll_id: pollId,
-        user_id: currentUser.id,
-        option_index: optionIndex
-      });
-
+      .insert({ poll_id: pollId, user_id: currentUser.id, option_index: optionIndex });
     if (error) throw error;
-
-    // Refresh just this poll's results
     await refreshPollResults(pollId);
-
   } catch (err) {
     console.error('Poll vote error:', err);
   }
@@ -578,46 +620,22 @@ async function handlePollVote(pollId, optionIndex) {
 async function refreshPollResults(pollId) {
   const pollCard = document.querySelector(`.poll-card[data-poll-id="${pollId}"]`);
   if (!pollCard) return;
-
-  const { data: poll } = await window.db
-    .from('polls')
-    .select('*')
-    .eq('id', pollId)
-    .single();
-
+  const { data: poll } = await window.db.from('polls').select('*').eq('id', pollId).single();
   if (!poll) return;
-
-  const { data: allVotes } = await window.db
-    .from('poll_votes')
-    .select('option_index')
-    .eq('poll_id', pollId);
-
+  const { data: allVotes } = await window.db.from('poll_votes').select('option_index').eq('poll_id', pollId);
   const voteCounts = {};
-  if (allVotes) {
-    allVotes.forEach(v => {
-      voteCounts[v.option_index] = (voteCounts[v.option_index] || 0) + 1;
-    });
-  }
+  if (allVotes) allVotes.forEach(v => { voteCounts[v.option_index] = (voteCounts[v.option_index] || 0) + 1; });
   const totalVotes = allVotes ? allVotes.length : 0;
-
-  const { data: myVoteRow } = await window.db
-    .from('poll_votes')
-    .select('option_index')
-    .eq('poll_id', pollId)
-    .eq('user_id', currentUser.id)
-    .single();
-
+  const { data: myVoteRow } = await window.db.from('poll_votes').select('option_index').eq('poll_id', pollId).eq('user_id', currentUser.id).single();
   const myVote = myVoteRow ? myVoteRow.option_index : null;
   const options = poll.options || [];
   const isExpired = poll.expires_at && new Date(poll.expires_at) < new Date();
-
   const optionsContainer = pollCard.querySelector('.poll-options');
   if (optionsContainer) {
     optionsContainer.innerHTML = options.map((opt, idx) => {
       const voteCount = voteCounts[idx] || 0;
       const pct = totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0;
       const isMyVote = myVote === idx;
-
       return `
         <div style="margin-bottom:8px;">
           <div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:4px;">
@@ -631,18 +649,13 @@ async function refreshPollResults(pollId) {
       `;
     }).join('');
   }
-
-  // Update vote count text
   const voteCountEl = pollCard.querySelector('.poll-vote-count');
-  if (voteCountEl) {
-    voteCountEl.textContent = `${totalVotes} vote${totalVotes !== 1 ? 's' : ''}${isExpired ? ' · Closed' : ''}`;
-  }
+  if (voteCountEl) voteCountEl.textContent = `${totalVotes} vote${totalVotes !== 1 ? 's' : ''}${isExpired ? ' · Closed' : ''}`;
 }
 
 function showEditForm(postId, currentContent) {
   const card = document.querySelector(`.post-card[data-post-id="${postId}"]`);
   if (!card) return;
-
   const wrapper = card.querySelector('.post-content-wrapper');
   wrapper.innerHTML = `
     <div style="margin-top:8px;">
@@ -655,15 +668,12 @@ function showEditForm(postId, currentContent) {
       </div>
     </div>
   `;
-
   const textarea = wrapper.querySelector('.edit-post-textarea');
   textarea.focus();
   textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-
   wrapper.querySelector('.cancel-edit-btn').addEventListener('click', () => {
     wrapper.innerHTML = `<div class="post-content">${renderMentions(currentContent)}</div>`;
   });
-
   wrapper.querySelector('.save-edit-btn').addEventListener('click', () => {
     handleEditPost(postId, textarea.value.trim(), wrapper, currentContent);
   });
@@ -675,22 +685,17 @@ async function handleEditPost(postId, newContent, wrapper, originalContent) {
     wrapper.innerHTML = `<div class="post-content">${renderMentions(originalContent)}</div>`;
     return;
   }
-
   const saveBtn = wrapper.querySelector('.save-edit-btn');
   saveBtn.textContent = 'Saving...';
   saveBtn.disabled = true;
-
   try {
     const { error } = await window.db
       .from('posts')
       .update({ content: newContent, is_edited: true })
       .eq('id', postId)
       .eq('user_id', currentUser.id);
-
     if (error) throw error;
-
     wrapper.innerHTML = `<div class="post-content">${renderMentions(newContent)}</div>`;
-
     const card = document.querySelector(`.post-card[data-post-id="${postId}"]`);
     const timestampDiv = card?.querySelector('.post-timestamp')?.parentElement;
     if (timestampDiv && !timestampDiv.querySelector('.edited-label')) {
@@ -700,7 +705,6 @@ async function handleEditPost(postId, newContent, wrapper, originalContent) {
       editedSpan.textContent = ' · edited';
       timestampDiv.appendChild(editedSpan);
     }
-
   } catch (err) {
     console.error('Edit error:', err);
     saveBtn.textContent = 'Save';
@@ -710,7 +714,6 @@ async function handleEditPost(postId, newContent, wrapper, originalContent) {
 
 async function handleReaction(postId, type) {
   if (!currentUser) return;
-
   try {
     const { data: existing } = await window.db
       .from('reactions')
@@ -719,7 +722,6 @@ async function handleReaction(postId, type) {
       .eq('target_id', postId)
       .eq('target_type', 'post')
       .single();
-
     if (existing) {
       if (existing.reaction_type === type) {
         await window.db.from('reactions').delete().eq('id', existing.id);
@@ -734,9 +736,7 @@ async function handleReaction(postId, type) {
         reaction_type: type
       });
     }
-
     await refreshPostReactions(postId);
-
   } catch (err) {
     console.error('Reaction error:', err);
   }
@@ -748,17 +748,10 @@ async function refreshPostReactions(postId) {
     .select('reaction_type')
     .eq('target_id', postId)
     .eq('target_type', 'post');
-
   const card = document.querySelector(`.post-card[data-post-id="${postId}"]`);
   if (!card) return;
-
   const counts = {};
-  if (reactions) {
-    reactions.forEach(r => {
-      counts[r.reaction_type] = (counts[r.reaction_type] || 0) + 1;
-    });
-  }
-
+  if (reactions) reactions.forEach(r => { counts[r.reaction_type] = (counts[r.reaction_type] || 0) + 1; });
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
   const topEmojis = REACTIONS
     .filter(r => counts[r.type] > 0)
@@ -766,7 +759,6 @@ async function refreshPostReactions(postId) {
     .slice(0, 3)
     .map(r => r.emoji)
     .join('');
-
   let summary = card.querySelector('.reaction-summary');
   if (total > 0) {
     if (!summary) {
@@ -780,7 +772,6 @@ async function refreshPostReactions(postId) {
   } else if (summary) {
     summary.parentElement.remove();
   }
-
   const { data: myReaction } = await window.db
     .from('reactions')
     .select('reaction_type')
@@ -788,7 +779,6 @@ async function refreshPostReactions(postId) {
     .eq('target_type', 'post')
     .eq('user_id', currentUser.id)
     .single();
-
   const reactBtn = card.querySelector('.react-btn');
   if (reactBtn) {
     const myReactionObj = REACTIONS.find(r => r.type === myReaction?.reaction_type);
@@ -800,31 +790,24 @@ async function refreshPostReactions(postId) {
 
 async function handleCreatePost() {
   if (!currentUser) return;
-
   const content = document.getElementById('post-content').value.trim();
   const hasPoll = pollVisible;
-
   if (!content && !hasPoll) return;
-
   const btn = document.getElementById('post-btn');
   btn.textContent = 'Posting...';
   btn.disabled = true;
-
   try {
     const { data: post, error: postError } = await window.db
       .from('posts')
       .insert({ user_id: currentUser.id, content: content })
       .select()
       .single();
-
     if (postError) throw postError;
-
     if (hasPoll && post) {
       const question = document.getElementById('poll-question').value.trim();
       const optionInputs = document.querySelectorAll('.poll-option');
       const options = Array.from(optionInputs).map(i => i.value.trim()).filter(v => v.length > 0);
       const duration = parseInt(document.getElementById('poll-duration').value);
-
       if (question && options.length >= 2) {
         const expiresAt = new Date();
         expiresAt.setHours(expiresAt.getHours() + duration);
@@ -838,12 +821,10 @@ async function handleCreatePost() {
         });
       }
     }
-
     await window.db
       .from('profiles')
       .update({ post_count: (currentProfile?.post_count || 0) + 1 })
       .eq('user_id', currentUser.id);
-
     document.getElementById('post-content').value = '';
     if (hasPoll) {
       document.getElementById('poll-creator').style.display = 'none';
@@ -854,11 +835,9 @@ async function handleCreatePost() {
       });
       pollVisible = false;
     }
-
     btn.textContent = 'Post';
     btn.disabled = false;
     await loadFeed();
-
   } catch (err) {
     console.error('Post error:', err);
     btn.textContent = 'Post';
@@ -876,22 +855,18 @@ async function handleDeletePost(postId) {
 async function loadSidebarCommunities() {
   const container = document.getElementById('sidebar-communities');
   if (!container) return;
-
   const { data: communities } = await window.db
     .from('communities')
     .select('name, slug')
     .eq('is_official', true)
     .order('name')
     .limit(8);
-
   if (!communities) return;
-
   container.innerHTML = communities.map(c => `
     <a href="/community.html?slug=${c.slug}" style="display:block;padding:8px 16px;border-radius:8px;color:var(--text-secondary);font-size:14px;text-decoration:none;transition:all 0.15s ease;">
       ${c.name}
     </a>
   `).join('');
-
   container.querySelectorAll('a').forEach(a => {
     a.addEventListener('mouseover', () => { a.style.background = 'var(--bg-hover)'; a.style.color = 'var(--text)'; });
     a.addEventListener('mouseout', () => { a.style.background = ''; a.style.color = 'var(--text-secondary)'; });
@@ -901,16 +876,13 @@ async function loadSidebarCommunities() {
 async function loadTrendingCommunities() {
   const container = document.getElementById('trending-communities');
   if (!container) return;
-
   const { data: communities } = await window.db
     .from('communities')
     .select('name, slug, member_count')
     .eq('is_official', true)
     .order('member_count', { ascending: false })
     .limit(5);
-
   if (!communities) return;
-
   container.innerHTML = communities.map(c => `
     <a href="/community.html?slug=${c.slug}" style="display:block;padding:12px;border-radius:8px;margin-bottom:8px;background:var(--bg-card);border:1px solid var(--border);text-decoration:none;transition:all 0.15s ease;">
       <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px;">${c.name}</div>
@@ -922,14 +894,11 @@ async function loadTrendingCommunities() {
 async function loadEcosystemSidebar() {
   const container = document.getElementById('ecosystem-sidebar');
   if (!container) return;
-
   const { data: cards } = await window.db
     .from('ecosystem_cards')
     .select('name, tagline, status')
     .order('display_order');
-
   if (!cards) return;
-
   container.innerHTML = cards.map(card => `
     <div style="padding:12px;border-radius:8px;margin-bottom:8px;background:var(--bg-card);border:1px solid var(--border);">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
