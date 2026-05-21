@@ -3,14 +3,33 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Reaction Time — XenChee</title>
+  <title>Reaction Time — Voxxee</title>
+
+  <!-- OG Meta Tags -->
+  <meta property="og:title" content="Reaction Time — Voxxee Games" />
+  <meta property="og:description" content="Play Reaction Time on Voxxee. Click when the screen turns green. How fast are your reflexes?" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://voxxee.com/game-reaction.html" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Reaction Time — Voxxee Games" />
+  <meta name="twitter:description" content="Play Reaction Time on Voxxee. Click when the screen turns green. How fast are your reflexes?" />
+
+  <!-- GA4 -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-FSCZJEWZ6F"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-FSCZJEWZ6F');
+  </script>
+
   <link rel="stylesheet" href="/css/main.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
   <nav class="nav">
-    <a href="/feed.html" class="nav-brand">XenChee</a>
+    <a href="/feed.html" class="nav-brand">Voxxee</a>
     <div class="nav-actions">
       <a href="/games.html" class="btn btn-ghost">← Games</a>
       <button id="logout-btn" class="btn btn-ghost">Log Out</button>
@@ -141,7 +160,7 @@
 
     function initReaction() {
       const ROUNDS = 5;
-      let state = 'idle'; // idle | waiting | ready | result | done
+      let state = 'idle';
       let round = 0;
       let times = [];
       let startTime = null;
@@ -184,7 +203,6 @@
         document.getElementById('box-emoji').textContent = '🔴';
         document.getElementById('box-title').textContent = 'Wait for green...';
         document.getElementById('box-subtitle').textContent = "Don't click yet!";
-
         const delay = 1500 + Math.random() * 3000;
         waitTimeout = setTimeout(setGreen, delay);
       }
@@ -215,7 +233,6 @@
         document.getElementById('round-display').textContent = `${round} / ${ROUNDS}`;
         document.getElementById('last-time').textContent = `${ms}ms`;
 
-        // Add round pill
         const pill = document.createElement('div');
         pill.style.cssText = `padding:6px 14px;border-radius:100px;background:${ms < 250 ? 'rgba(76,175,125,0.2)' : ms < 350 ? 'rgba(245,166,35,0.2)' : 'rgba(239,68,68,0.2)'};color:${ms < 250 ? '#4caf7d' : ms < 350 ? '#f5a623' : '#ef4444'};font-size:13px;font-weight:700;`;
         pill.textContent = `R${round}: ${ms}ms`;
@@ -224,7 +241,6 @@
         if (round >= ROUNDS) {
           showFinal();
         } else {
-          // Ready for next round
           state = 'idle';
           box.style.background = '#1a1f2e';
           box.style.borderColor = 'var(--border)';
