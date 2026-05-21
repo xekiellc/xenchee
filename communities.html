@@ -29,6 +29,8 @@
         <li><a href="/events.html"><span class="sidebar-nav-icon">📅</span>Events</a></li>
         <li><a href="/messages.html"><span class="sidebar-nav-icon">✉️</span>Messages</a></li>
         <li><a href="/notifications.html"><span class="sidebar-nav-icon">🔔</span>Notifications</a></li>
+        <li><a href="/memories.html"><span class="sidebar-nav-icon">🕰️</span>Memories</a></li>
+        <li><a href="/games.html"><span class="sidebar-nav-icon">🎮</span>Games</a></li>
         <li><a href="/profile.html"><span class="sidebar-nav-icon">👤</span>Profile</a></li>
         <li><a href="/ecosystem.html"><span class="sidebar-nav-icon">🌐</span>Ecosystem</a></li>
       </ul>
@@ -119,6 +121,14 @@
       renderActiveSidebar(communities);
     }
 
+    function communityLogoHtml(c, size = 48) {
+      if (c.logo_url) {
+        return `<img src="${c.logo_url}" alt="${c.name}" style="width:${size}px;height:${size}px;border-radius:10px;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
+        <div style="display:none;width:${size}px;height:${size}px;border-radius:10px;background:var(--primary);color:#fff;align-items:center;justify-content:center;font-size:${Math.round(size*0.4)}px;font-weight:800;flex-shrink:0;">${c.name.charAt(0)}</div>`;
+      }
+      return `<div style="width:${size}px;height:${size}px;border-radius:10px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:${Math.round(size*0.4)}px;font-weight:800;flex-shrink:0;">${c.name.charAt(0)}</div>`;
+    }
+
     function renderCommunities(communities) {
       const grid = document.getElementById('communities-grid');
 
@@ -131,7 +141,7 @@
         <a href="/community.html?slug=${c.slug}" style="text-decoration:none;">
           <div class="community-card" style="height:100%;">
             <div class="community-card-header">
-              <div class="community-avatar">${c.name.charAt(0)}</div>
+              ${communityLogoHtml(c, 48)}
               <div>
                 <div class="community-name">${c.name}</div>
                 <div class="community-type">v/${c.slug}</div>
@@ -155,9 +165,12 @@
       const sorted = [...communities].sort((a, b) => (b.member_count || 0) - (a.member_count || 0)).slice(0, 6);
 
       container.innerHTML = sorted.map(c => `
-        <a href="/community.html?slug=${c.slug}" style="display:block;padding:10px 12px;border-radius:8px;margin-bottom:6px;background:var(--bg-card);border:1px solid var(--border);text-decoration:none;transition:all 0.15s ease;">
-          <div style="font-size:14px;font-weight:600;color:var(--text);">${c.name}</div>
-          <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">${c.member_count > 0 ? c.member_count.toLocaleString() + ' members' : 'New'}</div>
+        <a href="/community.html?slug=${c.slug}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;margin-bottom:6px;background:var(--bg-card);border:1px solid var(--border);text-decoration:none;transition:all 0.15s ease;">
+          ${communityLogoHtml(c, 32)}
+          <div style="min-width:0;">
+            <div style="font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.name}</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">${c.member_count > 0 ? c.member_count.toLocaleString() + ' members' : 'New'}</div>
+          </div>
         </a>
       `).join('');
     }
