@@ -66,9 +66,27 @@ async function loadCommunity(slug) {
   document.title = community.name + ' — XenChee';
 
   document.getElementById('community-name').textContent = community.name;
-  document.getElementById('community-slug').textContent = 'xenchee.com/c/' + community.slug;
+  document.getElementById('community-slug').textContent = 'v/' + community.slug;
   document.getElementById('community-description').textContent = community.description || '';
-  document.getElementById('community-member-count').textContent = community.member_count || 0;
+  document.getElementById('community-member-count').textContent = (community.member_count || 0).toLocaleString();
+  document.getElementById('community-post-count').textContent = (community.post_count || 0).toLocaleString();
+
+  // Populate logo
+  const logoEl = document.getElementById('community-logo');
+  if (logoEl) {
+    if (community.logo_url) {
+      logoEl.innerHTML = `
+        <img src="${community.logo_url}" alt="${escapeHtml(community.name)}"
+          style="width:100%;height:100%;object-fit:cover;"
+          onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
+        <span style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:#fff;">
+          ${community.name.charAt(0).toUpperCase()}
+        </span>
+      `;
+    } else {
+      logoEl.textContent = community.name.charAt(0).toUpperCase();
+    }
+  }
 
   // Join button
   const joinBtn = document.getElementById('join-btn');
@@ -119,14 +137,11 @@ async function loadCommunityPosts(communityId) {
 
     if (error) throw error;
 
-    document.getElementById('community-post-count').textContent = posts ? posts.length : 0;
-
     if (!posts || posts.length === 0) {
       container.innerHTML = '<div class="loading">No posts yet. Be the first to post in this community.</div>';
       return;
     }
 
-    // Fetch author profiles
     const userIds = [...new Set(posts.map(p => p.user_id))];
     const { data: profiles } = await window.db
       .from('profiles')
@@ -136,8 +151,8 @@ async function loadCommunityPosts(communityId) {
     const profileMap = {};
     if (profiles) profiles.forEach(p => { profileMap[p.user_id] = p; });
 
-    // Fetch reaction counts
     const postIds = posts.map(p => p.id);
+
     const { data: reactions } = await window.db
       .from('reactions')
       .select('target_id, reaction_type')
@@ -147,12 +162,11 @@ async function loadCommunityPosts(communityId) {
     const reactionMap = {};
     if (reactions) {
       reactions.forEach(r => {
-        if (!reactionMap[r.target_id]) reactionMap[r.target_id] = { like: 0, downvote: 0 };
-        reactionMap[r.target_id][r.reaction_type]++;
+        if (!reactionMap[r.target_id]) reactionMap[r.target_id] = {};
+        reactionMap[r.target_id][r.reaction_type] = (reactionMap[r.target_id][r.reaction_type] || 0) + 1;
       });
     }
 
-    // Fetch comment counts
     const { data: comments } = await window.db
       .from('comments')
       .select('post_id')
@@ -166,7 +180,6 @@ async function loadCommunityPosts(communityId) {
       });
     }
 
-    // Fetch current user's reactions
     const { data: myReactions } = await window.db
       .from('reactions')
       .select('target_id, reaction_type')
@@ -198,18 +211,38 @@ function renderPost(post, profileMap, reactionMap, commentCountMap, myReactionMa
     month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
   });
 
-  const likes = reactionMap[post.id]?.like || 0;
-  const downvotes = reactionMap[post.id]?.downvote || 0;
+  const postReactions = reactionMap[post.id] || {};
+  const likes = postReactions.like || 0;
+  const downvotes = postReactions.downvote || 0;
   const commentCount = commentCountMap[post.id] || 0;
   const myReaction = myReactionMap[post.id];
 
-  const likeActive = myReaction === 'like' ? 'font-weight:700;' : '';
-  const downvoteActive = myReaction === 'downvote' ? 'font-weight:700;' : '';
+  const REACTIONS = [
+    { type: 'like', emoji: '❤️', label: 'Like' },
+    { type: 'haha', emoji: '😂', label: 'Haha' },
+    { type: 'wow', emoji: '😮', label: 'Wow' },
+    { type: 'sad', emoji: '😢', label: 'Sad' },
+    { type: 'angry', emoji: '😡', label: 'Angry' },
+    { type: 'downvote', emoji: '👎', label: 'Downvote' }
+  ];
+
+  const totalReactions = Object.values(postReactions).reduce((a, b) => a + b, 0);
+  const topEmojis = REACTIONS
+    .filter(r => postReactions[r.type] > 0)
+    .sort((a, b) => (postReactions[b.type] || 0) - (postReactions[a.type] || 0))
+    .slice(0, 3)
+    .map(r => r.emoji)
+    .join('');
+
+  const myReactionObj = REACTIONS.find(r => r.type === myReaction);
+  const reactBtnLabel = myReactionObj ? `${myReactionObj.emoji} ${myReactionObj.label}` : '❤️ React';
+  const reactBtnStyle = myReaction ? 'font-weight:700;color:var(--primary);' : '';
 
   return `
     <div class="post-card" data-post-id="${post.id}">
       <div class="post-header">
-        <div class="post-avatar" style="cursor:pointer;" onclick="window.location.href='/profile.html?user=${encodeURIComponent(username)}'">${initial}</div>
+        <div class="post-avatar" style="cursor:pointer;"
+          onclick="window.location.href='/profile.html?user=${encodeURIComponent(username)}'">${initial}</div>
         <div class="post-meta">
           <div class="post-username">
             <a href="/profile.html?user=${encodeURIComponent(username)}" style="text-decoration:none;color:inherit;">${escapeHtml(displayName)}</a>
@@ -217,22 +250,53 @@ function renderPost(post, profileMap, reactionMap, commentCountMap, myReactionMa
           </div>
           <span class="post-timestamp">${timestamp}</span>
         </div>
+        ${post.user_id === currentUser?.id ? `
+          <div class="post-menu-wrapper" style="position:relative;margin-left:auto;">
+            <button class="post-menu-btn" data-post-id="${post.id}"
+              style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:18px;padding:4px 8px;border-radius:6px;line-height:1;">•••</button>
+            <div class="post-menu-dropdown" data-post-id="${post.id}"
+              style="display:none;position:absolute;top:28px;right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.3);z-index:200;min-width:140px;overflow:hidden;">
+              <button class="delete-btn" data-post-id="${post.id}"
+                style="display:block;width:100%;text-align:left;padding:10px 16px;background:none;border:none;cursor:pointer;font-size:14px;color:var(--danger);">
+                🗑️ Delete
+              </button>
+            </div>
+          </div>
+        ` : ''}
       </div>
+
       <div class="post-content">${escapeHtml(post.content || '')}</div>
+
+      ${totalReactions > 0 ? `
+        <div style="padding:4px 0 8px 0;">
+          <span style="font-size:13px;color:var(--text-muted);">${topEmojis} ${totalReactions}</span>
+        </div>
+      ` : ''}
+
       <div class="post-actions">
-        <button class="post-action-btn like-btn" data-post-id="${post.id}" style="${likeActive}">
-          ❤️ <span class="like-count">${likes}</span>
-        </button>
+        <div class="reaction-btn-wrapper" style="position:relative;">
+          <button class="post-action-btn react-btn" data-post-id="${post.id}" style="${reactBtnStyle}">
+            ${reactBtnLabel}
+          </button>
+          <div class="reaction-picker" data-post-id="${post.id}"
+            style="display:none;position:absolute;bottom:36px;left:0;background:var(--bg-card);border:1px solid var(--border);border-radius:100px;padding:6px 10px;gap:4px;z-index:100;box-shadow:0 4px 20px rgba(0,0,0,0.3);">
+            ${REACTIONS.map(r => `
+              <button class="reaction-option" data-post-id="${post.id}" data-type="${r.type}" title="${r.label}"
+                style="background:none;border:none;cursor:pointer;font-size:22px;padding:2px 4px;border-radius:50%;transition:transform 0.1s ease;${myReaction === r.type ? 'transform:scale(1.3);' : ''}"
+                onmouseover="this.style.transform='scale(1.3)'"
+                onmouseout="this.style.transform='${myReaction === r.type ? 'scale(1.3)' : 'scale(1)'}'">
+                ${r.emoji}
+              </button>
+            `).join('')}
+          </div>
+        </div>
         <button class="post-action-btn comment-btn" data-post-id="${post.id}">
           💬 <span>${commentCount > 0 ? commentCount : ''} Comment${commentCount !== 1 ? 's' : ''}</span>
-        </button>
-        <button class="post-action-btn downvote-btn" data-post-id="${post.id}" style="${downvoteActive}">
-          👎 <span class="downvote-count">${downvotes}</span>
         </button>
         <button class="post-action-btn share-btn" data-post-id="${post.id}">
           🔗 Share
         </button>
-        ${post.user_id === currentUser.id ? `
+        ${post.user_id === currentUser?.id ? `
           <button class="post-action-btn delete-btn" data-post-id="${post.id}" style="margin-left:auto;color:var(--danger);">
             🗑️
           </button>
@@ -243,12 +307,37 @@ function renderPost(post, profileMap, reactionMap, commentCountMap, myReactionMa
 }
 
 function attachPostListeners(communityId) {
-  document.querySelectorAll('.like-btn').forEach(btn => {
-    btn.addEventListener('click', () => handleReaction(btn.dataset.postId, 'like'));
+  document.querySelectorAll('.react-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const postId = btn.dataset.postId;
+      const picker = document.querySelector(`.reaction-picker[data-post-id="${postId}"]`);
+      const isVisible = picker.style.display === 'flex';
+      document.querySelectorAll('.reaction-picker').forEach(p => p.style.display = 'none');
+      picker.style.display = isVisible ? 'none' : 'flex';
+    });
   });
 
-  document.querySelectorAll('.downvote-btn').forEach(btn => {
-    btn.addEventListener('click', () => handleReaction(btn.dataset.postId, 'downvote'));
+  document.querySelectorAll('.reaction-option').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const postId = btn.dataset.postId;
+      const type = btn.dataset.type;
+      const picker = document.querySelector(`.reaction-picker[data-post-id="${postId}"]`);
+      picker.style.display = 'none';
+      handleReaction(postId, type);
+    });
+  });
+
+  document.querySelectorAll('.post-menu-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const postId = btn.dataset.postId;
+      const menu = document.querySelector(`.post-menu-dropdown[data-post-id="${postId}"]`);
+      const isVisible = menu.style.display === 'block';
+      document.querySelectorAll('.post-menu-dropdown').forEach(m => m.style.display = 'none');
+      menu.style.display = isVisible ? 'none' : 'block';
+    });
   });
 
   document.querySelectorAll('.comment-btn').forEach(btn => {
@@ -259,7 +348,7 @@ function attachPostListeners(communityId) {
 
   document.querySelectorAll('.share-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      const url = `${window.location.origin}/post.html?id=${btn.dataset.postId}`;
+      const url = `${window.location.origin}/comments.html?post=${btn.dataset.postId}`;
       navigator.clipboard.writeText(url).then(() => {
         btn.textContent = '✅ Copied';
         setTimeout(() => { btn.textContent = '🔗 Share'; }, 2000);
@@ -268,13 +357,26 @@ function attachPostListeners(communityId) {
   });
 
   document.querySelectorAll('.delete-btn').forEach(btn => {
-    btn.addEventListener('click', () => handleDeletePost(btn.dataset.postId, communityId));
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const menu = document.querySelector(`.post-menu-dropdown[data-post-id="${btn.dataset.postId}"]`);
+      if (menu) menu.style.display = 'none';
+      handleDeletePost(btn.dataset.postId, communityId);
+    });
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.reaction-btn-wrapper')) {
+      document.querySelectorAll('.reaction-picker').forEach(p => p.style.display = 'none');
+    }
+    if (!e.target.closest('.post-menu-wrapper')) {
+      document.querySelectorAll('.post-menu-dropdown').forEach(m => m.style.display = 'none');
+    }
   });
 }
 
 async function handleReaction(postId, type) {
   if (!currentUser) return;
-
   try {
     const { data: existing } = await window.db
       .from('reactions')
@@ -298,31 +400,55 @@ async function handleReaction(postId, type) {
         reaction_type: type
       });
     }
-
     await refreshPostReactions(postId);
-
   } catch (err) {
     console.error('Reaction error:', err);
   }
 }
 
 async function refreshPostReactions(postId) {
+  const REACTIONS = [
+    { type: 'like', emoji: '❤️' },
+    { type: 'haha', emoji: '😂' },
+    { type: 'wow', emoji: '😮' },
+    { type: 'sad', emoji: '😢' },
+    { type: 'angry', emoji: '😡' },
+    { type: 'downvote', emoji: '👎' }
+  ];
+
   const { data: reactions } = await window.db
     .from('reactions')
     .select('reaction_type')
     .eq('target_id', postId)
     .eq('target_type', 'post');
 
-  const likes = reactions ? reactions.filter(r => r.reaction_type === 'like').length : 0;
-  const downvotes = reactions ? reactions.filter(r => r.reaction_type === 'downvote').length : 0;
-
   const card = document.querySelector(`.post-card[data-post-id="${postId}"]`);
   if (!card) return;
 
-  const likeCount = card.querySelector('.like-count');
-  const downvoteCount = card.querySelector('.downvote-count');
-  if (likeCount) likeCount.textContent = likes;
-  if (downvoteCount) downvoteCount.textContent = downvotes;
+  const counts = {};
+  if (reactions) reactions.forEach(r => { counts[r.reaction_type] = (counts[r.reaction_type] || 0) + 1; });
+
+  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+  const topEmojis = REACTIONS
+    .filter(r => counts[r.type] > 0)
+    .sort((a, b) => (counts[b.type] || 0) - (counts[a.type] || 0))
+    .slice(0, 3)
+    .map(r => r.emoji)
+    .join('');
+
+  let summary = card.querySelector('.reaction-summary');
+  if (total > 0) {
+    if (!summary) {
+      const div = document.createElement('div');
+      div.style.cssText = 'padding:4px 0 8px 0;';
+      div.innerHTML = `<span class="reaction-summary" style="font-size:13px;color:var(--text-muted);"></span>`;
+      card.querySelector('.post-content').after(div);
+      summary = card.querySelector('.reaction-summary');
+    }
+    summary.textContent = `${topEmojis} ${total}`;
+  } else if (summary) {
+    summary.parentElement.remove();
+  }
 
   const { data: myReaction } = await window.db
     .from('reactions')
@@ -332,38 +458,34 @@ async function refreshPostReactions(postId) {
     .eq('user_id', currentUser.id)
     .single();
 
-  const likeBtn = card.querySelector('.like-btn');
-  const downvoteBtn = card.querySelector('.downvote-btn');
-  if (likeBtn) likeBtn.style.fontWeight = myReaction?.reaction_type === 'like' ? '700' : '';
-  if (downvoteBtn) downvoteBtn.style.fontWeight = myReaction?.reaction_type === 'downvote' ? '700' : '';
+  const reactBtn = card.querySelector('.react-btn');
+  if (reactBtn) {
+    const myReactionObj = REACTIONS.find(r => r.type === myReaction?.reaction_type);
+    reactBtn.textContent = myReactionObj ? `${myReactionObj.emoji} ${myReactionObj.label || myReactionObj.type}` : '❤️ React';
+    reactBtn.style.fontWeight = myReaction ? '700' : '';
+    reactBtn.style.color = myReaction ? 'var(--primary)' : '';
+  }
 }
 
 async function handleCreatePost() {
   if (!currentCommunity) return;
-
   const content = document.getElementById('post-content').value.trim();
   if (!content) return;
-
   const btn = document.getElementById('post-btn');
   btn.textContent = 'Posting...';
   btn.disabled = true;
-
   try {
     const { error } = await window.db.from('posts').insert({
       user_id: currentUser.id,
       community_id: currentCommunity.id,
-      content: content
+      content
     });
-
     if (error) throw error;
-
     document.getElementById('post-content').value = '';
     await loadCommunityPosts(currentCommunity.id);
-
   } catch (err) {
     console.error('Post error:', err);
   }
-
   btn.textContent = 'Post';
   btn.disabled = false;
 }
@@ -378,25 +500,20 @@ async function handleJoin(communityId) {
   const btn = document.getElementById('join-btn');
   btn.textContent = 'Joining...';
   btn.disabled = true;
-
   try {
     await window.db.from('community_members').insert({
       community_id: communityId,
       user_id: currentUser.id,
       role: 'member'
     });
-
     await window.db.from('communities')
       .update({ member_count: (currentCommunity.member_count || 0) + 1 })
       .eq('id', communityId);
-
     currentCommunity.member_count = (currentCommunity.member_count || 0) + 1;
-    document.getElementById('community-member-count').textContent = currentCommunity.member_count;
-
+    document.getElementById('community-member-count').textContent = currentCommunity.member_count.toLocaleString();
     btn.textContent = 'Joined ✓';
     btn.className = 'btn btn-ghost';
     btn.disabled = false;
-
   } catch (err) {
     console.error('Join error:', err);
     btn.textContent = 'Join Community';
@@ -406,10 +523,9 @@ async function handleJoin(communityId) {
 
 async function loadOtherCommunities(currentSlug) {
   const container = document.getElementById('other-communities');
-
   const { data: communities } = await window.db
     .from('communities')
-    .select('name, slug')
+    .select('name, slug, logo_url')
     .neq('slug', currentSlug)
     .eq('is_official', true)
     .order('name')
@@ -417,11 +533,17 @@ async function loadOtherCommunities(currentSlug) {
 
   if (!communities) return;
 
-  container.innerHTML = communities.map(c => `
-    <a href="/community.html?slug=${c.slug}" style="display:block;padding:10px 12px;border-radius:8px;margin-bottom:6px;background:var(--bg-card);border:1px solid var(--border);color:var(--text);font-size:14px;text-decoration:none;transition:all 0.15s ease;">
-      ${escapeHtml(c.name)}
-    </a>
-  `).join('');
+  container.innerHTML = communities.map(c => {
+    const logoHtml = c.logo_url
+      ? `<img src="${c.logo_url}" alt="${escapeHtml(c.name)}" style="width:28px;height:28px;border-radius:6px;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'" />`
+      : `<div style="width:28px;height:28px;border-radius:6px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">${c.name.charAt(0)}</div>`;
+    return `
+      <a href="/community.html?slug=${c.slug}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;margin-bottom:6px;background:var(--bg-card);border:1px solid var(--border);color:var(--text);font-size:14px;text-decoration:none;transition:all 0.15s ease;">
+        ${logoHtml}
+        <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(c.name)}</span>
+      </a>
+    `;
+  }).join('');
 }
 
 function escapeHtml(text) {
