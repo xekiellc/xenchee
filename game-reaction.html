@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reaction Time — XenChee</title>
+  <link rel="stylesheet" href="/css/main.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <nav class="nav">
+    <a href="/feed.html" class="nav-brand">XenChee</a>
+    <div class="nav-actions">
+      <a href="/games.html" class="btn btn-ghost">← Games</a>
+      <button id="logout-btn" class="btn btn-ghost">Log Out</button>
+    </div>
+  </nav>
+
+  <div class="app-layout">
+    <div class="sidebar-left">
+      <ul class="sidebar-nav">
+        <li><a href="/feed.html"><span class="sidebar-nav-icon">🏠</span>Home</a></li>
+        <li><a href="/search.html"><span class="sidebar-nav-icon">🔍</span>Search</a></li>
+        <li><a href="/communities.html"><span class="sidebar-nav-icon">💬</span>Communities</a></li>
+        <li><a href="/events.html"><span class="sidebar-nav-icon">📅</span>Events</a></li>
+        <li><a href="/messages.html"><span class="sidebar-nav-icon">✉️</span>Messages</a></li>
+        <li><a href="/notifications.html"><span class="sidebar-nav-icon">🔔</span>Notifications</a></li>
+        <li><a href="/memories.html"><span class="sidebar-nav-icon">🕰️</span>Memories</a></li>
+        <li><a href="/games.html" class="active"><span class="sidebar-nav-icon">🎮</span>Games</a></li>
+        <li><a href="/profile.html"><span class="sidebar-nav-icon">👤</span>Profile</a></li>
+        <li><a href="/ecosystem.html"><span class="sidebar-nav-icon">🌐</span>Ecosystem</a></li>
+      </ul>
+    </div>
+
+    <div class="feed-main">
+      <div style="max-width:520px;margin:0 auto;">
+
+        <div style="text-align:center;margin-bottom:24px;">
+          <div style="font-size:48px;margin-bottom:8px;">⚡</div>
+          <div style="font-size:24px;font-weight:800;color:var(--text);margin-bottom:4px;">Reaction Time</div>
+          <div style="font-size:14px;color:var(--text-muted);">Click when the screen turns green · 5 rounds · Best average wins</div>
+        </div>
+
+        <!-- Stats Bar -->
+        <div style="display:flex;gap:12px;margin-bottom:16px;">
+          <div style="flex:1;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;">
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Round</div>
+            <div id="round-display" style="font-size:20px;font-weight:800;color:var(--primary);">0 / 5</div>
+          </div>
+          <div style="flex:1;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;">
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Last</div>
+            <div id="last-time" style="font-size:20px;font-weight:800;color:var(--primary);">—</div>
+          </div>
+          <div style="flex:1;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;">
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Best</div>
+            <div id="best-display" style="font-size:20px;font-weight:800;color:var(--primary);">—</div>
+          </div>
+        </div>
+
+        <!-- Game Box -->
+        <div id="reaction-box"
+          style="height:320px;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:background 0.1s ease;background:#1a1f2e;border:2px solid var(--border);user-select:none;">
+          <div id="box-emoji" style="font-size:56px;margin-bottom:16px;">⚡</div>
+          <div id="box-title" style="font-size:22px;font-weight:800;color:#fff;margin-bottom:8px;">Reaction Time</div>
+          <div id="box-subtitle" style="font-size:14px;color:rgba(255,255,255,0.6);text-align:center;padding:0 24px;">Click anywhere to start</div>
+        </div>
+
+        <!-- Round Results -->
+        <div id="round-results" style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;justify-content:center;"></div>
+
+        <!-- Final Results -->
+        <div id="final-results" style="display:none;margin-top:20px;">
+          <div class="post-card" style="text-align:center;padding:32px 24px;">
+            <div style="font-size:48px;margin-bottom:12px;" id="result-emoji">⚡</div>
+            <div style="font-size:22px;font-weight:800;color:var(--text);margin-bottom:4px;">Results</div>
+            <div style="font-size:36px;font-weight:800;color:var(--primary);margin-bottom:4px;" id="avg-time"></div>
+            <div style="font-size:14px;color:var(--text-muted);margin-bottom:8px;">average reaction time</div>
+            <div style="font-size:14px;font-weight:700;margin-bottom:20px;" id="rating-text"></div>
+            <div style="display:flex;gap:16px;justify-content:center;margin-bottom:20px;" id="result-breakdown"></div>
+            <div id="new-best-msg" style="display:none;color:#4caf7d;font-weight:700;font-size:14px;margin-bottom:16px;">🏆 New personal best!</div>
+            <div style="display:flex;gap:8px;justify-content:center;">
+              <button id="play-again-btn" class="btn btn-primary">Play Again</button>
+              <a href="/games.html" class="btn btn-ghost" style="text-decoration:none;">← Games</a>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="sidebar-right">
+      <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">
+        ⚡ How to Play
+      </div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.8;margin-bottom:32px;">
+        <div>👆 Click to start each round</div>
+        <div>⏳ Wait for green — don't click early!</div>
+        <div>🟢 Click as fast as you can</div>
+        <div>🔁 5 rounds total</div>
+        <div>📊 Your average is your score</div>
+      </div>
+
+      <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">
+        🏆 Rating Scale
+      </div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.8;">
+        <div>🥇 Under 200ms — Elite</div>
+        <div>⚡ 200–250ms — Excellent</div>
+        <div>👍 250–300ms — Good</div>
+        <div>😊 300–400ms — Average</div>
+        <div>🐢 Over 400ms — Keep practicing</div>
+      </div>
+
+      <div style="margin-top:24px;padding:12px;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;">
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">Your Personal Best</div>
+        <div id="personal-best" style="font-size:18px;font-weight:800;color:var(--primary);">—</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/supabase.js"></script>
+  <script>
+    async function waitForDb(timeout = 5000) {
+      const start = Date.now();
+      while (!window.db) {
+        if (Date.now() - start > timeout) throw new Error('timeout');
+        await new Promise(r => setTimeout(r, 50));
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      await waitForDb();
+      const user = await window.auth.getUser();
+      if (!user) { window.location.href = '/login.html'; return; }
+      document.getElementById('logout-btn').addEventListener('click', async () => {
+        await window.auth.signOut(); window.location.href = '/';
+      });
+      initReaction();
+    });
+
+    function initReaction() {
+      const ROUNDS = 5;
+      let state = 'idle'; // idle | waiting | ready | result | done
+      let round = 0;
+      let times = [];
+      let startTime = null;
+      let waitTimeout = null;
+      const best = parseFloat(localStorage.getItem('reaction_best') || '0');
+
+      const box = document.getElementById('reaction-box');
+      const bestDisplay = document.getElementById('best-display');
+
+      if (best) {
+        bestDisplay.textContent = `${best}ms`;
+        document.getElementById('personal-best').textContent = `${best}ms`;
+      }
+
+      function reset() {
+        round = 0;
+        times = [];
+        state = 'idle';
+        clearTimeout(waitTimeout);
+        document.getElementById('round-display').textContent = `0 / ${ROUNDS}`;
+        document.getElementById('last-time').textContent = '—';
+        document.getElementById('round-results').innerHTML = '';
+        document.getElementById('final-results').style.display = 'none';
+        setIdle();
+      }
+
+      function setIdle() {
+        state = 'idle';
+        box.style.background = '#1a1f2e';
+        box.style.borderColor = 'var(--border)';
+        document.getElementById('box-emoji').textContent = '⚡';
+        document.getElementById('box-title').textContent = 'Reaction Time';
+        document.getElementById('box-subtitle').textContent = 'Click anywhere to start';
+      }
+
+      function setWaiting() {
+        state = 'waiting';
+        box.style.background = '#7f1d1d';
+        box.style.borderColor = '#ef4444';
+        document.getElementById('box-emoji').textContent = '🔴';
+        document.getElementById('box-title').textContent = 'Wait for green...';
+        document.getElementById('box-subtitle').textContent = "Don't click yet!";
+
+        const delay = 1500 + Math.random() * 3000;
+        waitTimeout = setTimeout(setGreen, delay);
+      }
+
+      function setGreen() {
+        state = 'ready';
+        startTime = performance.now();
+        box.style.background = '#14532d';
+        box.style.borderColor = '#4caf7d';
+        document.getElementById('box-emoji').textContent = '🟢';
+        document.getElementById('box-title').textContent = 'CLICK NOW!';
+        document.getElementById('box-subtitle').textContent = '';
+      }
+
+      function setEarlyClick() {
+        state = 'idle';
+        clearTimeout(waitTimeout);
+        box.style.background = '#1e1b4b';
+        box.style.borderColor = '#6366f1';
+        document.getElementById('box-emoji').textContent = '😬';
+        document.getElementById('box-title').textContent = 'Too early!';
+        document.getElementById('box-subtitle').textContent = 'Click to try this round again';
+      }
+
+      function recordTime(ms) {
+        times.push(ms);
+        round++;
+        document.getElementById('round-display').textContent = `${round} / ${ROUNDS}`;
+        document.getElementById('last-time').textContent = `${ms}ms`;
+
+        // Add round pill
+        const pill = document.createElement('div');
+        pill.style.cssText = `padding:6px 14px;border-radius:100px;background:${ms < 250 ? 'rgba(76,175,125,0.2)' : ms < 350 ? 'rgba(245,166,35,0.2)' : 'rgba(239,68,68,0.2)'};color:${ms < 250 ? '#4caf7d' : ms < 350 ? '#f5a623' : '#ef4444'};font-size:13px;font-weight:700;`;
+        pill.textContent = `R${round}: ${ms}ms`;
+        document.getElementById('round-results').appendChild(pill);
+
+        if (round >= ROUNDS) {
+          showFinal();
+        } else {
+          // Ready for next round
+          state = 'idle';
+          box.style.background = '#1a1f2e';
+          box.style.borderColor = 'var(--border)';
+          document.getElementById('box-emoji').textContent = '⚡';
+          document.getElementById('box-title').textContent = `Round ${round + 1} of ${ROUNDS}`;
+          document.getElementById('box-subtitle').textContent = 'Click to continue';
+        }
+      }
+
+      function showFinal() {
+        state = 'done';
+        const avg = Math.round(times.reduce((a, b) => a + b, 0) / times.length);
+        const min = Math.min(...times);
+        const max = Math.max(...times);
+
+        const prevBest = parseFloat(localStorage.getItem('reaction_best') || '0');
+        const isNewBest = !prevBest || avg < prevBest;
+        if (isNewBest) {
+          localStorage.setItem('reaction_best', avg);
+          document.getElementById('best-display').textContent = `${avg}ms`;
+          document.getElementById('personal-best').textContent = `${avg}ms`;
+        }
+
+        const rating = avg < 200 ? { text: '🥇 Elite reflexes!', color: '#4caf7d' }
+          : avg < 250 ? { text: '⚡ Excellent!', color: '#6366f1' }
+          : avg < 300 ? { text: '👍 Good reflexes', color: '#f5a623' }
+          : avg < 400 ? { text: '😊 Average', color: '#f5a623' }
+          : { text: '🐢 Keep practicing!', color: '#ef4444' };
+
+        const emoji = avg < 200 ? '🥇' : avg < 250 ? '⚡' : avg < 300 ? '👍' : avg < 400 ? '😊' : '🐢';
+
+        document.getElementById('result-emoji').textContent = emoji;
+        document.getElementById('avg-time').textContent = `${avg}ms`;
+        document.getElementById('rating-text').innerHTML = `<span style="color:${rating.color}">${rating.text}</span>`;
+        document.getElementById('result-breakdown').innerHTML = `
+          <div style="text-align:center;">
+            <div style="font-size:18px;font-weight:800;color:var(--primary);">${min}ms</div>
+            <div style="font-size:11px;color:var(--text-muted);">Best Round</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:18px;font-weight:800;color:var(--primary);">${max}ms</div>
+            <div style="font-size:11px;color:var(--text-muted);">Worst Round</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:18px;font-weight:800;color:var(--primary);">${max - min}ms</div>
+            <div style="font-size:11px;color:var(--text-muted);">Variance</div>
+          </div>
+        `;
+
+        if (isNewBest) document.getElementById('new-best-msg').style.display = 'block';
+
+        box.style.display = 'none';
+        document.getElementById('final-results').style.display = 'block';
+      }
+
+      box.addEventListener('click', () => {
+        if (state === 'idle') {
+          setWaiting();
+        } else if (state === 'waiting') {
+          setEarlyClick();
+        } else if (state === 'ready') {
+          const ms = Math.round(performance.now() - startTime);
+          recordTime(ms);
+        } else if (state === 'done') {
+          reset();
+        }
+      });
+
+      document.getElementById('play-again-btn').addEventListener('click', () => {
+        box.style.display = 'flex';
+        reset();
+      });
+    }
+  </script>
+</body>
+</html>
