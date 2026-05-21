@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Events — XenChee</title>
+  <link rel="stylesheet" href="/css/main.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <nav class="nav">
+    <a href="/feed.html" class="nav-brand">XenChee</a>
+    <div class="nav-actions">
+      <a href="/feed.html" class="btn btn-ghost">Feed</a>
+      <a href="/profile.html" class="btn btn-ghost">Profile</a>
+      <button id="logout-btn" class="btn btn-ghost">Log Out</button>
+    </div>
+  </nav>
+
+  <div class="app-layout">
+    <div class="sidebar-left">
+      <ul class="sidebar-nav">
+        <li><a href="/feed.html"><span class="sidebar-nav-icon">🏠</span>Home</a></li>
+        <li><a href="/search.html"><span class="sidebar-nav-icon">🔍</span>Search</a></li>
+        <li><a href="/communities.html"><span class="sidebar-nav-icon">💬</span>Communities</a></li>
+        <li><a href="/events.html" class="active"><span class="sidebar-nav-icon">📅</span>Events</a></li>
+        <li><a href="/messages.html"><span class="sidebar-nav-icon">✉️</span>Messages</a></li>
+        <li><a href="/notifications.html"><span class="sidebar-nav-icon">🔔</span>Notifications</a></li>
+        <li><a href="/memories.html"><span class="sidebar-nav-icon">🕰️</span>Memories</a></li>
+        <li><a href="/games.html"><span class="sidebar-nav-icon">🎮</span>Games</a></li>
+        <li><a href="/profile.html"><span class="sidebar-nav-icon">👤</span>Profile</a></li>
+        <li><a href="/ecosystem.html"><span class="sidebar-nav-icon">🌐</span>Ecosystem</a></li>
+      </ul>
+    </div>
+
+    <div class="feed-main">
+
+      <!-- Header -->
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+        <div>
+          <div style="font-size:24px;font-weight:800;color:var(--text);margin-bottom:4px;">📅 Events</div>
+          <div style="font-size:15px;color:var(--text-muted);">Community meetups, live discussions, and more.</div>
+        </div>
+        <button id="create-event-btn" class="btn btn-primary">+ Create Event</button>
+      </div>
+
+      <!-- Filter tabs -->
+      <div style="display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap;">
+        <button class="btn btn-primary event-filter-btn" data-filter="upcoming">Upcoming</button>
+        <button class="btn btn-ghost event-filter-btn" data-filter="today">Today</button>
+        <button class="btn btn-ghost event-filter-btn" data-filter="this_week">This Week</button>
+        <button class="btn btn-ghost event-filter-btn" data-filter="going">I'm Going</button>
+        <button class="btn btn-ghost event-filter-btn" data-filter="past">Past</button>
+      </div>
+
+      <!-- Events List -->
+      <div id="events-container">
+        <div class="loading"><div class="spinner"></div>Loading events...</div>
+      </div>
+
+      <!-- Create Event Form -->
+      <div id="create-event-form" style="display:none;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;margin-top:24px;">
+        <div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:20px;">Create Event</div>
+
+        <div class="form-group">
+          <label class="form-label">Event Title <span style="color:var(--danger);">*</span></label>
+          <input type="text" id="event-title" class="form-input" placeholder="What's happening?" maxlength="100" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea id="event-description" class="form-input" rows="3" placeholder="Tell people about this event..." maxlength="1000" style="resize:vertical;"></textarea>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div class="form-group">
+            <label class="form-label">Start Date & Time <span style="color:var(--danger);">*</span></label>
+            <input type="datetime-local" id="event-date" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">End Date & Time</label>
+            <input type="datetime-local" id="event-end-date" class="form-input" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:12px;">
+            <input type="checkbox" id="event-is-online" style="accent-color:var(--primary);" />
+            <span style="font-size:14px;color:var(--text);">🌐 This is an online event</span>
+          </label>
+        </div>
+
+        <div class="form-group" id="location-group">
+          <label class="form-label">Location</label>
+          <input type="text" id="event-location" class="form-input" placeholder="Address or venue name" maxlength="200" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Event URL</label>
+          <input type="url" id="event-url" class="form-input" placeholder="https://zoom.us/... or event link" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Community</label>
+          <select id="event-community" class="form-input">
+            <option value="">No community</option>
+          </select>
+        </div>
+
+        <div id="create-event-error" style="display:none;color:var(--danger);font-size:14px;margin-bottom:12px;"></div>
+
+        <div style="display:flex;gap:8px;">
+          <button id="save-event-btn" class="btn btn-primary">Create Event</button>
+          <button id="cancel-event-btn" class="btn btn-ghost">Cancel</button>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="sidebar-right">
+      <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">
+        📅 This Week
+      </div>
+      <div id="this-week-sidebar">
+        <div class="loading"><div class="spinner"></div></div>
+      </div>
+
+      <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-top:32px;margin-bottom:16px;">
+        🎯 Your RSVPs
+      </div>
+      <div id="my-rsvps-sidebar">
+        <div class="loading"><div class="spinner"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/supabase.js"></script>
+  <script src="/js/events.js"></script>
+</body>
+</html>
