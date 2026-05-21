@@ -222,7 +222,7 @@ async function loadFeed() {
       }
     }
 
-    // Fetch view counts for all posts
+    // Fetch view counts
     const { data: views } = await window.db
       .from('post_views')
       .select('post_id')
@@ -235,13 +235,55 @@ async function loadFeed() {
       });
     }
 
+    // Fetch polls for all posts
+    const { data: polls } = await window.db
+      .from('polls')
+      .select('*')
+      .in('post_id', postIds);
+
+    const pollMap = {};
+    if (polls) polls.forEach(p => { pollMap[p.post_id] = p; });
+
+    // Fetch current user's poll votes
+    let myVoteMap = {};
+    if (polls && polls.length > 0) {
+      const pollIds = polls.map(p => p.id);
+      const { data: myVotes } = await window.db
+        .from('poll_votes')
+        .select('poll_id, option_index')
+        .in('poll_id', pollIds)
+        .eq('user_id', currentUser.id);
+      if (myVotes) {
+        myVotes.forEach(v => { myVoteMap[v.poll_id] = v.option_index; });
+      }
+
+      // Fetch all votes for vote counts
+      const { data: allVotes } = await window.db
+        .from('poll_votes')
+        .select('poll_id, option_index')
+        .in('poll_id', pollIds);
+
+      const pollVoteCountMap = {};
+      if (allVotes) {
+        allVotes.forEach(v => {
+          if (!pollVoteCountMap[v.poll_id]) pollVoteCountMap[v.poll_id] = {};
+          pollVoteCountMap[v.poll_id][v.option_index] = (pollVoteCountMap[v.poll_id][v.option_index] || 0) + 1;
+        });
+      }
+
+      // Attach vote counts to pollMap
+      polls.forEach(p => {
+        p.voteCounts = pollVoteCountMap[p.id] || {};
+        p.totalVotes = Object.values(p.voteCounts).reduce((a, b) => a + b, 0);
+        p.myVote = myVoteMap[p.id] !== undefined ? myVoteMap[p.id] : null;
+      });
+    }
+
     container.innerHTML = posts.map(post =>
-      renderPost(post, profileMap, communityMap, reactionMap, commentCountMap, myReactionMap, viewCountMap)
+      renderPost(post, profileMap, communityMap, reactionMap, commentCountMap, myReactionMap, viewCountMap, pollMap)
     ).join('');
 
     attachPostListeners();
-
-    // Record views for all posts in feed — fire and forget
     recordFeedViews(postIds);
 
   } catch (err) {
@@ -253,26 +295,18 @@ async function loadFeed() {
 async function recordFeedViews(postIds) {
   if (!currentUser || !postIds.length) return;
   try {
-    // Only record if not already viewed in this session
     const viewedKey = 'viewed_posts_' + currentUser.id;
     const viewed = JSON.parse(sessionStorage.getItem(viewedKey) || '[]');
     const newPostIds = postIds.filter(id => !viewed.includes(id));
     if (newPostIds.length === 0) return;
-
     await window.db.from('post_views').insert(
-      newPostIds.map(post_id => ({
-        post_id,
-        user_id: currentUser.id
-      }))
+      newPostIds.map(post_id => ({ post_id, user_id: currentUser.id }))
     );
-
     sessionStorage.setItem(viewedKey, JSON.stringify([...viewed, ...newPostIds]));
-  } catch (err) {
-    // Silent fail — views are non-critical
-  }
+  } catch (err) {}
 }
 
-function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap, myReactionMap, viewCountMap) {
+function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap, myReactionMap, viewCountMap, pollMap) {
   const profile = profileMap[post.user_id];
   const username = profile?.username || 'unknown';
   const displayName = profile?.display_name || username;
@@ -300,19 +334,64 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
     .map(r => r.emoji)
     .join('');
 
-  const reactionSummary = totalReactions > 0
-    ? `<span class="reaction-summary" style="font-size:13px;color:var(--text-muted);cursor:pointer;">${topEmojis} ${totalReactions}</span>`
-    : '';
-
   const myReactionObj = REACTIONS.find(r => r.type === myReaction);
   const reactBtnLabel = myReactionObj ? `${myReactionObj.emoji} ${myReactionObj.label}` : '❤️ React';
   const reactBtnStyle = myReaction ? 'font-weight:700;color:var(--primary);' : '';
-
   const isOwnPost = post.user_id === currentUser?.id;
-
   const viewLabel = viewCount > 0
     ? `<span style="font-size:12px;color:var(--text-muted);">👁 ${viewCount.toLocaleString()} view${viewCount !== 1 ? 's' : ''}</span>`
     : '';
+
+  // Poll rendering
+  const poll = pollMap ? pollMap[post.id] : null;
+  let pollHtml = '';
+  if (poll) {
+    const options = poll.options || [];
+    const isExpired = poll.expires_at && new Date(poll.expires_at) < new Date();
+    const hasVoted = poll.myVote !== null;
+    const showResults = hasVoted || isExpired;
+    const totalVotes = poll.totalVotes || 0;
+
+    pollHtml = `
+      <div class="poll-card" data-poll-id="${poll.id}" style="margin-top:12px;background:var(--bg-input);border:1px solid var(--border);border-radius:12px;padding:14px;">
+        <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:12px;">${escapeHtml(poll.question)}</div>
+        <div class="poll-options">
+          ${options.map((opt, idx) => {
+            const voteCount = poll.voteCounts[idx] || 0;
+            const pct = totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0;
+            const isMyVote = poll.myVote === idx;
+
+            if (showResults) {
+              return `
+                <div style="margin-bottom:8px;">
+                  <div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:4px;">
+                    <span style="color:var(--text);${isMyVote ? 'font-weight:700;' : ''}">${isMyVote ? '✓ ' : ''}${escapeHtml(opt)}</span>
+                    <span style="color:var(--text-muted);">${pct}%</span>
+                  </div>
+                  <div style="height:6px;background:var(--border);border-radius:100px;overflow:hidden;">
+                    <div style="height:100%;width:${pct}%;background:${isMyVote ? 'var(--primary)' : 'var(--text-muted)'};border-radius:100px;transition:width 0.3s ease;"></div>
+                  </div>
+                </div>
+              `;
+            } else {
+              return `
+                <button class="poll-vote-btn" data-poll-id="${poll.id}" data-option-index="${idx}"
+                  style="display:block;width:100%;text-align:left;padding:10px 14px;margin-bottom:6px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:14px;color:var(--text);transition:all 0.15s ease;"
+                  onmouseover="this.style.borderColor='var(--primary)';this.style.background='var(--bg-hover)'"
+                  onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--bg-card)'">
+                  ${escapeHtml(opt)}
+                </button>
+              `;
+            }
+          }).join('')}
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:8px;">
+          ${totalVotes} vote${totalVotes !== 1 ? 's' : ''}
+          ${isExpired ? ' · Closed' : poll.expires_at ? ` · Ends ${new Date(poll.expires_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : ''}
+        </div>
+      </div>
+    `;
+  }
 
   return `
     <div class="post-card" data-post-id="${post.id}">
@@ -352,9 +431,11 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
         <div class="post-content">${renderMentions(post.content || '')}</div>
       </div>
 
-      ${reactionSummary || viewLabel ? `
+      ${pollHtml}
+
+      ${totalReactions > 0 || viewCount > 0 ? `
         <div style="padding:4px 0 8px 0;display:flex;justify-content:space-between;align-items:center;">
-          ${reactionSummary ? `<span class="reaction-summary" style="font-size:13px;color:var(--text-muted);cursor:pointer;">${topEmojis} ${totalReactions}</span>` : '<span></span>'}
+          ${totalReactions > 0 ? `<span class="reaction-summary" style="font-size:13px;color:var(--text-muted);cursor:pointer;">${topEmojis} ${totalReactions}</span>` : '<span></span>'}
           ${viewLabel}
         </div>
       ` : ''}
@@ -455,6 +536,107 @@ function attachPostListeners() {
       window.location.href = `/comments.html?post=${btn.dataset.postId}`;
     });
   });
+
+  // Poll vote buttons
+  document.querySelectorAll('.poll-vote-btn').forEach(btn => {
+    btn.addEventListener('click', () => handlePollVote(btn.dataset.pollId, parseInt(btn.dataset.optionIndex)));
+  });
+}
+
+async function handlePollVote(pollId, optionIndex) {
+  if (!currentUser) return;
+
+  try {
+    // Check if already voted
+    const { data: existing } = await window.db
+      .from('poll_votes')
+      .select('id')
+      .eq('poll_id', pollId)
+      .eq('user_id', currentUser.id)
+      .single();
+
+    if (existing) return; // Already voted — no changes
+
+    const { error } = await window.db
+      .from('poll_votes')
+      .insert({
+        poll_id: pollId,
+        user_id: currentUser.id,
+        option_index: optionIndex
+      });
+
+    if (error) throw error;
+
+    // Refresh just this poll's results
+    await refreshPollResults(pollId);
+
+  } catch (err) {
+    console.error('Poll vote error:', err);
+  }
+}
+
+async function refreshPollResults(pollId) {
+  const pollCard = document.querySelector(`.poll-card[data-poll-id="${pollId}"]`);
+  if (!pollCard) return;
+
+  const { data: poll } = await window.db
+    .from('polls')
+    .select('*')
+    .eq('id', pollId)
+    .single();
+
+  if (!poll) return;
+
+  const { data: allVotes } = await window.db
+    .from('poll_votes')
+    .select('option_index')
+    .eq('poll_id', pollId);
+
+  const voteCounts = {};
+  if (allVotes) {
+    allVotes.forEach(v => {
+      voteCounts[v.option_index] = (voteCounts[v.option_index] || 0) + 1;
+    });
+  }
+  const totalVotes = allVotes ? allVotes.length : 0;
+
+  const { data: myVoteRow } = await window.db
+    .from('poll_votes')
+    .select('option_index')
+    .eq('poll_id', pollId)
+    .eq('user_id', currentUser.id)
+    .single();
+
+  const myVote = myVoteRow ? myVoteRow.option_index : null;
+  const options = poll.options || [];
+  const isExpired = poll.expires_at && new Date(poll.expires_at) < new Date();
+
+  const optionsContainer = pollCard.querySelector('.poll-options');
+  if (optionsContainer) {
+    optionsContainer.innerHTML = options.map((opt, idx) => {
+      const voteCount = voteCounts[idx] || 0;
+      const pct = totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0;
+      const isMyVote = myVote === idx;
+
+      return `
+        <div style="margin-bottom:8px;">
+          <div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:4px;">
+            <span style="color:var(--text);${isMyVote ? 'font-weight:700;' : ''}">${isMyVote ? '✓ ' : ''}${escapeHtml(opt)}</span>
+            <span style="color:var(--text-muted);">${pct}%</span>
+          </div>
+          <div style="height:6px;background:var(--border);border-radius:100px;overflow:hidden;">
+            <div style="height:100%;width:${pct}%;background:${isMyVote ? 'var(--primary)' : 'var(--text-muted)'};border-radius:100px;transition:width 0.3s ease;"></div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Update vote count text
+  const voteCountEl = pollCard.querySelector('.poll-vote-count');
+  if (voteCountEl) {
+    voteCountEl.textContent = `${totalVotes} vote${totalVotes !== 1 ? 's' : ''}${isExpired ? ' · Closed' : ''}`;
+  }
 }
 
 function showEditForm(postId, currentContent) {
