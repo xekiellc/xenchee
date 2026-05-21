@@ -3,14 +3,33 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Memories — XenChee</title>
+  <title>Memories — Voxxee</title>
+
+  <!-- OG Meta Tags -->
+  <meta property="og:title" content="Memories — Voxxee" />
+  <meta property="og:description" content="Look back on what you posted on this day in previous years on Voxxee." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://voxxee.com/memories.html" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Memories — Voxxee" />
+  <meta name="twitter:description" content="Look back on what you posted on this day in previous years on Voxxee." />
+
+  <!-- GA4 -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-FSCZJEWZ6F"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-FSCZJEWZ6F');
+  </script>
+
   <link rel="stylesheet" href="/css/main.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
   <nav class="nav">
-    <a href="/feed.html" class="nav-brand">XenChee</a>
+    <a href="/feed.html" class="nav-brand">Voxxee</a>
     <div class="nav-actions">
       <a href="/feed.html" class="btn btn-ghost">Feed</a>
       <a href="/profile.html" class="btn btn-ghost">Profile</a>
@@ -27,7 +46,7 @@
         <li><a href="/events.html"><span class="sidebar-nav-icon">📅</span>Events</a></li>
         <li><a href="/messages.html"><span class="sidebar-nav-icon">✉️</span>Messages</a></li>
         <li><a href="/notifications.html"><span class="sidebar-nav-icon">🔔</span>Notifications</a></li>
-        <li><a href="/memories.html" class="active"><span class="sidebar-nav-icon">📅</span>Memories</a></li>
+        <li><a href="/memories.html" class="active"><span class="sidebar-nav-icon">🕰️</span>Memories</a></li>
         <li><a href="/profile.html"><span class="sidebar-nav-icon">👤</span>Profile</a></li>
         <li><a href="/ecosystem.html"><span class="sidebar-nav-icon">🌐</span>Ecosystem</a></li>
       </ul>
@@ -37,7 +56,7 @@
 
       <!-- Header -->
       <div style="margin-bottom:24px;">
-        <div style="font-size:24px;font-weight:800;color:var(--text);margin-bottom:4px;">📅 Memories</div>
+        <div style="font-size:24px;font-weight:800;color:var(--text);margin-bottom:4px;">🕰️ Memories</div>
         <div style="font-size:15px;color:var(--text-muted);">Look back on what you posted on this day in previous years.</div>
       </div>
 
