@@ -70,7 +70,7 @@
         </div>
       </div>
 
-      <!-- Wiki Panel (hidden by default) -->
+      <!-- Wiki Panel -->
       <div id="wiki-panel" style="display:none;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;margin-bottom:20px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
           <div style="font-size:18px;font-weight:700;color:var(--text);">📖 Community Wiki</div>
@@ -80,7 +80,6 @@
           </div>
         </div>
 
-        <!-- View mode -->
         <div id="wiki-view">
           <div id="wiki-content" style="font-size:15px;color:var(--text-secondary);line-height:1.7;white-space:pre-wrap;"></div>
           <div id="wiki-empty" style="display:none;text-align:center;padding:40px 0;">
@@ -90,12 +89,11 @@
           </div>
         </div>
 
-        <!-- Edit mode (moderators/admins only) -->
         <div id="wiki-edit" style="display:none;">
           <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px;">Supports plain text. Use blank lines to separate sections.</div>
           <textarea id="wiki-textarea" class="form-input"
             style="width:100%;min-height:300px;resize:vertical;font-size:14px;line-height:1.6;font-family:inherit;"
-            placeholder="Write your community wiki here...&#10;&#10;You can cover:&#10;• What this community is about&#10;• Posting guidelines&#10;• Frequently asked questions&#10;• Useful resources and links"
+            placeholder="Write your community wiki here..."
             maxlength="10000"></textarea>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;">
             <span id="wiki-char-count" style="font-size:12px;color:var(--text-muted);">0 / 10,000</span>
@@ -106,12 +104,9 @@
           </div>
         </div>
 
-        <!-- Rules section inside wiki panel -->
         <div id="wiki-rules-section" style="margin-top:24px;border-top:1px solid var(--border);padding-top:20px;display:none;">
           <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:12px;">📋 Community Rules</div>
           <div id="wiki-rules-list"></div>
-
-          <!-- Add/edit rules (moderators only) -->
           <div id="wiki-rules-editor" style="display:none;margin-top:16px;">
             <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px;">One rule per line.</div>
             <textarea id="rules-textarea" class="form-input"
@@ -154,6 +149,7 @@
   </div>
 
   <script src="js/supabase.js"></script>
+  <script src="js/reputation.js"></script>
   <script src="js/community.js"></script>
 </body>
 </html>
