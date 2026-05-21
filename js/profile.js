@@ -10,6 +10,7 @@ let currentUser = null;
 let viewingProfile = null;
 let isOwnProfile = false;
 let isFollowing = false;
+let mutedKeywords = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
   await waitForDb();
@@ -37,10 +38,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function loadOwnProfile() {
   const { data: profile } = await window.db
-    .from('profiles')
-    .select('*')
-    .eq('user_id', currentUser.id)
-    .single();
+    .from('profiles').select('*').eq('user_id', currentUser.id).single();
 
   if (!profile) {
     document.getElementById('profile-header').innerHTML = '<div class="loading">Profile not found.</div>';
@@ -49,6 +47,7 @@ async function loadOwnProfile() {
 
   viewingProfile = profile;
   isOwnProfile = true;
+  mutedKeywords = profile.muted_keywords || [];
   renderProfile(profile);
   await loadProfilePosts(profile.user_id);
   await loadProfileCommunities();
@@ -56,10 +55,7 @@ async function loadOwnProfile() {
 
 async function loadProfileByUsername(username) {
   const { data: profile } = await window.db
-    .from('profiles')
-    .select('*')
-    .eq('username', username.toLowerCase())
-    .single();
+    .from('profiles').select('*').eq('username', username.toLowerCase()).single();
 
   if (!profile) {
     document.getElementById('profile-header').innerHTML = '<div class="loading">User not found.</div>';
@@ -68,14 +64,12 @@ async function loadProfileByUsername(username) {
 
   viewingProfile = profile;
   isOwnProfile = profile.user_id === currentUser.id;
+  mutedKeywords = profile.muted_keywords || [];
 
   if (!isOwnProfile) {
     const { data: followRow } = await window.db
-      .from('follows')
-      .select('id')
-      .eq('follower_id', currentUser.id)
-      .eq('following_id', profile.user_id)
-      .single();
+      .from('follows').select('id')
+      .eq('follower_id', currentUser.id).eq('following_id', profile.user_id).single();
     isFollowing = !!followRow;
   }
 
@@ -93,11 +87,8 @@ function renderProfile(profile) {
   document.getElementById('profile-follower-count').textContent = (profile.follower_count || 0).toLocaleString();
   document.getElementById('profile-following-count').textContent = (profile.following_count || 0).toLocaleString();
 
-  if (profile.bio) {
-    document.getElementById('profile-bio').textContent = profile.bio;
-  }
+  if (profile.bio) document.getElementById('profile-bio').textContent = profile.bio;
 
-  // Meta row — location and website
   const metaEl = document.getElementById('profile-meta');
   if (metaEl) {
     const parts = [];
@@ -106,14 +97,12 @@ function renderProfile(profile) {
     metaEl.innerHTML = parts.join('<span style="margin:0 4px;">·</span>');
   }
 
-  // Verified badge
   const badge = document.getElementById('verified-badge');
   if (badge && profile.is_verified) badge.style.display = 'inline';
 
-  // Adult creator badge
   if (profile.is_adult_creator && !isOwnProfile) {
     const nameEl = document.getElementById('profile-display-name');
-    if (nameEl && !nameEl.nextElementSibling?.classList?.contains('adult-badge')) {
+    if (nameEl && !document.querySelector('.adult-badge')) {
       const span = document.createElement('span');
       span.className = 'adult-badge';
       span.style.cssText = 'font-size:11px;padding:2px 8px;border-radius:100px;background:rgba(239,68,68,0.15);color:#ef4444;font-weight:600;margin-left:8px;';
@@ -142,55 +131,37 @@ function renderProfile(profile) {
 async function handleFollowToggle() {
   const btn = document.getElementById('follow-btn');
   btn.disabled = true;
-
   try {
     if (isFollowing) {
-      await window.db
-        .from('follows')
-        .delete()
-        .eq('follower_id', currentUser.id)
-        .eq('following_id', viewingProfile.user_id);
-
-      await window.db
-        .from('profiles')
+      await window.db.from('follows').delete()
+        .eq('follower_id', currentUser.id).eq('following_id', viewingProfile.user_id);
+      await window.db.from('profiles')
         .update({ follower_count: Math.max((viewingProfile.follower_count || 1) - 1, 0) })
         .eq('user_id', viewingProfile.user_id);
-
-      await window.db
-        .from('profiles')
+      await window.db.from('profiles')
         .update({ following_count: Math.max((viewingProfile.following_count || 1) - 1, 0) })
         .eq('user_id', currentUser.id);
-
       isFollowing = false;
       viewingProfile.follower_count = Math.max((viewingProfile.follower_count || 1) - 1, 0);
-
     } else {
-      await window.db
-        .from('follows')
-        .insert({ follower_id: currentUser.id, following_id: viewingProfile.user_id });
-
-      await window.db
-        .from('profiles')
+      await window.db.from('follows').insert({
+        follower_id: currentUser.id, following_id: viewingProfile.user_id
+      });
+      await window.db.from('profiles')
         .update({ follower_count: (viewingProfile.follower_count || 0) + 1 })
         .eq('user_id', viewingProfile.user_id);
-
-      await window.db
-        .from('profiles')
+      await window.db.from('profiles')
         .update({ following_count: (viewingProfile.following_count || 0) + 1 })
         .eq('user_id', currentUser.id);
-
       isFollowing = true;
       viewingProfile.follower_count = (viewingProfile.follower_count || 0) + 1;
     }
-
     btn.textContent = isFollowing ? 'Unfollow' : 'Follow';
     btn.className = isFollowing ? 'btn btn-ghost' : 'btn btn-primary';
     document.getElementById('profile-follower-count').textContent = viewingProfile.follower_count.toLocaleString();
-
   } catch (err) {
     console.error('Follow error:', err);
   }
-
   btn.disabled = false;
 }
 
@@ -200,26 +171,20 @@ function setToggle(checkboxId, trackId, value) {
   if (!checkbox || !track) return;
   checkbox.checked = value;
   track.style.background = value ? 'var(--primary)' : 'var(--border)';
-  if (value) {
-    track.style.setProperty('--toggle-x', '20px');
-  }
+  const knob = track.querySelector('span');
+  if (knob) knob.style.transform = value ? 'translateX(20px)' : 'translateX(0)';
 }
 
 function initToggle(checkboxId, trackId) {
   const checkbox = document.getElementById(checkboxId);
   const track = document.getElementById(trackId);
-  if (!checkbox || !track) return;
+  if (!checkbox || !track || track.querySelector('span')) return;
 
-  // Create the knob
   const knob = document.createElement('span');
   knob.style.cssText = `
-    position:absolute;
-    height:18px;width:18px;
-    left:3px;bottom:3px;
-    background:#fff;
-    border-radius:50%;
-    transition:0.2s;
-    pointer-events:none;
+    position:absolute;height:18px;width:18px;
+    left:3px;bottom:3px;background:#fff;
+    border-radius:50%;transition:0.2s;pointer-events:none;
   `;
   track.appendChild(knob);
 
@@ -232,8 +197,34 @@ function initToggle(checkboxId, trackId) {
     checkbox.checked = !checkbox.checked;
     update();
   });
-
   update();
+}
+
+function renderKeywordTags() {
+  const container = document.getElementById('muted-keywords-list');
+  if (!container) return;
+
+  if (mutedKeywords.length === 0) {
+    container.innerHTML = '<span style="font-size:13px;color:var(--text-muted);font-style:italic;">No muted keywords yet.</span>';
+    return;
+  }
+
+  container.innerHTML = mutedKeywords.map((kw, idx) => `
+    <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:var(--bg-input);border:1px solid var(--border);border-radius:100px;font-size:13px;color:var(--text);">
+      ${escapeHtml(kw)}
+      <button data-idx="${idx}" class="remove-keyword-btn"
+        style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:14px;line-height:1;padding:0;display:flex;align-items:center;"
+        onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--text-muted)'">×</button>
+    </span>
+  `).join('');
+
+  container.querySelectorAll('.remove-keyword-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.idx);
+      mutedKeywords.splice(idx, 1);
+      renderKeywordTags();
+    });
+  });
 }
 
 function showEditForm(profile) {
@@ -243,34 +234,43 @@ function showEditForm(profile) {
   document.getElementById('edit-location').value = profile.location || '';
   document.getElementById('edit-website').value = profile.website || '';
 
-  // Init toggles
+  mutedKeywords = [...(profile.muted_keywords || [])];
+  renderKeywordTags();
+
   initToggle('toggle-show-adult', 'toggle-show-adult-track');
   initToggle('toggle-is-adult-creator', 'toggle-is-adult-creator-track');
 
-  // Set current values
-  const showAdult = document.getElementById('toggle-show-adult');
-  const isCreator = document.getElementById('toggle-is-adult-creator');
-  const showAdultTrack = document.getElementById('toggle-show-adult-track');
-  const isCreatorTrack = document.getElementById('toggle-is-adult-creator-track');
+  setToggle('toggle-show-adult', 'toggle-show-adult-track', !!profile.show_adult_content);
+  setToggle('toggle-is-adult-creator', 'toggle-is-adult-creator-track', !!profile.is_adult_creator);
 
-  if (showAdult) {
-    showAdult.checked = !!profile.show_adult_content;
-    showAdultTrack.style.background = profile.show_adult_content ? 'var(--primary)' : 'var(--border)';
-    const knob = showAdultTrack.querySelector('span');
-    if (knob) knob.style.transform = profile.show_adult_content ? 'translateX(20px)' : 'translateX(0)';
-  }
+  // Add keyword button
+  const addBtn = document.getElementById('add-keyword-btn');
+  const keywordInput = document.getElementById('keyword-input');
 
-  if (isCreator) {
-    isCreator.checked = !!profile.is_adult_creator;
-    isCreatorTrack.style.background = profile.is_adult_creator ? 'var(--primary)' : 'var(--border)';
-    const knob = isCreatorTrack.querySelector('span');
-    if (knob) knob.style.transform = profile.is_adult_creator ? 'translateX(20px)' : 'translateX(0)';
-  }
+  addBtn.onclick = () => addKeyword();
+  keywordInput.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); addKeyword(); } };
 
   document.getElementById('save-profile-btn').onclick = saveProfile;
   document.getElementById('cancel-edit-btn').onclick = () => {
     document.getElementById('edit-profile-form').style.display = 'none';
   };
+}
+
+function addKeyword() {
+  const input = document.getElementById('keyword-input');
+  const kw = input.value.trim().toLowerCase();
+  if (!kw) return;
+  if (mutedKeywords.length >= 50) {
+    alert('Maximum 50 muted keywords.');
+    return;
+  }
+  if (mutedKeywords.includes(kw)) {
+    input.value = '';
+    return;
+  }
+  mutedKeywords.push(kw);
+  input.value = '';
+  renderKeywordTags();
 }
 
 async function saveProfile() {
@@ -294,19 +294,20 @@ async function saveProfile() {
         location,
         website,
         show_adult_content: showAdultContent,
-        is_adult_creator: isAdultCreator
+        is_adult_creator: isAdultCreator,
+        muted_keywords: mutedKeywords
       })
       .eq('user_id', currentUser.id);
 
     if (error) throw error;
 
-    // Update local profile
     viewingProfile.display_name = displayName;
     viewingProfile.bio = bio;
     viewingProfile.location = location;
     viewingProfile.website = website;
     viewingProfile.show_adult_content = showAdultContent;
     viewingProfile.is_adult_creator = isAdultCreator;
+    viewingProfile.muted_keywords = mutedKeywords;
 
     document.getElementById('profile-display-name').textContent = displayName || viewingProfile.username;
     document.getElementById('profile-bio').textContent = bio;
@@ -320,7 +321,6 @@ async function saveProfile() {
     }
 
     document.getElementById('edit-profile-form').style.display = 'none';
-
     btn.textContent = 'Save Profile';
     btn.disabled = false;
 
@@ -335,12 +335,8 @@ async function loadProfilePosts(userId) {
   const container = document.getElementById('profile-posts');
 
   const { data: posts } = await window.db
-    .from('posts')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('is_removed', false)
-    .order('created_at', { ascending: false })
-    .limit(20);
+    .from('posts').select('*').eq('user_id', userId).eq('is_removed', false)
+    .order('created_at', { ascending: false }).limit(20);
 
   if (!posts || posts.length === 0) {
     container.innerHTML = '<div class="loading">No posts yet.</div>';
@@ -348,18 +344,13 @@ async function loadProfilePosts(userId) {
   }
 
   const { data: profile } = await window.db
-    .from('profiles')
-    .select('username, display_name')
-    .eq('user_id', userId)
-    .single();
+    .from('profiles').select('username, display_name').eq('user_id', userId).single();
 
   const postIds = posts.map(p => p.id);
 
   const { data: reactions } = await window.db
-    .from('reactions')
-    .select('target_id, reaction_type')
-    .in('target_id', postIds)
-    .eq('target_type', 'post');
+    .from('reactions').select('target_id, reaction_type')
+    .in('target_id', postIds).eq('target_type', 'post');
 
   const reactionMap = {};
   if (reactions) {
@@ -370,16 +361,11 @@ async function loadProfilePosts(userId) {
   }
 
   const { data: comments } = await window.db
-    .from('comments')
-    .select('post_id')
-    .in('post_id', postIds)
-    .eq('is_removed', false);
+    .from('comments').select('post_id').in('post_id', postIds).eq('is_removed', false);
 
   const commentCountMap = {};
   if (comments) {
-    comments.forEach(c => {
-      commentCountMap[c.post_id] = (commentCountMap[c.post_id] || 0) + 1;
-    });
+    comments.forEach(c => { commentCountMap[c.post_id] = (commentCountMap[c.post_id] || 0) + 1; });
   }
 
   const username = profile?.username || 'unknown';
@@ -390,12 +376,9 @@ async function loadProfilePosts(userId) {
     const timestamp = new Date(post.created_at).toLocaleDateString('en-US', {
       month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
     });
-
     const postReactions = reactionMap[post.id] || {};
-    const totalReactions = Object.values(postReactions).reduce((a, b) => a + b, 0);
     const likes = postReactions.like || 0;
     const commentCount = commentCountMap[post.id] || 0;
-
     const adultBadge = post.is_adult
       ? `<span style="font-size:11px;padding:2px 8px;border-radius:100px;background:rgba(239,68,68,0.15);color:#ef4444;font-weight:600;margin-left:8px;">🔞</span>`
       : '';
@@ -460,11 +443,7 @@ async function loadProfileCommunities() {
   if (!container) return;
 
   const { data: communities } = await window.db
-    .from('communities')
-    .select('name, slug, logo_url')
-    .eq('is_official', true)
-    .order('name')
-    .limit(8);
+    .from('communities').select('name, slug, logo_url').eq('is_official', true).order('name').limit(8);
 
   if (!communities) return;
 
