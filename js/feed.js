@@ -279,7 +279,7 @@ async function loadFeed() {
     const userIds = [...new Set(posts.map(p => p.user_id))];
     const { data: profiles } = await window.db
       .from('profiles')
-      .select('user_id, username, display_name, avatar_url, is_verified, verified_type')
+      .select('user_id, username, display_name, avatar_url, is_verified, verified_type, reputation')
       .in('user_id', userIds);
     const profileMap = {};
     if (profiles) profiles.forEach(p => { profileMap[p.user_id] = p; });
@@ -294,7 +294,7 @@ async function loadFeed() {
 
     const postIds = posts.map(p => p.id);
 
-    // Fetch original posts for reposts
+    // Fetch shared posts
     const sharedPostIds = [...new Set(posts.filter(p => p.shared_post_id).map(p => p.shared_post_id))];
     let sharedPostMap = {};
     let sharedProfileMap = {};
@@ -628,6 +628,7 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
   const displayName = profile?.display_name || username;
   const initial = username.charAt(0).toUpperCase();
   const verifiedBadge = getVerifiedBadge(profile);
+  const repBadge = repBadgeHtml(profile?.reputation);
   const community = post.community_id && communityMap[post.community_id]
     ? `<span class="post-community">in ${communityMap[post.community_id].name}</span>` : '';
   const timestamp = new Date(post.created_at).toLocaleDateString('en-US', {
@@ -657,12 +658,10 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
   const viewLabel = viewCount > 0
     ? `<span style="font-size:12px;color:var(--text-muted);">👁 ${viewCount.toLocaleString()} view${viewCount !== 1 ? 's' : ''}</span>` : '';
 
-  // Repost embedded original
   const sharedPostHtml = post.shared_post_id && sharedPostMap
     ? renderSharedPost(sharedPostMap[post.shared_post_id] || null, sharedProfileMap || {})
     : '';
 
-  // Strip [Reposted] label from repost content for cleaner display
   const postContent = post.shared_post_id
     ? (post.content || '').replace(/\n\n🔁 \[Reposted\]$/, '').trim()
     : (post.content || '');
@@ -726,6 +725,7 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
             <a href="/profile.html?user=${encodeURIComponent(username)}" style="text-decoration:none;color:inherit;">${escapeHtml(displayName)}</a>
             ${verifiedBadge}
             <span style="font-weight:400;color:var(--text-muted);font-size:13px;">@${escapeHtml(username)}</span>
+            ${repBadge}
             ${adultBadge}
             ${modeLabel}
           </div>
@@ -1147,9 +1147,26 @@ async function handleReaction(postId, type) {
     const { data: existing } = await window.db
       .from('reactions').select('*')
       .eq('user_id', currentUser.id).eq('target_id', postId).eq('target_type', 'post').single();
+
     if (existing) {
       if (existing.reaction_type === type) {
+        // Remove reaction — reverse the reputation
         await window.db.from('reactions').delete().eq('id', existing.id);
+        // Fetch post owner
+        const { data: post } = await window.db.from('posts').select('user_id').eq('id', postId).single();
+        if (post && post.user_id !== currentUser.id) {
+          const reverseType = existing.reaction_type === 'downvote' ? 'reaction_received' : 'reaction_received';
+          const reversePoints = existing.reaction_type === 'downvote' ? 1 : -1;
+          await window.db.from('reputation_events').insert({
+            user_id: post.user_id, source_user_id: currentUser.id,
+            event_type: 'reaction_removed', points: reversePoints,
+            target_id: postId, target_type: 'post'
+          });
+          const { data: ownerProfile } = await window.db
+            .from('profiles').select('reputation').eq('user_id', post.user_id).single();
+          const newRep = Math.max(0, (ownerProfile?.reputation || 0) + reversePoints);
+          await window.db.from('profiles').update({ reputation: newRep }).eq('user_id', post.user_id);
+        }
       } else {
         await window.db.from('reactions').update({ reaction_type: type }).eq('id', existing.id);
       }
@@ -1157,6 +1174,12 @@ async function handleReaction(postId, type) {
       await window.db.from('reactions').insert({
         user_id: currentUser.id, target_id: postId, target_type: 'post', reaction_type: type
       });
+      // Award reputation to post owner
+      const { data: post } = await window.db.from('posts').select('user_id').eq('id', postId).single();
+      if (post && post.user_id !== currentUser.id) {
+        const eventType = type === 'downvote' ? 'downvote_received' : 'reaction_received';
+        await awardReputation(post.user_id, eventType, postId, 'post', currentUser.id);
+      }
     }
     await refreshPostReactions(postId);
   } catch (err) {
@@ -1217,6 +1240,10 @@ async function handleCreatePost() {
         is_adult: currentProfile?.is_adult_creator || false
       }).select().single();
     if (postError) throw postError;
+
+    // Award reputation for posting
+    await awardReputation(currentUser.id, 'post_created', post.id, 'post', null);
+
     if (hasPoll && post) {
       const question = document.getElementById('poll-question').value.trim();
       const optionInputs = document.querySelectorAll('.poll-option');
@@ -1255,6 +1282,8 @@ async function handleDeletePost(postId) {
   if (!currentUser) return;
   if (!confirm('Delete this post?')) return;
   await window.db.from('posts').update({ is_removed: true }).eq('id', postId).eq('user_id', currentUser.id);
+  // Deduct reputation for deleted post
+  await awardReputation(currentUser.id, 'post_removed', postId, 'post', null);
   await loadFeed();
 }
 
