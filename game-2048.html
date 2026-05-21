@@ -3,14 +3,33 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>2048 — XenChee</title>
+  <title>2048 — Voxxee</title>
+
+  <!-- OG Meta Tags -->
+  <meta property="og:title" content="2048 — Voxxee Games" />
+  <meta property="og:description" content="Play 2048 on Voxxee. Slide and merge tiles. Reach 2048. Satisfyingly addictive." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://voxxee.com/game-2048.html" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="2048 — Voxxee Games" />
+  <meta name="twitter:description" content="Play 2048 on Voxxee. Slide and merge tiles. Reach 2048. Satisfyingly addictive." />
+
+  <!-- GA4 -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-FSCZJEWZ6F"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-FSCZJEWZ6F');
+  </script>
+
   <link rel="stylesheet" href="/css/main.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
   <nav class="nav">
-    <a href="/feed.html" class="nav-brand">XenChee</a>
+    <a href="/feed.html" class="nav-brand">Voxxee</a>
     <div class="nav-actions">
       <a href="/games.html" class="btn btn-ghost">← Games</a>
       <button id="logout-btn" class="btn btn-ghost">Log Out</button>
@@ -221,7 +240,6 @@
 
       function move(dir) {
         if (over) return;
-        let moved = false;
         const prev = JSON.stringify(board);
 
         if (dir === 'left') {
@@ -243,7 +261,6 @@
         }
 
         if (JSON.stringify(board) !== prev) {
-          moved = true;
           addTile();
           document.getElementById('score').textContent = score;
           if (score > best) {
@@ -264,8 +281,7 @@
             if (board[r][c] === 2048) {
               won = true;
               document.getElementById('win-score').textContent = score;
-              const overlay = document.getElementById('win-overlay');
-              overlay.style.display = 'flex';
+              document.getElementById('win-overlay').style.display = 'flex';
             }
       }
 
@@ -278,8 +294,7 @@
           }
         over = true;
         document.getElementById('final-score').textContent = score;
-        const overlay = document.getElementById('game-over-overlay');
-        overlay.style.display = 'flex';
+        document.getElementById('game-over-overlay').style.display = 'flex';
       }
 
       // Keyboard
