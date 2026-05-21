@@ -9,6 +9,7 @@ async function waitForDb(timeout = 5000) {
 let currentUser = null;
 let currentProfile = null;
 let currentCommunity = null;
+let isModerator = false;
 
 const REACTIONS = [
   { type: 'like', emoji: '❤️', label: 'Like' },
@@ -90,12 +91,18 @@ async function loadCommunity(slug) {
     }
   }
 
+  // Check membership and moderator status
   const joinBtn = document.getElementById('join-btn');
   joinBtn.style.display = 'block';
 
   const { data: membership } = await window.db
-    .from('community_members').select('id')
+    .from('community_members').select('id, role')
     .eq('community_id', community.id).eq('user_id', currentUser.id).single();
+
+  isModerator = membership?.role === 'moderator' || membership?.role === 'admin';
+
+  // Also treat community creator as moderator
+  if (community.created_by === currentUser.id) isModerator = true;
 
   if (membership) {
     joinBtn.textContent = 'Joined ✓';
@@ -105,18 +112,196 @@ async function loadCommunity(slug) {
     joinBtn.addEventListener('click', () => handleJoin(community.id));
   }
 
-  if (community.rules && community.rules.length > 0) {
-    document.getElementById('community-rules-sidebar').innerHTML = `
-      <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">Community Rules</div>
-      ${community.rules.map((rule, i) => `
-        <div style="padding:10px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;margin-bottom:8px;font-size:13px;color:var(--text-secondary);">
-          <span style="font-weight:700;color:var(--text);">${i + 1}.</span> ${escapeHtml(rule)}
-        </div>
-      `).join('')}
-    `;
+  // Wiki button
+  const wikiBtn = document.getElementById('wiki-btn');
+  if (wikiBtn) {
+    wikiBtn.style.display = 'block';
+    wikiBtn.addEventListener('click', () => toggleWikiPanel(community));
   }
 
+  // Rules sidebar
+  renderRulesSidebar(community.rules || []);
+
   await loadCommunityPosts(community.id);
+}
+
+function renderRulesSidebar(rules) {
+  const container = document.getElementById('community-rules-sidebar');
+  if (!container) return;
+  if (!rules || rules.length === 0) {
+    container.innerHTML = '';
+    return;
+  }
+  container.innerHTML = `
+    <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">Community Rules</div>
+    ${rules.map((rule, i) => `
+      <div style="padding:10px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;margin-bottom:8px;font-size:13px;color:var(--text-secondary);">
+        <span style="font-weight:700;color:var(--text);">${i + 1}.</span> ${escapeHtml(rule)}
+      </div>
+    `).join('')}
+  `;
+}
+
+function toggleWikiPanel(community) {
+  const panel = document.getElementById('wiki-panel');
+  const isVisible = panel.style.display !== 'none';
+  if (isVisible) {
+    panel.style.display = 'none';
+    return;
+  }
+  panel.style.display = 'block';
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  renderWikiView(community);
+  setupWikiListeners(community);
+}
+
+function renderWikiView(community) {
+  const contentEl = document.getElementById('wiki-content');
+  const emptyEl = document.getElementById('wiki-empty');
+  const editBtn = document.getElementById('wiki-edit-btn');
+  const rulesSection = document.getElementById('wiki-rules-section');
+  const rulesList = document.getElementById('wiki-rules-list');
+
+  // Switch to view mode
+  document.getElementById('wiki-view').style.display = 'block';
+  document.getElementById('wiki-edit').style.display = 'none';
+
+  if (community.wiki && community.wiki.trim()) {
+    contentEl.textContent = community.wiki;
+    contentEl.style.display = 'block';
+    emptyEl.style.display = 'none';
+  } else {
+    contentEl.style.display = 'none';
+    emptyEl.style.display = 'block';
+  }
+
+  // Show edit button for moderators
+  if (editBtn) editBtn.style.display = isModerator ? 'block' : 'none';
+
+  // Rules section
+  const rules = community.rules || [];
+  if (rules.length > 0 || isModerator) {
+    rulesSection.style.display = 'block';
+    const rulesEditor = document.getElementById('wiki-rules-editor');
+
+    if (rules.length > 0) {
+      rulesList.innerHTML = rules.map((rule, i) => `
+        <div style="display:flex;gap:10px;padding:10px 12px;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;font-size:14px;color:var(--text-secondary);">
+          <span style="font-weight:700;color:var(--primary);flex-shrink:0;">${i + 1}.</span>
+          <span>${escapeHtml(rule)}</span>
+        </div>
+      `).join('');
+    } else {
+      rulesList.innerHTML = '<div style="font-size:13px;color:var(--text-muted);font-style:italic;margin-bottom:8px;">No rules set yet.</div>';
+    }
+
+    if (isModerator) {
+      // Add edit rules button if not already there
+      if (!document.getElementById('edit-rules-btn')) {
+        const editRulesBtn = document.createElement('button');
+        editRulesBtn.id = 'edit-rules-btn';
+        editRulesBtn.className = 'btn btn-ghost';
+        editRulesBtn.style.cssText = 'font-size:13px;margin-top:8px;';
+        editRulesBtn.textContent = '✏️ Edit Rules';
+        rulesList.after(editRulesBtn);
+        editRulesBtn.addEventListener('click', () => {
+          rulesEditor.style.display = rulesEditor.style.display === 'none' ? 'block' : 'none';
+          if (rulesEditor.style.display === 'block') {
+            document.getElementById('rules-textarea').value = (community.rules || []).join('\n');
+          }
+        });
+      }
+      rulesEditor.style.display = 'none';
+    }
+  } else {
+    rulesSection.style.display = 'none';
+  }
+}
+
+function setupWikiListeners(community) {
+  // Prevent re-attaching listeners
+  const panel = document.getElementById('wiki-panel');
+  if (panel.dataset.listenersAttached) return;
+  panel.dataset.listenersAttached = '1';
+
+  document.getElementById('wiki-close-btn').addEventListener('click', () => {
+    panel.style.display = 'none';
+  });
+
+  const editBtn = document.getElementById('wiki-edit-btn');
+  if (editBtn) {
+    editBtn.addEventListener('click', () => {
+      document.getElementById('wiki-view').style.display = 'none';
+      document.getElementById('wiki-edit').style.display = 'block';
+      const textarea = document.getElementById('wiki-textarea');
+      textarea.value = community.wiki || '';
+      updateWikiCharCount();
+      textarea.focus();
+    });
+  }
+
+  document.getElementById('wiki-textarea').addEventListener('input', updateWikiCharCount);
+
+  document.getElementById('wiki-cancel-edit-btn').addEventListener('click', () => {
+    document.getElementById('wiki-view').style.display = 'block';
+    document.getElementById('wiki-edit').style.display = 'none';
+  });
+
+  document.getElementById('wiki-save-btn').addEventListener('click', async () => {
+    const content = document.getElementById('wiki-textarea').value.trim();
+    const btn = document.getElementById('wiki-save-btn');
+    btn.textContent = 'Saving...';
+    btn.disabled = true;
+    try {
+      const { error } = await window.db
+        .from('communities').update({ wiki: content }).eq('id', community.id);
+      if (error) throw error;
+      community.wiki = content;
+      currentCommunity.wiki = content;
+      document.getElementById('wiki-view').style.display = 'block';
+      document.getElementById('wiki-edit').style.display = 'none';
+      renderWikiView(community);
+    } catch (err) {
+      console.error('Wiki save error:', err);
+    }
+    btn.textContent = 'Save Wiki';
+    btn.disabled = false;
+  });
+
+  document.getElementById('rules-cancel-btn').addEventListener('click', () => {
+    document.getElementById('wiki-rules-editor').style.display = 'none';
+  });
+
+  document.getElementById('rules-save-btn').addEventListener('click', async () => {
+    const rawText = document.getElementById('rules-textarea').value;
+    const rules = rawText.split('\n').map(r => r.trim()).filter(r => r.length > 0);
+    const btn = document.getElementById('rules-save-btn');
+    btn.textContent = 'Saving...';
+    btn.disabled = true;
+    try {
+      const { error } = await window.db
+        .from('communities').update({ rules }).eq('id', community.id);
+      if (error) throw error;
+      community.rules = rules;
+      currentCommunity.rules = rules;
+      document.getElementById('wiki-rules-editor').style.display = 'none';
+      renderWikiView(community);
+      renderRulesSidebar(rules);
+    } catch (err) {
+      console.error('Rules save error:', err);
+    }
+    btn.textContent = 'Save Rules';
+    btn.disabled = false;
+  });
+}
+
+function updateWikiCharCount() {
+  const textarea = document.getElementById('wiki-textarea');
+  const counter = document.getElementById('wiki-char-count');
+  if (!textarea || !counter) return;
+  const count = textarea.value.length;
+  counter.textContent = `${count.toLocaleString()} / 10,000`;
+  counter.style.color = count > 9000 ? 'var(--danger)' : 'var(--text-muted)';
 }
 
 async function loadCommunityPosts(communityId) {
@@ -173,14 +358,12 @@ async function loadCommunityPosts(communityId) {
     const myReactionMap = {};
     if (myReactions) myReactions.forEach(r => { myReactionMap[r.target_id] = r.reaction_type; });
 
-    // Fetch polls
     const { data: polls } = await window.db
       .from('polls').select('*').in('post_id', postIds);
 
     const pollMap = {};
     if (polls) polls.forEach(p => { pollMap[p.post_id] = p; });
 
-    // Fetch poll votes
     if (polls && polls.length > 0) {
       const pollIds = polls.map(p => p.id);
 
@@ -254,7 +437,6 @@ function renderPost(post, profileMap, reactionMap, commentCountMap, myReactionMa
   const reactBtnStyle = myReaction ? 'font-weight:700;color:var(--primary);' : '';
   const isOwnPost = post.user_id === currentUser?.id;
 
-  // Poll
   const poll = pollMap ? pollMap[post.id] : null;
   let pollHtml = '';
   if (poll) {
@@ -313,6 +495,7 @@ function renderPost(post, profileMap, reactionMap, commentCountMap, myReactionMa
             <a href="/profile.html?user=${encodeURIComponent(username)}" style="text-decoration:none;color:inherit;">${escapeHtml(displayName)}</a>
             ${verifiedBadge}
             <span style="font-weight:400;color:var(--text-muted);font-size:13px;">@${escapeHtml(username)}</span>
+            ${isModerator && !isOwnPost ? `<span style="font-size:11px;padding:2px 8px;border-radius:100px;background:rgba(99,102,241,0.15);color:var(--primary);font-weight:600;margin-left:6px;">MOD</span>` : ''}
           </div>
           <span class="post-timestamp">${timestamp}</span>
         </div>
@@ -321,7 +504,7 @@ function renderPost(post, profileMap, reactionMap, commentCountMap, myReactionMa
             style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:18px;padding:4px 8px;border-radius:6px;line-height:1;">•••</button>
           <div class="post-menu-dropdown" data-post-id="${post.id}"
             style="display:none;position:absolute;top:28px;right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.3);z-index:200;min-width:150px;overflow:hidden;">
-            ${isOwnPost ? `
+            ${isOwnPost || isModerator ? `
               <button class="delete-btn" data-post-id="${post.id}"
                 style="display:block;width:100%;text-align:left;padding:10px 16px;background:none;border:none;cursor:pointer;font-size:14px;color:var(--danger);">
                 🗑️ Delete
@@ -455,7 +638,7 @@ function attachPostListeners(communityId) {
     }
   });
 
-  // Report modal — create if not exists
+  // Report modal
   if (!document.getElementById('report-modal')) {
     const modal = document.createElement('div');
     modal.id = 'report-modal';
@@ -578,21 +761,17 @@ async function handlePollVote(pollId, optionIndex) {
 async function refreshPollResults(pollId) {
   const pollCard = document.querySelector(`.poll-card[data-poll-id="${pollId}"]`);
   if (!pollCard) return;
-
   const { data: poll } = await window.db.from('polls').select('*').eq('id', pollId).single();
   if (!poll) return;
-
   const { data: allVotes } = await window.db.from('poll_votes').select('option_index').eq('poll_id', pollId);
   const voteCounts = {};
   if (allVotes) allVotes.forEach(v => { voteCounts[v.option_index] = (voteCounts[v.option_index] || 0) + 1; });
   const totalVotes = allVotes ? allVotes.length : 0;
-
   const { data: myVoteRow } = await window.db.from('poll_votes').select('option_index')
     .eq('poll_id', pollId).eq('user_id', currentUser.id).single();
   const myVote = myVoteRow ? myVoteRow.option_index : null;
   const options = poll.options || [];
   const isExpired = poll.expires_at && new Date(poll.expires_at) < new Date();
-
   const optionsContainer = pollCard.querySelector('.poll-options');
   if (optionsContainer) {
     optionsContainer.innerHTML = options.map((opt, idx) => {
@@ -612,7 +791,6 @@ async function refreshPollResults(pollId) {
       `;
     }).join('');
   }
-
   const voteCountEl = pollCard.querySelector('.poll-vote-count');
   if (voteCountEl) {
     voteCountEl.textContent = `${totalVotes} vote${totalVotes !== 1 ? 's' : ''}${isExpired ? ' · Closed' : ''}`;
@@ -703,7 +881,7 @@ async function handleCreatePost() {
 
 async function handleDeletePost(postId, communityId) {
   if (!confirm('Delete this post?')) return;
-  await window.db.from('posts').update({ is_removed: true }).eq('id', postId).eq('user_id', currentUser.id);
+  await window.db.from('posts').update({ is_removed: true }).eq('id', postId);
   await loadCommunityPosts(communityId);
 }
 
