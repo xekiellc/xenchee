@@ -21,6 +21,16 @@ const REACTIONS = [
   { type: 'downvote', emoji: '👎', label: 'Downvote' }
 ];
 
+function getVerifiedBadge(profile) {
+  if (!profile?.is_verified) return '';
+  const badges = {
+    staff:    '<span title="Voxxee Staff" style="font-size:14px;cursor:default;">🟣</span>',
+    notable:  '<span title="Notable Account" style="font-size:14px;cursor:default;">⭐</span>',
+    identity: '<span title="ID Verified" style="font-size:14px;cursor:default;">🔵</span>',
+  };
+  return badges[profile.verified_type] || badges.identity;
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   await waitForDb();
 
@@ -74,19 +84,13 @@ async function loadBirthdays() {
   const sidebar = document.getElementById('birthdays-sidebar');
   const list = document.getElementById('birthdays-list');
   if (!sidebar || !list) return;
-
   try {
     const today = new Date();
     const month = today.getMonth() + 1;
     const day = today.getDate();
-
     const { data: users } = await window.db
-      .from('users')
-      .select('id, date_of_birth')
-      .not('date_of_birth', 'is', null);
-
+      .from('users').select('id, date_of_birth').not('date_of_birth', 'is', null);
     if (!users || users.length === 0) return;
-
     const birthdayUserIds = users
       .filter(u => {
         if (u.id === currentUser.id) return false;
@@ -94,18 +98,11 @@ async function loadBirthdays() {
         return dob.getMonth() + 1 === month && dob.getDate() === day;
       })
       .map(u => u.id);
-
     if (birthdayUserIds.length === 0) return;
-
     const { data: profiles } = await window.db
-      .from('profiles')
-      .select('user_id, username, display_name')
-      .in('user_id', birthdayUserIds);
-
+      .from('profiles').select('user_id, username, display_name').in('user_id', birthdayUserIds);
     if (!profiles || profiles.length === 0) return;
-
     sidebar.style.display = 'block';
-
     list.innerHTML = profiles.map(p => {
       const displayName = p.display_name || p.username;
       const initial = p.username.charAt(0).toUpperCase();
@@ -120,7 +117,6 @@ async function loadBirthdays() {
         </a>
       `;
     }).join('');
-
   } catch (err) {
     console.error('Birthdays error:', err);
   }
@@ -129,14 +125,10 @@ async function loadBirthdays() {
 async function loadNotifBadge() {
   const badge = document.getElementById('notif-badge');
   if (!badge || !currentUser) return;
-
   try {
     const { count } = await window.db
-      .from('notifications')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', currentUser.id)
-      .eq('is_read', false);
-
+      .from('notifications').select('id', { count: 'exact', head: true })
+      .eq('user_id', currentUser.id).eq('is_read', false);
     if (count && count > 0) {
       badge.textContent = count > 99 ? '99+' : count;
       badge.style.display = 'inline-flex';
@@ -150,31 +142,26 @@ async function loadNotifBadge() {
 
 function setupEventListeners() {
   document.getElementById('post-btn').addEventListener('click', handleCreatePost);
-
   document.getElementById('logout-btn').addEventListener('click', async () => {
     await window.auth.signOut();
     window.location.href = '/';
   });
-
   document.getElementById('feed-all-btn').addEventListener('click', () => {
     feedMode = 'all';
     document.getElementById('feed-all-btn').className = 'btn btn-primary';
     document.getElementById('feed-following-btn').className = 'btn btn-ghost';
     loadFeed();
   });
-
   document.getElementById('feed-following-btn').addEventListener('click', () => {
     feedMode = 'following';
     document.getElementById('feed-all-btn').className = 'btn btn-ghost';
     document.getElementById('feed-following-btn').className = 'btn btn-primary';
     loadFeed();
   });
-
   document.getElementById('poll-toggle-btn').addEventListener('click', () => {
     pollVisible = !pollVisible;
     document.getElementById('poll-creator').style.display = pollVisible ? 'block' : 'none';
   });
-
   document.getElementById('add-option-btn').addEventListener('click', () => {
     const container = document.getElementById('poll-options').querySelector('.form-group');
     const options = container.querySelectorAll('.poll-option');
@@ -195,18 +182,12 @@ async function loadFeed() {
 
   try {
     let postsQuery = window.db
-      .from('posts')
-      .select('*')
-      .eq('is_removed', false)
-      .order('created_at', { ascending: false })
-      .limit(50);
+      .from('posts').select('*').eq('is_removed', false)
+      .order('created_at', { ascending: false }).limit(50);
 
     if (feedMode === 'following' && currentUser) {
       const { data: follows } = await window.db
-        .from('follows')
-        .select('following_id')
-        .eq('follower_id', currentUser.id);
-
+        .from('follows').select('following_id').eq('follower_id', currentUser.id);
       const followingIds = follows ? follows.map(f => f.following_id) : [];
       if (followingIds.length === 0) {
         container.innerHTML = '<div class="loading">Follow some people to see their posts here.</div>';
@@ -215,7 +196,6 @@ async function loadFeed() {
       postsQuery = postsQuery.in('user_id', followingIds);
     }
 
-    // Filter adult content at query level
     if (!currentProfile?.show_adult_content) {
       postsQuery = postsQuery.eq('is_adult', false);
     }
@@ -231,9 +211,8 @@ async function loadFeed() {
     const userIds = [...new Set(posts.map(p => p.user_id))];
     const { data: profiles } = await window.db
       .from('profiles')
-      .select('user_id, username, display_name, avatar_url')
+      .select('user_id, username, display_name, avatar_url, is_verified, verified_type')
       .in('user_id', userIds);
-
     const profileMap = {};
     if (profiles) profiles.forEach(p => { profileMap[p.user_id] = p; });
 
@@ -241,20 +220,15 @@ async function loadFeed() {
     let communityMap = {};
     if (communityIds.length > 0) {
       const { data: communities } = await window.db
-        .from('communities')
-        .select('id, name, slug')
-        .in('id', communityIds);
+        .from('communities').select('id, name, slug').in('id', communityIds);
       if (communities) communities.forEach(c => { communityMap[c.id] = c; });
     }
 
     const postIds = posts.map(p => p.id);
 
     const { data: reactions } = await window.db
-      .from('reactions')
-      .select('target_id, reaction_type')
-      .in('target_id', postIds)
-      .eq('target_type', 'post');
-
+      .from('reactions').select('target_id, reaction_type')
+      .in('target_id', postIds).eq('target_type', 'post');
     const reactionMap = {};
     if (reactions) {
       reactions.forEach(r => {
@@ -264,80 +238,45 @@ async function loadFeed() {
     }
 
     const { data: comments } = await window.db
-      .from('comments')
-      .select('post_id')
-      .in('post_id', postIds)
-      .eq('is_removed', false);
-
+      .from('comments').select('post_id').in('post_id', postIds).eq('is_removed', false);
     const commentCountMap = {};
     if (comments) {
-      comments.forEach(c => {
-        commentCountMap[c.post_id] = (commentCountMap[c.post_id] || 0) + 1;
-      });
+      comments.forEach(c => { commentCountMap[c.post_id] = (commentCountMap[c.post_id] || 0) + 1; });
     }
 
     let myReactionMap = {};
     if (currentUser) {
       const { data: myReactions } = await window.db
-        .from('reactions')
-        .select('target_id, reaction_type')
-        .in('target_id', postIds)
-        .eq('target_type', 'post')
-        .eq('user_id', currentUser.id);
-      if (myReactions) {
-        myReactions.forEach(r => { myReactionMap[r.target_id] = r.reaction_type; });
-      }
+        .from('reactions').select('target_id, reaction_type')
+        .in('target_id', postIds).eq('target_type', 'post').eq('user_id', currentUser.id);
+      if (myReactions) myReactions.forEach(r => { myReactionMap[r.target_id] = r.reaction_type; });
     }
 
     const { data: views } = await window.db
-      .from('post_views')
-      .select('post_id')
-      .in('post_id', postIds);
-
+      .from('post_views').select('post_id').in('post_id', postIds);
     const viewCountMap = {};
-    if (views) {
-      views.forEach(v => {
-        viewCountMap[v.post_id] = (viewCountMap[v.post_id] || 0) + 1;
-      });
-    }
+    if (views) views.forEach(v => { viewCountMap[v.post_id] = (viewCountMap[v.post_id] || 0) + 1; });
 
     const { data: shares } = await window.db
-      .from('shares')
-      .select('post_id')
-      .in('post_id', postIds);
-
+      .from('shares').select('post_id').in('post_id', postIds);
     const shareCountMap = {};
-    if (shares) {
-      shares.forEach(s => {
-        shareCountMap[s.post_id] = (shareCountMap[s.post_id] || 0) + 1;
-      });
-    }
+    if (shares) shares.forEach(s => { shareCountMap[s.post_id] = (shareCountMap[s.post_id] || 0) + 1; });
 
     const { data: polls } = await window.db
-      .from('polls')
-      .select('*')
-      .in('post_id', postIds);
-
+      .from('polls').select('*').in('post_id', postIds);
     const pollMap = {};
     if (polls) polls.forEach(p => { pollMap[p.post_id] = p; });
 
-    let myVoteMap = {};
     if (polls && polls.length > 0) {
       const pollIds = polls.map(p => p.id);
       const { data: myVotes } = await window.db
-        .from('poll_votes')
-        .select('poll_id, option_index')
-        .in('poll_id', pollIds)
-        .eq('user_id', currentUser.id);
-      if (myVotes) {
-        myVotes.forEach(v => { myVoteMap[v.poll_id] = v.option_index; });
-      }
+        .from('poll_votes').select('poll_id, option_index')
+        .in('poll_id', pollIds).eq('user_id', currentUser.id);
+      const myVoteMap = {};
+      if (myVotes) myVotes.forEach(v => { myVoteMap[v.poll_id] = v.option_index; });
 
       const { data: allVotes } = await window.db
-        .from('poll_votes')
-        .select('poll_id, option_index')
-        .in('poll_id', pollIds);
-
+        .from('poll_votes').select('poll_id, option_index').in('poll_id', pollIds);
       const pollVoteCountMap = {};
       if (allVotes) {
         allVotes.forEach(v => {
@@ -345,7 +284,6 @@ async function loadFeed() {
           pollVoteCountMap[v.poll_id][v.option_index] = (pollVoteCountMap[v.poll_id][v.option_index] || 0) + 1;
         });
       }
-
       polls.forEach(p => {
         p.voteCounts = pollVoteCountMap[p.id] || {};
         p.totalVotes = Object.values(p.voteCounts).reduce((a, b) => a + b, 0);
@@ -357,6 +295,7 @@ async function loadFeed() {
       renderPost(post, profileMap, communityMap, reactionMap, commentCountMap, myReactionMap, viewCountMap, pollMap, shareCountMap)
     ).join('');
 
+    // Share modal
     if (!document.getElementById('share-modal')) {
       const modal = document.createElement('div');
       modal.id = 'share-modal';
@@ -368,10 +307,7 @@ async function loadFeed() {
             <button id="share-modal-close" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--text-muted);line-height:1;">×</button>
           </div>
           <div style="padding:20px 24px;">
-            <textarea id="share-comment" class="form-input" rows="3"
-              placeholder="Add your thoughts... (optional)"
-              maxlength="500"
-              style="width:100%;resize:none;margin-bottom:16px;font-size:15px;"></textarea>
+            <textarea id="share-comment" class="form-input" rows="3" placeholder="Add your thoughts... (optional)" maxlength="500" style="width:100%;resize:none;margin-bottom:16px;font-size:15px;"></textarea>
             <div id="share-post-preview" style="background:var(--bg-input);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px;font-size:14px;color:var(--text-muted);"></div>
             <div style="display:flex;gap:8px;justify-content:flex-end;">
               <button id="share-modal-cancel" class="btn btn-ghost">Cancel</button>
@@ -386,6 +322,51 @@ async function loadFeed() {
       modal.addEventListener('click', (e) => { if (e.target === modal) closeShareModal(); });
     }
 
+    // Report modal
+    if (!document.getElementById('report-modal')) {
+      const modal = document.createElement('div');
+      modal.id = 'report-modal';
+      modal.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;padding:20px;';
+      modal.innerHTML = `
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:16px;width:100%;max-width:480px;overflow:hidden;">
+          <div style="padding:20px 24px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+            <div style="font-size:17px;font-weight:700;color:var(--text);">🚩 Report Post</div>
+            <button id="report-modal-close" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--text-muted);line-height:1;">×</button>
+          </div>
+          <div style="padding:20px 24px;">
+            <div style="font-size:14px;color:var(--text-muted);margin-bottom:16px;">Why are you reporting this post?</div>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+              ${[
+                ['spam', '🚫 Spam or advertising'],
+                ['harassment', '😡 Harassment or bullying'],
+                ['hate_speech', '🤬 Hate speech or discrimination'],
+                ['misinformation', '📰 Misinformation or false content'],
+                ['illegal', '⚖️ Illegal content'],
+                ['adult', '🔞 Adult content shown to minors'],
+                ['violence', '💢 Violence or threats'],
+                ['other', '❓ Other']
+              ].map(([value, label]) => `
+                <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:border-color 0.15s ease;"
+                  onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border)'">
+                  <input type="radio" name="report-reason" value="${value}" style="accent-color:var(--primary);" />
+                  <span style="font-size:14px;color:var(--text);">${label}</span>
+                </label>
+              `).join('')}
+            </div>
+            <div id="report-error" style="display:none;color:var(--danger);font-size:13px;margin-bottom:12px;"></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;">
+              <button id="report-modal-cancel" class="btn btn-ghost">Cancel</button>
+              <button id="report-modal-submit" class="btn btn-primary" style="background:#ef4444;border-color:#ef4444;">Submit Report</button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      document.getElementById('report-modal-close').addEventListener('click', closeReportModal);
+      document.getElementById('report-modal-cancel').addEventListener('click', closeReportModal);
+      modal.addEventListener('click', (e) => { if (e.target === modal) closeReportModal(); });
+    }
+
     attachPostListeners();
     recordFeedViews(postIds);
 
@@ -393,6 +374,83 @@ async function loadFeed() {
     console.error('Feed error:', err);
     container.innerHTML = '<div class="loading">Could not load feed. Please refresh.</div>';
   }
+}
+
+function openReportModal(postId) {
+  const modal = document.getElementById('report-modal');
+  if (!modal) return;
+  // Clear previous state
+  document.querySelectorAll('input[name="report-reason"]').forEach(r => r.checked = false);
+  document.getElementById('report-error').style.display = 'none';
+  const submitBtn = document.getElementById('report-modal-submit');
+  submitBtn.onclick = () => handleReport(postId);
+  modal.style.display = 'flex';
+}
+
+function closeReportModal() {
+  const modal = document.getElementById('report-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function handleReport(postId) {
+  const reason = document.querySelector('input[name="report-reason"]:checked')?.value;
+  const errorEl = document.getElementById('report-error');
+
+  if (!reason) {
+    errorEl.textContent = 'Please select a reason.';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  const submitBtn = document.getElementById('report-modal-submit');
+  submitBtn.textContent = 'Submitting...';
+  submitBtn.disabled = true;
+
+  try {
+    // Check if already reported
+    const { data: existing } = await window.db
+      .from('reports')
+      .select('id')
+      .eq('reporter_id', currentUser.id)
+      .eq('target_id', postId)
+      .eq('target_type', 'post')
+      .single();
+
+    if (existing) {
+      errorEl.textContent = 'You have already reported this post.';
+      errorEl.style.display = 'block';
+      submitBtn.textContent = 'Submit Report';
+      submitBtn.disabled = false;
+      return;
+    }
+
+    const { error } = await window.db.from('reports').insert({
+      reporter_id: currentUser.id,
+      target_id: postId,
+      target_type: 'post',
+      reason,
+      status: 'pending'
+    });
+
+    if (error) throw error;
+
+    closeReportModal();
+
+    // Brief confirmation on the ••• button
+    const menuBtn = document.querySelector(`.post-menu-btn[data-post-id="${postId}"]`);
+    if (menuBtn) {
+      menuBtn.textContent = '✅';
+      setTimeout(() => { menuBtn.textContent = '•••'; }, 2000);
+    }
+
+  } catch (err) {
+    console.error('Report error:', err);
+    errorEl.textContent = 'Something went wrong. Please try again.';
+    errorEl.style.display = 'block';
+  }
+
+  submitBtn.textContent = 'Submit Report';
+  submitBtn.disabled = false;
 }
 
 function openShareModal(postId, postContent, postUsername) {
@@ -420,22 +478,15 @@ async function handleShare(postId) {
   const submitBtn = document.getElementById('share-modal-submit');
   submitBtn.textContent = 'Reposting...';
   submitBtn.disabled = true;
-
   try {
     const { error: shareError } = await window.db
-      .from('shares')
-      .insert({ post_id: postId, user_id: currentUser.id, comment });
+      .from('shares').insert({ post_id: postId, user_id: currentUser.id, comment });
     if (shareError) throw shareError;
-
     const shareContent = comment ? `${comment}\n\n🔁 [Reposted]` : '🔁 [Reposted]';
     await window.db.from('posts').insert({
-      user_id: currentUser.id,
-      content: shareContent,
-      shared_post_id: postId
+      user_id: currentUser.id, content: shareContent, shared_post_id: postId
     });
-
     closeShareModal();
-
     const shareBtn = document.querySelector(`.share-btn[data-post-id="${postId}"]`);
     if (shareBtn) {
       const current = parseInt(shareBtn.dataset.shareCount || '0');
@@ -474,18 +525,16 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
   const username = profile?.username || 'unknown';
   const displayName = profile?.display_name || username;
   const initial = username.charAt(0).toUpperCase();
+  const verifiedBadge = getVerifiedBadge(profile);
   const community = post.community_id && communityMap[post.community_id]
-    ? `<span class="post-community">in ${communityMap[post.community_id].name}</span>`
-    : '';
+    ? `<span class="post-community">in ${communityMap[post.community_id].name}</span>` : '';
   const timestamp = new Date(post.created_at).toLocaleDateString('en-US', {
     month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
   });
   const editedLabel = post.is_edited
-    ? `<span style="font-size:11px;color:var(--text-muted);"> · edited</span>`
-    : '';
+    ? `<span style="font-size:11px;color:var(--text-muted);"> · edited</span>` : '';
   const adultBadge = post.is_adult
-    ? `<span style="font-size:11px;padding:2px 6px;border-radius:100px;background:rgba(239,68,68,0.15);color:#ef4444;font-weight:600;">🔞</span>`
-    : '';
+    ? `<span style="font-size:11px;padding:2px 6px;border-radius:100px;background:rgba(239,68,68,0.15);color:#ef4444;font-weight:600;">🔞</span>` : '';
 
   const commentCount = commentCountMap[post.id] || 0;
   const myReaction = myReactionMap[post.id];
@@ -497,27 +546,22 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
   const topEmojis = REACTIONS
     .filter(r => postReactions[r.type] > 0)
     .sort((a, b) => (postReactions[b.type] || 0) - (postReactions[a.type] || 0))
-    .slice(0, 3)
-    .map(r => r.emoji)
-    .join('');
+    .slice(0, 3).map(r => r.emoji).join('');
 
   const myReactionObj = REACTIONS.find(r => r.type === myReaction);
   const reactBtnLabel = myReactionObj ? `${myReactionObj.emoji} ${myReactionObj.label}` : '❤️ React';
   const reactBtnStyle = myReaction ? 'font-weight:700;color:var(--primary);' : '';
   const isOwnPost = post.user_id === currentUser?.id;
   const viewLabel = viewCount > 0
-    ? `<span style="font-size:12px;color:var(--text-muted);">👁 ${viewCount.toLocaleString()} view${viewCount !== 1 ? 's' : ''}</span>`
-    : '';
+    ? `<span style="font-size:12px;color:var(--text-muted);">👁 ${viewCount.toLocaleString()} view${viewCount !== 1 ? 's' : ''}</span>` : '';
 
   const poll = pollMap ? pollMap[post.id] : null;
   let pollHtml = '';
   if (poll) {
     const options = poll.options || [];
     const isExpired = poll.expires_at && new Date(poll.expires_at) < new Date();
-    const hasVoted = poll.myVote !== null;
-    const showResults = hasVoted || isExpired;
+    const showResults = poll.myVote !== null || isExpired;
     const totalVotes = poll.totalVotes || 0;
-
     pollHtml = `
       <div class="poll-card" data-poll-id="${poll.id}" style="margin-top:12px;background:var(--bg-input);border:1px solid var(--border);border-radius:12px;padding:14px;">
         <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:12px;">${escapeHtml(poll.question)}</div>
@@ -536,8 +580,7 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
                   <div style="height:6px;background:var(--border);border-radius:100px;overflow:hidden;">
                     <div style="height:100%;width:${pct}%;background:${isMyVote ? 'var(--primary)' : 'var(--text-muted)'};border-radius:100px;transition:width 0.3s ease;"></div>
                   </div>
-                </div>
-              `;
+                </div>`;
             } else {
               return `
                 <button class="poll-vote-btn" data-poll-id="${poll.id}" data-option-index="${idx}"
@@ -545,8 +588,7 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
                   onmouseover="this.style.borderColor='var(--primary)';this.style.background='var(--bg-hover)'"
                   onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--bg-card)'">
                   ${escapeHtml(opt)}
-                </button>
-              `;
+                </button>`;
             }
           }).join('')}
         </div>
@@ -554,8 +596,7 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
           ${totalVotes} vote${totalVotes !== 1 ? 's' : ''}
           ${isExpired ? ' · Closed' : poll.expires_at ? ` · Ends ${new Date(poll.expires_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : ''}
         </div>
-      </div>
-    `;
+      </div>`;
   }
 
   return `
@@ -565,6 +606,7 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
         <div class="post-meta">
           <div class="post-username">
             <a href="/profile.html?user=${encodeURIComponent(username)}" style="text-decoration:none;color:inherit;">${escapeHtml(displayName)}</a>
+            ${verifiedBadge}
             <span style="font-weight:400;color:var(--text-muted);font-size:13px;">@${escapeHtml(username)}</span>
             ${adultBadge}
           </div>
@@ -574,12 +616,12 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
             ${community}
           </div>
         </div>
-        ${isOwnPost ? `
-          <div class="post-menu-wrapper" style="position:relative;margin-left:auto;">
-            <button class="post-menu-btn" data-post-id="${post.id}"
-              style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:18px;padding:4px 8px;border-radius:6px;line-height:1;">•••</button>
-            <div class="post-menu-dropdown" data-post-id="${post.id}"
-              style="display:none;position:absolute;top:28px;right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.3);z-index:200;min-width:140px;overflow:hidden;">
+        <div class="post-menu-wrapper" style="position:relative;margin-left:auto;">
+          <button class="post-menu-btn" data-post-id="${post.id}"
+            style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:18px;padding:4px 8px;border-radius:6px;line-height:1;">•••</button>
+          <div class="post-menu-dropdown" data-post-id="${post.id}"
+            style="display:none;position:absolute;top:28px;right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.3);z-index:200;min-width:150px;overflow:hidden;">
+            ${isOwnPost ? `
               <button class="edit-btn" data-post-id="${post.id}" data-content="${escapeHtml(post.content || '')}"
                 style="display:block;width:100%;text-align:left;padding:10px 16px;background:none;border:none;cursor:pointer;font-size:14px;color:var(--text);">
                 ✏️ Edit
@@ -588,9 +630,14 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
                 style="display:block;width:100%;text-align:left;padding:10px 16px;background:none;border:none;cursor:pointer;font-size:14px;color:var(--danger);">
                 🗑️ Delete
               </button>
-            </div>
+            ` : `
+              <button class="report-btn" data-post-id="${post.id}"
+                style="display:block;width:100%;text-align:left;padding:10px 16px;background:none;border:none;cursor:pointer;font-size:14px;color:var(--danger);">
+                🚩 Report Post
+              </button>
+            `}
           </div>
-        ` : ''}
+        </div>
       </div>
 
       <div class="post-content-wrapper">
@@ -625,11 +672,8 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
         <button class="post-action-btn comment-btn" data-post-id="${post.id}">
           💬 <span>${commentCount > 0 ? commentCount : ''} Comment${commentCount !== 1 ? 's' : ''}</span>
         </button>
-
         <div class="gif-picker-wrapper" style="position:relative;">
-          <button class="post-action-btn gif-react-btn" data-post-id="${post.id}">
-            🎞️ GIF
-          </button>
+          <button class="post-action-btn gif-react-btn" data-post-id="${post.id}">🎞️ GIF</button>
           <div class="gif-picker-panel" data-post-id="${post.id}"
             style="display:none;position:absolute;bottom:40px;left:0;width:300px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,0.4);z-index:300;overflow:hidden;">
             <div style="padding:10px;">
@@ -644,7 +688,6 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
             </div>
           </div>
         </div>
-
         <button class="post-action-btn share-btn"
           data-post-id="${post.id}"
           data-post-content="${escapeHtml(post.content || '')}"
@@ -652,10 +695,7 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
           data-share-count="${shareCount}">
           🔁 ${shareCount > 0 ? shareCount : 'Repost'}
         </button>
-
-        <button class="post-action-btn copy-link-btn" data-post-id="${post.id}">
-          🔗
-        </button>
+        <button class="post-action-btn copy-link-btn" data-post-id="${post.id}">🔗</button>
       </div>
     </div>
   `;
@@ -712,6 +752,15 @@ function attachPostListeners() {
       const menu = document.querySelector(`.post-menu-dropdown[data-post-id="${btn.dataset.postId}"]`);
       if (menu) menu.style.display = 'none';
       handleDeletePost(btn.dataset.postId);
+    });
+  });
+
+  document.querySelectorAll('.report-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const menu = document.querySelector(`.post-menu-dropdown[data-post-id="${btn.dataset.postId}"]`);
+      if (menu) menu.style.display = 'none';
+      openReportModal(btn.dataset.postId);
     });
   });
 
@@ -827,8 +876,7 @@ function renderGifPickerResults(postId, gifs) {
       <img src="${preview}" data-full="${full}"
         style="width:100%;height:70px;object-fit:cover;border-radius:6px;cursor:pointer;transition:opacity 0.15s ease;"
         class="gif-pick-item" data-post-id="${postId}"
-        onmouseover="this.style.opacity='0.8'"
-        onmouseout="this.style.opacity='1'" />
+        onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'" />
     `;
   }).join('');
   resultsEl.querySelectorAll('.gif-pick-item').forEach(img => {
@@ -845,8 +893,7 @@ async function postGifReaction(postId, gifUrl) {
   activeGifPicker = null;
   try {
     const { error } = await window.db
-      .from('comments')
-      .insert({ post_id: postId, user_id: currentUser.id, content: gifUrl });
+      .from('comments').insert({ post_id: postId, user_id: currentUser.id, content: gifUrl });
     if (error) throw error;
     const commentBtn = document.querySelector(`.comment-btn[data-post-id="${postId}"] span`);
     if (commentBtn) {
@@ -889,7 +936,8 @@ async function refreshPollResults(pollId) {
   const voteCounts = {};
   if (allVotes) allVotes.forEach(v => { voteCounts[v.option_index] = (voteCounts[v.option_index] || 0) + 1; });
   const totalVotes = allVotes ? allVotes.length : 0;
-  const { data: myVoteRow } = await window.db.from('poll_votes').select('option_index').eq('poll_id', pollId).eq('user_id', currentUser.id).single();
+  const { data: myVoteRow } = await window.db.from('poll_votes').select('option_index')
+    .eq('poll_id', pollId).eq('user_id', currentUser.id).single();
   const myVote = myVoteRow ? myVoteRow.option_index : null;
   const options = poll.options || [];
   const isExpired = poll.expires_at && new Date(poll.expires_at) < new Date();
@@ -1045,8 +1093,7 @@ async function handleCreatePost() {
   try {
     const { data: post, error: postError } = await window.db
       .from('posts').insert({
-        user_id: currentUser.id,
-        content,
+        user_id: currentUser.id, content,
         is_adult: currentProfile?.is_adult_creator || false
       }).select().single();
     if (postError) throw postError;
