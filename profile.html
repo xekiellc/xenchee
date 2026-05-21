@@ -19,7 +19,6 @@
 
   <div class="app-layout">
 
-    <!-- Left Sidebar -->
     <div class="sidebar-left">
       <ul class="sidebar-nav">
         <li><a href="/feed.html"><span class="sidebar-nav-icon">🏠</span>Home</a></li>
@@ -35,18 +34,13 @@
       </ul>
     </div>
 
-    <!-- Main Content -->
     <div class="feed-main">
 
       <!-- Profile Header -->
       <div id="profile-header" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:20px;overflow:hidden;">
-
-        <!-- Banner -->
         <div style="height:160px;background:linear-gradient(135deg,var(--primary),#a78bfa);position:relative;">
           <div id="profile-avatar-large" style="position:absolute;bottom:-32px;left:24px;width:80px;height:80px;border-radius:50%;background:var(--bg-card);border:4px solid var(--bg-card);display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:800;color:var(--primary);">?</div>
         </div>
-
-        <!-- Profile Info -->
         <div style="padding:48px 24px 24px;">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
             <div>
@@ -61,11 +55,8 @@
               <button id="edit-profile-btn" class="btn btn-ghost" style="display:none;">Edit Profile</button>
             </div>
           </div>
-
           <div id="profile-bio" style="margin-top:12px;font-size:15px;color:var(--text-secondary);line-height:1.6;"></div>
-
           <div id="profile-meta" style="display:flex;gap:16px;margin-top:8px;flex-wrap:wrap;font-size:13px;color:var(--text-muted);"></div>
-
           <div style="display:flex;gap:24px;margin-top:16px;flex-wrap:wrap;">
             <div style="font-size:14px;color:var(--text-secondary);">
               <span id="profile-post-count" style="font-weight:700;color:var(--text);">0</span> Posts
@@ -80,7 +71,7 @@
         </div>
       </div>
 
-      <!-- Edit Profile Form (hidden by default) -->
+      <!-- Edit Profile Form -->
       <div id="edit-profile-form" style="display:none;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;margin-bottom:20px;">
         <div style="font-size:18px;font-weight:700;margin-bottom:20px;">Edit Profile</div>
 
@@ -117,8 +108,7 @@
               </div>
               <label style="position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;">
                 <input type="checkbox" id="toggle-show-adult" style="opacity:0;width:0;height:0;" />
-                <span style="position:absolute;cursor:pointer;inset:0;background:var(--border);border-radius:100px;transition:0.2s;"
-                  id="toggle-show-adult-track"></span>
+                <span style="position:absolute;cursor:pointer;inset:0;background:var(--border);border-radius:100px;transition:0.2s;" id="toggle-show-adult-track"></span>
               </label>
             </div>
           </div>
@@ -127,15 +117,31 @@
             <div style="display:flex;justify-content:space-between;align-items:center;">
               <div>
                 <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:2px;">I Create Adult Content</div>
-                <div style="font-size:12px;color:var(--text-muted);">Mark your posts as 18+ by default. Subscribers must have adult content enabled to see them.</div>
+                <div style="font-size:12px;color:var(--text-muted);">Mark your posts as 18+ by default.</div>
               </div>
               <label style="position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;">
                 <input type="checkbox" id="toggle-is-adult-creator" style="opacity:0;width:0;height:0;" />
-                <span style="position:absolute;cursor:pointer;inset:0;background:var(--border);border-radius:100px;transition:0.2s;"
-                  id="toggle-is-adult-creator-track"></span>
+                <span style="position:absolute;cursor:pointer;inset:0;background:var(--border);border-radius:100px;transition:0.2s;" id="toggle-is-adult-creator-track"></span>
               </label>
             </div>
           </div>
+        </div>
+
+        <!-- Keyword Muting -->
+        <div style="border-top:1px solid var(--border);margin-top:20px;padding-top:20px;">
+          <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px;">🔇 Muted Keywords</div>
+          <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Posts containing these words won't appear in your feed.</div>
+
+          <!-- Current keywords -->
+          <div id="muted-keywords-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;min-height:32px;"></div>
+
+          <!-- Add keyword -->
+          <div style="display:flex;gap:8px;">
+            <input type="text" id="keyword-input" class="form-input" placeholder="Add a keyword..." maxlength="50"
+              style="flex:1;" />
+            <button id="add-keyword-btn" class="btn btn-ghost" style="flex-shrink:0;">+ Add</button>
+          </div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">Up to 50 keywords. Case-insensitive.</div>
         </div>
 
         <div style="display:flex;gap:12px;margin-top:20px;">
@@ -152,7 +158,6 @@
 
     </div>
 
-    <!-- Right Sidebar -->
     <div class="sidebar-right">
       <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">Communities</div>
       <div id="profile-communities"></div>
