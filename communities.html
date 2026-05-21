@@ -3,14 +3,33 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Communities — XenChee</title>
+  <title>Communities — Voxxee</title>
+
+  <!-- OG Meta Tags -->
+  <meta property="og:title" content="Communities — Voxxee" />
+  <meta property="og:description" content="Find your people on Voxxee. Browse and join communities across dozens of topics — all free, all uncensored, all verified adults." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://voxxee.com/communities.html" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Communities — Voxxee" />
+  <meta name="twitter:description" content="Find your people on Voxxee. Browse and join communities across dozens of topics — all free, all uncensored, all verified adults." />
+
+  <!-- GA4 -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-FSCZJEWZ6F"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-FSCZJEWZ6F');
+  </script>
+
   <link rel="stylesheet" href="css/main.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
   <nav class="nav">
-    <a href="/feed.html" class="nav-brand">XenChee</a>
+    <a href="/feed.html" class="nav-brand">Voxxee</a>
     <div class="nav-actions">
       <a href="/feed.html" class="btn btn-ghost">Feed</a>
       <a href="/profile.html" class="btn btn-ghost">Profile</a>
@@ -346,7 +365,6 @@
           return loc.includes(city);
         });
       } else {
-        // No city set — show all local communities
         filtered = filtered.filter(c => c.is_local);
       }
 
@@ -358,7 +376,6 @@
         );
       }
 
-      // Update location display
       if (city) {
         document.getElementById('local-location-display').textContent =
           state ? `${city}, ${state}` : city;
