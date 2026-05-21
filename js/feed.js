@@ -74,6 +74,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.querySelectorAll('.gif-picker-panel').forEach(p => p.style.display = 'none');
       activeGifPicker = null;
     }
+    if (!e.target.closest('.diagnostics-panel') && !e.target.closest('.view-label-btn')) {
+      document.querySelectorAll('.diagnostics-panel').forEach(p => p.style.display = 'none');
+    }
   });
 });
 
@@ -256,7 +259,6 @@ async function loadFeed() {
       }
     }
 
-    // Filter muted keywords
     if (posts && currentProfile?.muted_keywords?.length > 0) {
       const keywords = currentProfile.muted_keywords.map(k => k.toLowerCase());
       posts = posts.filter(post => {
@@ -294,7 +296,6 @@ async function loadFeed() {
 
     const postIds = posts.map(p => p.id);
 
-    // Fetch shared posts
     const sharedPostIds = [...new Set(posts.filter(p => p.shared_post_id).map(p => p.shared_post_id))];
     let sharedPostMap = {};
     let sharedProfileMap = {};
@@ -380,7 +381,6 @@ async function loadFeed() {
       renderPost(post, profileMap, communityMap, reactionMap, commentCountMap, myReactionMap, viewCountMap, pollMap, shareCountMap, sharedPostMap, sharedProfileMap)
     ).join('');
 
-    // Share modal
     if (!document.getElementById('share-modal')) {
       const modal = document.createElement('div');
       modal.id = 'share-modal';
@@ -407,7 +407,6 @@ async function loadFeed() {
       modal.addEventListener('click', (e) => { if (e.target === modal) closeShareModal(); });
     }
 
-    // Report modal
     if (!document.getElementById('report-modal')) {
       const modal = document.createElement('div');
       modal.id = 'report-modal';
@@ -458,6 +457,92 @@ async function loadFeed() {
   } catch (err) {
     console.error('Feed error:', err);
     container.innerHTML = '<div class="loading">Could not load feed. Please refresh.</div>';
+  }
+}
+
+async function handleViewDiagnostics(postId, viewCount, reactionMap, commentCount, shareCount) {
+  const card = document.querySelector(`.post-card[data-post-id="${postId}"]`);
+  if (!card) return;
+
+  const existing = card.querySelector('.diagnostics-panel');
+  if (existing) {
+    existing.style.display = existing.style.display === 'none' ? 'block' : 'none';
+    return;
+  }
+
+  // Fetch fresh data
+  const { data: reactions } = await window.db
+    .from('reactions').select('reaction_type')
+    .eq('target_id', postId).eq('target_type', 'post');
+
+  const counts = {};
+  if (reactions) reactions.forEach(r => {
+    counts[r.reaction_type] = (counts[r.reaction_type] || 0) + 1;
+  });
+
+  const totalReactions = Object.values(counts).reduce((a, b) => a + b, 0);
+
+  const reactionRows = REACTIONS
+    .filter(r => counts[r.type] > 0)
+    .map(r => `
+      <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;">
+        <span style="color:var(--text-muted);">${r.emoji} ${r.label}</span>
+        <span style="font-weight:600;color:var(--text);">${counts[r.type]}</span>
+      </div>
+    `).join('');
+
+  const engagementRate = viewCount > 0
+    ? ((totalReactions + commentCount) / viewCount * 100).toFixed(1)
+    : '0.0';
+
+  const panel = document.createElement('div');
+  panel.className = 'diagnostics-panel';
+  panel.style.cssText = `
+    margin-top:12px;
+    background:var(--bg-input);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:16px;
+    font-size:13px;
+  `;
+  panel.innerHTML = `
+    <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px;">📊 Post Analytics</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;">
+        <div style="font-size:22px;font-weight:800;color:var(--primary);">${viewCount.toLocaleString()}</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">👁 Views</div>
+      </div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;">
+        <div style="font-size:22px;font-weight:800;color:var(--primary);">${totalReactions}</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">❤️ Reactions</div>
+      </div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;">
+        <div style="font-size:22px;font-weight:800;color:var(--primary);">${commentCount}</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">💬 Comments</div>
+      </div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;">
+        <div style="font-size:22px;font-weight:800;color:var(--primary);">${shareCount}</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">🔁 Reposts</div>
+      </div>
+    </div>
+    ${reactionRows ? `
+      <div style="border-top:1px solid var(--border);padding-top:12px;margin-bottom:12px;">
+        <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Reaction Breakdown</div>
+        ${reactionRows}
+      </div>
+    ` : ''}
+    <div style="border-top:1px solid var(--border);padding-top:12px;">
+      <div style="display:flex;justify-content:space-between;font-size:13px;">
+        <span style="color:var(--text-muted);">Engagement rate</span>
+        <span style="font-weight:700;color:${parseFloat(engagementRate) >= 5 ? '#4caf7d' : 'var(--text)'};">${engagementRate}%</span>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">(reactions + comments) ÷ views</div>
+    </div>
+  `;
+
+  const postActions = card.querySelector('.post-actions');
+  if (postActions) {
+    postActions.before(panel);
   }
 }
 
@@ -644,6 +729,7 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
   const postReactions = reactionMap[post.id] || {};
   const viewCount = viewCountMap ? (viewCountMap[post.id] || 0) : 0;
   const shareCount = shareCountMap ? (shareCountMap[post.id] || 0) : 0;
+  const isOwnPost = post.user_id === currentUser?.id;
 
   const totalReactions = Object.values(postReactions).reduce((a, b) => a + b, 0);
   const topEmojis = REACTIONS
@@ -654,9 +740,18 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
   const myReactionObj = REACTIONS.find(r => r.type === myReaction);
   const reactBtnLabel = myReactionObj ? `${myReactionObj.emoji} ${myReactionObj.label}` : '❤️ React';
   const reactBtnStyle = myReaction ? 'font-weight:700;color:var(--primary);' : '';
-  const isOwnPost = post.user_id === currentUser?.id;
-  const viewLabel = viewCount > 0
-    ? `<span style="font-size:12px;color:var(--text-muted);">👁 ${viewCount.toLocaleString()} view${viewCount !== 1 ? 's' : ''}</span>` : '';
+
+  // View label — clickable for own posts to show diagnostics
+  const viewLabel = viewCount > 0 ? (
+    isOwnPost
+      ? `<button class="view-label-btn post-action-btn" data-post-id="${post.id}"
+           data-view-count="${viewCount}" data-comment-count="${commentCount}" data-share-count="${shareCount}"
+           style="font-size:12px;color:var(--text-muted);background:none;border:none;cursor:pointer;padding:0;"
+           title="Click to see post analytics">
+           👁 ${viewCount.toLocaleString()} view${viewCount !== 1 ? 's' : ''} 📊
+         </button>`
+      : `<span style="font-size:12px;color:var(--text-muted);">👁 ${viewCount.toLocaleString()} view${viewCount !== 1 ? 's' : ''}</span>`
+  ) : '';
 
   const sharedPostHtml = post.shared_post_id && sharedPostMap
     ? renderSharedPost(sharedPostMap[post.shared_post_id] || null, sharedProfileMap || {})
@@ -910,6 +1005,17 @@ function attachPostListeners() {
     });
   });
 
+  document.querySelectorAll('.view-label-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const postId = btn.dataset.postId;
+      const viewCount = parseInt(btn.dataset.viewCount || '0');
+      const commentCount = parseInt(btn.dataset.commentCount || '0');
+      const shareCount = parseInt(btn.dataset.shareCount || '0');
+      handleViewDiagnostics(postId, viewCount, {}, commentCount, shareCount);
+    });
+  });
+
   document.querySelectorAll('.gif-react-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -1150,12 +1256,9 @@ async function handleReaction(postId, type) {
 
     if (existing) {
       if (existing.reaction_type === type) {
-        // Remove reaction — reverse the reputation
         await window.db.from('reactions').delete().eq('id', existing.id);
-        // Fetch post owner
         const { data: post } = await window.db.from('posts').select('user_id').eq('id', postId).single();
         if (post && post.user_id !== currentUser.id) {
-          const reverseType = existing.reaction_type === 'downvote' ? 'reaction_received' : 'reaction_received';
           const reversePoints = existing.reaction_type === 'downvote' ? 1 : -1;
           await window.db.from('reputation_events').insert({
             user_id: post.user_id, source_user_id: currentUser.id,
@@ -1174,7 +1277,6 @@ async function handleReaction(postId, type) {
       await window.db.from('reactions').insert({
         user_id: currentUser.id, target_id: postId, target_type: 'post', reaction_type: type
       });
-      // Award reputation to post owner
       const { data: post } = await window.db.from('posts').select('user_id').eq('id', postId).single();
       if (post && post.user_id !== currentUser.id) {
         const eventType = type === 'downvote' ? 'downvote_received' : 'reaction_received';
@@ -1241,7 +1343,6 @@ async function handleCreatePost() {
       }).select().single();
     if (postError) throw postError;
 
-    // Award reputation for posting
     await awardReputation(currentUser.id, 'post_created', post.id, 'post', null);
 
     if (hasPoll && post) {
@@ -1282,7 +1383,6 @@ async function handleDeletePost(postId) {
   if (!currentUser) return;
   if (!confirm('Delete this post?')) return;
   await window.db.from('posts').update({ is_removed: true }).eq('id', postId).eq('user_id', currentUser.id);
-  // Deduct reputation for deleted post
   await awardReputation(currentUser.id, 'post_removed', postId, 'post', null);
   await loadFeed();
 }
