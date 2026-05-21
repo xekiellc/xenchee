@@ -30,10 +30,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   const { data: profile } = await window.db
-    .from('profiles')
-    .select('*')
-    .eq('user_id', currentUser.id)
-    .single();
+    .from('profiles').select('*').eq('user_id', currentUser.id).single();
 
   currentProfile = profile;
 
@@ -42,7 +39,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (avatar) avatar.textContent = profile.username.charAt(0).toUpperCase();
   }
 
-  // Fetch Giphy API key from config
   try {
     const res = await fetch('/.netlify/functions/config');
     const config = await res.json();
@@ -51,7 +47,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.error('Could not load Giphy key:', err);
   }
 
-  // Init mention autocomplete
   initMentionAutocomplete('comment-content', 'comment-mention-dropdown');
 
   document.getElementById('logout-btn').addEventListener('click', async () => {
@@ -61,7 +56,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('comment-btn').addEventListener('click', handleCreateComment);
 
-  // GIF toggle
   document.getElementById('gif-toggle-btn').addEventListener('click', () => {
     const picker = document.getElementById('gif-picker');
     const isVisible = picker.style.display !== 'none';
@@ -72,13 +66,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // GIF search
   document.getElementById('gif-search-btn').addEventListener('click', searchGifs);
   document.getElementById('gif-search-input').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') searchGifs();
   });
 
-  // Remove GIF
   document.getElementById('gif-remove-btn').addEventListener('click', () => {
     selectedGifUrl = null;
     document.getElementById('gif-preview').style.display = 'none';
@@ -94,7 +86,6 @@ async function loadTrendingGifs() {
   if (!giphyApiKey) return;
   const container = document.getElementById('gif-results');
   container.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:8px;">Loading trending GIFs...</div>';
-
   try {
     const res = await fetch(`https://api.giphy.com/v1/gifs/trending?api_key=${giphyApiKey}&limit=12&rating=g`);
     const data = await res.json();
@@ -108,10 +99,8 @@ async function searchGifs() {
   if (!giphyApiKey) return;
   const query = document.getElementById('gif-search-input').value.trim();
   if (!query) return;
-
   const container = document.getElementById('gif-results');
   container.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:8px;">Searching...</div>';
-
   try {
     const res = await fetch(`https://api.giphy.com/v1/gifs/search?api_key=${giphyApiKey}&q=${encodeURIComponent(query)}&limit=12&rating=g`);
     const data = await res.json();
@@ -123,28 +112,20 @@ async function searchGifs() {
 
 function renderGifResults(gifs) {
   const container = document.getElementById('gif-results');
-
   if (!gifs || gifs.length === 0) {
     container.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:8px;">No GIFs found.</div>';
     return;
   }
-
   container.innerHTML = gifs.map(gif => {
     const preview = gif.images.fixed_height_small.url;
     const full = gif.images.fixed_height.url;
     return `
-      <img
-        src="${preview}"
-        data-full="${full}"
-        alt="${escapeHtml(gif.title || 'GIF')}"
+      <img src="${preview}" data-full="${full}" alt="${escapeHtml(gif.title || 'GIF')}"
         style="width:100%;height:80px;object-fit:cover;border-radius:6px;cursor:pointer;transition:opacity 0.15s ease;"
         class="gif-result-item"
-        onmouseover="this.style.opacity='0.8'"
-        onmouseout="this.style.opacity='1'"
-      />
+        onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'" />
     `;
   }).join('');
-
   container.querySelectorAll('.gif-result-item').forEach(img => {
     img.addEventListener('click', () => {
       selectedGifUrl = img.dataset.full;
@@ -158,14 +139,9 @@ function renderGifResults(gifs) {
 
 async function loadPost() {
   const container = document.getElementById('original-post');
-
   try {
     const { data: post, error } = await window.db
-      .from('posts')
-      .select('*')
-      .eq('id', postId)
-      .eq('is_removed', false)
-      .single();
+      .from('posts').select('*').eq('id', postId).eq('is_removed', false).single();
 
     if (error || !post) {
       container.innerHTML = '<div class="loading">Post not found.</div>';
@@ -173,10 +149,8 @@ async function loadPost() {
     }
 
     const { data: profile } = await window.db
-      .from('profiles')
-      .select('username, display_name')
-      .eq('user_id', post.user_id)
-      .single();
+      .from('profiles').select('username, display_name, is_verified, verified_type, reputation')
+      .eq('user_id', post.user_id).single();
 
     const username = profile?.username || 'unknown';
     const displayName = profile?.display_name || username;
@@ -185,20 +159,24 @@ async function loadPost() {
       month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
     });
 
+    const verifiedBadge = getVerifiedBadge(profile);
+    const repBadge = repBadgeHtml(profile?.reputation);
+
     container.innerHTML = `
       <div class="post-header">
         <div class="post-avatar">${initial}</div>
         <div class="post-meta">
           <div class="post-username">
             <a href="/profile.html?user=${encodeURIComponent(username)}" style="text-decoration:none;color:inherit;">${escapeHtml(displayName)}</a>
+            ${verifiedBadge}
             <span style="font-weight:400;color:var(--text-muted);font-size:13px;">@${escapeHtml(username)}</span>
+            ${repBadge}
           </div>
           <span class="post-timestamp">${timestamp}</span>
         </div>
       </div>
       <div class="post-content" style="margin-top:12px;">${renderMentions(post.content || '')}</div>
     `;
-
   } catch (err) {
     console.error('Load post error:', err);
     container.innerHTML = '<div class="loading">Could not load post.</div>';
@@ -211,10 +189,7 @@ async function loadComments() {
 
   try {
     const { data: comments, error } = await window.db
-      .from('comments')
-      .select('*')
-      .eq('post_id', postId)
-      .eq('is_removed', false)
+      .from('comments').select('*').eq('post_id', postId).eq('is_removed', false)
       .order('created_at', { ascending: true });
 
     if (error) throw error;
@@ -226,8 +201,7 @@ async function loadComments() {
 
     const userIds = [...new Set(comments.map(c => c.user_id))];
     const { data: profiles } = await window.db
-      .from('profiles')
-      .select('user_id, username, display_name')
+      .from('profiles').select('user_id, username, display_name, is_verified, verified_type, reputation')
       .in('user_id', userIds);
 
     const profileMap = {};
@@ -242,6 +216,16 @@ async function loadComments() {
   }
 }
 
+function getVerifiedBadge(profile) {
+  if (!profile?.is_verified) return '';
+  const badges = {
+    staff:    '<span title="Voxxee Staff" style="font-size:14px;cursor:default;">🟣</span>',
+    notable:  '<span title="Notable Account" style="font-size:14px;cursor:default;">⭐</span>',
+    identity: '<span title="ID Verified" style="font-size:14px;cursor:default;">🔵</span>',
+  };
+  return badges[profile.verified_type] || badges.identity;
+}
+
 function renderComment(comment, profileMap) {
   const profile = profileMap[comment.user_id];
   const username = profile?.username || 'unknown';
@@ -250,6 +234,9 @@ function renderComment(comment, profileMap) {
   const timestamp = new Date(comment.created_at).toLocaleDateString('en-US', {
     month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
   });
+
+  const verifiedBadge = getVerifiedBadge(profile);
+  const repBadge = repBadgeHtml(profile?.reputation);
 
   const isGif = comment.content &&
     comment.content.startsWith('https://media') &&
@@ -266,7 +253,9 @@ function renderComment(comment, profileMap) {
         <div class="post-meta">
           <div class="post-username">
             <a href="/profile.html?user=${encodeURIComponent(username)}" style="text-decoration:none;color:inherit;">${escapeHtml(displayName)}</a>
+            ${verifiedBadge}
             <span style="font-weight:400;color:var(--text-muted);font-size:13px;">@${escapeHtml(username)}</span>
+            ${repBadge}
           </div>
           <span class="post-timestamp">${timestamp}</span>
         </div>
@@ -274,9 +263,7 @@ function renderComment(comment, profileMap) {
       ${contentHtml}
       <div class="post-actions">
         ${comment.user_id === currentUser?.id ? `
-          <button class="post-action-btn delete-comment-btn" data-comment-id="${comment.id}" style="margin-left:auto;color:var(--danger);">
-            🗑️
-          </button>
+          <button class="post-action-btn delete-comment-btn" data-comment-id="${comment.id}" style="margin-left:auto;color:var(--danger);">🗑️</button>
         ` : ''}
       </div>
     </div>
@@ -294,7 +281,6 @@ async function handleCreateComment() {
 
   const content = document.getElementById('comment-content').value.trim();
   const hasGif = !!selectedGifUrl;
-
   if (!content && !hasGif) return;
 
   const btn = document.getElementById('comment-btn');
@@ -303,26 +289,21 @@ async function handleCreateComment() {
 
   try {
     if (content) {
-      const { error } = await window.db
-        .from('comments')
-        .insert({
-          post_id: postId,
-          user_id: currentUser.id,
-          content: content
-        });
+      const { error } = await window.db.from('comments').insert({
+        post_id: postId, user_id: currentUser.id, content
+      });
       if (error) throw error;
     }
 
     if (hasGif) {
-      const { error } = await window.db
-        .from('comments')
-        .insert({
-          post_id: postId,
-          user_id: currentUser.id,
-          content: selectedGifUrl
-        });
+      const { error } = await window.db.from('comments').insert({
+        post_id: postId, user_id: currentUser.id, content: selectedGifUrl
+      });
       if (error) throw error;
     }
+
+    // Award reputation for commenting
+    await awardReputation(currentUser.id, 'comment_created', postId, 'post', null);
 
     document.getElementById('comment-content').value = '';
     selectedGifUrl = null;
@@ -344,13 +325,8 @@ async function handleCreateComment() {
 async function handleDeleteComment(commentId) {
   if (!currentUser) return;
   if (!confirm('Delete this comment?')) return;
-
-  await window.db
-    .from('comments')
-    .update({ is_removed: true })
-    .eq('id', commentId)
-    .eq('user_id', currentUser.id);
-
+  await window.db.from('comments').update({ is_removed: true })
+    .eq('id', commentId).eq('user_id', currentUser.id);
   await loadComments();
 }
 
