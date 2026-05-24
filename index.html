@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Voxxee — Say Exactly What You Mean</title>
 
-  <!-- OG Meta Tags -->
   <meta property="og:title" content="Voxxee — Say Exactly What You Mean" />
   <meta property="og:description" content="The free speech maximalist social platform for adults. No shadowbans. No censorship. No algorithm. Just real people, real conversations." />
   <meta property="og:type" content="website" />
@@ -14,7 +13,6 @@
   <meta name="twitter:title" content="Voxxee — Say Exactly What You Mean" />
   <meta name="twitter:description" content="The free speech maximalist social platform for adults. No shadowbans. No censorship. No algorithm. Just real people, real conversations." />
 
-  <!-- GA4 -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-FSCZJEWZ6F"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -25,10 +23,233 @@
 
   <link rel="stylesheet" href="css/main.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    /* ── Landing wrapper ─────────────────────────────────── */
+    .landing { min-height: 100vh; }
+
+    /* ── Hero ────────────────────────────────────────────── */
+    .hero {
+      padding: 100px 24px 64px;
+      text-align: center;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    .hero h1 {
+      font-size: clamp(2rem, 6vw, 3.5rem);
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      line-height: 1.1;
+      color: var(--text);
+      margin-bottom: 20px;
+    }
+
+    .hero p {
+      font-size: clamp(15px, 2.5vw, 18px);
+      color: #8888a0;
+      line-height: 1.7;
+      margin-bottom: 32px;
+      max-width: 560px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 48px;
+    }
+
+    .btn-large {
+      padding: 12px 28px;
+      font-size: 15px;
+    }
+
+    .hero-features {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    .feature {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-full);
+      padding: 7px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #b0b0be;
+      white-space: nowrap;
+    }
+
+    .feature-icon { font-size: 15px; }
+
+    /* ── Sections ────────────────────────────────────────── */
+    .communities-section,
+    .ecosystem-section {
+      padding: 64px 24px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .section-header h2 {
+      font-size: clamp(1.5rem, 4vw, 2.25rem);
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      margin-bottom: 10px;
+    }
+
+    .section-header p {
+      font-size: 15px;
+      color: #6a6a7a;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    .communities-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+    }
+
+    .ecosystem-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 16px;
+    }
+
+    /* ── Ecosystem card ──────────────────────────────────── */
+    .ecosystem-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      transition: all 0.15s ease;
+    }
+
+    .ecosystem-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    .ecosystem-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .ecosystem-name {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .ecosystem-status {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+    }
+
+    .status-live {
+      background: rgba(34, 197, 94, 0.12);
+      color: #22c55e;
+    }
+
+    .status-coming-soon {
+      background: var(--primary-dim);
+      color: var(--primary);
+    }
+
+    .ecosystem-tagline {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    .ecosystem-description {
+      font-size: 13px;
+      color: #6a6a7a;
+      line-height: 1.6;
+    }
+
+    /* ── Footer ──────────────────────────────────────────── */
+    .footer {
+      text-align: center;
+      padding: 48px 24px;
+      border-top: 1px solid var(--border);
+    }
+
+    .footer-brand {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    .footer-tagline {
+      font-size: 14px;
+      color: #6a6a7a;
+      margin-bottom: 20px;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .footer-links a {
+      font-size: 13px;
+      color: #6a6a7a;
+      transition: color 0.15s ease;
+    }
+
+    .footer-links a:hover { color: var(--text); }
+
+    .footer-legal {
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    /* ── Mobile ──────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .hero { padding: 80px 20px 48px; }
+      .communities-section,
+      .ecosystem-section { padding: 48px 16px; }
+      .communities-grid,
+      .ecosystem-grid { grid-template-columns: 1fr; }
+      .hero-actions { flex-direction: column; align-items: center; }
+      .hero-actions .btn { width: 100%; max-width: 320px; text-align: center; }
+    }
+
+    @media (max-width: 480px) {
+      .hero-features { gap: 8px; }
+      .feature { font-size: 12px; padding: 6px 12px; }
+    }
+  </style>
 </head>
 <body>
 
-  <!-- LANDING PAGE — shown to logged out users -->
   <div id="landing" class="landing">
 
     <nav class="nav">
@@ -47,30 +268,12 @@
         <a href="#communities" class="btn btn-ghost btn-large">Explore Communities</a>
       </div>
       <div class="hero-features">
-        <div class="feature">
-          <span class="feature-icon">🔒</span>
-          <span>18+ Verified</span>
-        </div>
-        <div class="feature">
-          <span class="feature-icon">🚫</span>
-          <span>No Shadowbans</span>
-        </div>
-        <div class="feature">
-          <span class="feature-icon">📅</span>
-          <span>Chronological Feed</span>
-        </div>
-        <div class="feature">
-          <span class="feature-icon">🗳️</span>
-          <span>Polls & Downvotes</span>
-        </div>
-        <div class="feature">
-          <span class="feature-icon">💬</span>
-          <span>Real Communities</span>
-        </div>
-        <div class="feature">
-          <span class="feature-icon">🔓</span>
-          <span>First Amendment First</span>
-        </div>
+        <div class="feature"><span class="feature-icon">🔒</span><span>18+ Verified</span></div>
+        <div class="feature"><span class="feature-icon">🚫</span><span>No Shadowbans</span></div>
+        <div class="feature"><span class="feature-icon">📅</span><span>Chronological Feed</span></div>
+        <div class="feature"><span class="feature-icon">🗳️</span><span>Polls & Downvotes</span></div>
+        <div class="feature"><span class="feature-icon">💬</span><span>Real Communities</span></div>
+        <div class="feature"><span class="feature-icon">🔓</span><span>First Amendment First</span></div>
       </div>
     </section>
 
@@ -79,9 +282,7 @@
         <h2>Explore Communities</h2>
         <p>Join the conversation across dozens of communities — all free, all uncensored, all verified adults.</p>
       </div>
-      <div class="communities-grid" id="communities-grid">
-        <!-- populated by JS -->
-      </div>
+      <div class="communities-grid" id="communities-grid"></div>
     </section>
 
     <section class="ecosystem-section" id="ecosystem">
@@ -89,9 +290,7 @@
         <h2>The Voxxee Ecosystem</h2>
         <p>More than a social platform. A complete alternative internet built for adults.</p>
       </div>
-      <div class="ecosystem-grid" id="ecosystem-grid">
-        <!-- populated by JS -->
-      </div>
+      <div class="ecosystem-grid" id="ecosystem-grid"></div>
     </section>
 
     <footer class="footer">
