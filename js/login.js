@@ -54,7 +54,17 @@ async function handleLogin() {
         .update({ last_login: new Date().toISOString() })
         .eq('id', data.user.id);
 
-      window.location.href = '/feed.html';
+      const { data: profile } = await window.db
+        .from('profiles')
+        .select('onboarding_complete')
+        .eq('user_id', data.user.id)
+        .single();
+
+      if (profile?.onboarding_complete) {
+        window.location.href = '/feed.html';
+      } else {
+        window.location.href = '/onboarding.html';
+      }
     }
 
   } catch (err) {
