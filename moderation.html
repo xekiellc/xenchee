@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Moderation — Voxxee</title>
 
-  <!-- OG Meta Tags -->
   <meta property="og:title" content="Moderation Policy — Voxxee" />
   <meta property="og:description" content="Voxxee moderation policy. Transparent by design. No shadowbans. Every action logged publicly. Every decision appealable." />
   <meta property="og:type" content="website" />
@@ -14,7 +13,6 @@
   <meta name="twitter:title" content="Moderation Policy — Voxxee" />
   <meta name="twitter:description" content="Voxxee moderation policy. Transparent by design. No shadowbans. Every action logged publicly. Every decision appealable." />
 
-  <!-- GA4 -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-FSCZJEWZ6F"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -25,6 +23,88 @@
 
   <link rel="stylesheet" href="css/main.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    .content-wrap {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: calc(var(--nav-height) + 40px) 24px 80px;
+    }
+    .content-title {
+      font-family: var(--font-display);
+      font-size: clamp(1.75rem, 5vw, 2.25rem);
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    .content-tagline { font-size: 14px; color: var(--text-muted); margin-bottom: 40px; }
+    .content-body { color: #b0b0be; line-height: 1.8; font-size: 15px; }
+    .content-body h2 {
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--text);
+      margin: 36px 0 12px;
+      letter-spacing: -0.02em;
+    }
+    .content-body p { margin-bottom: 16px; }
+    .content-body strong { color: var(--text); }
+    .content-body a { color: var(--primary); }
+    .content-body ul { margin: 12px 0 12px 24px; }
+    .content-body ul li { margin-bottom: 8px; }
+
+    .commitment-box {
+      background: var(--primary-dim);
+      border: 1px solid rgba(0,229,255,0.2);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      margin-bottom: 32px;
+    }
+    .commitment-box-title {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    .commitment-box p { margin: 0; color: #b0b0be; }
+
+    .mod-log-item {
+      padding: 16px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      margin-bottom: 8px;
+    }
+    .mod-log-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .mod-log-action { font-size: 13px; font-weight: 600; color: var(--text); text-transform: capitalize; }
+    .mod-log-date { font-size: 12px; color: var(--text-muted); }
+    .mod-log-reason { font-size: 13px; color: #b0b0be; }
+
+    .footer {
+      text-align: center;
+      padding: 48px 24px;
+      border-top: 1px solid var(--border);
+    }
+    .footer-brand { font-family: var(--font-display); font-size: 1.5rem; font-weight: 900; letter-spacing: -0.04em; color: var(--text); margin-bottom: 6px; }
+    .footer-tagline { font-size: 14px; color: var(--text-muted); margin-bottom: 20px; }
+    .footer-links { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; margin-bottom: 16px; }
+    .footer-links a { font-size: 13px; color: var(--text-muted); transition: color 0.15s; }
+    .footer-links a:hover { color: var(--text); }
+    .footer-legal { font-size: 12px; color: var(--text-dim); }
+
+    @media (max-width: 768px) {
+      .content-wrap { padding: calc(var(--nav-height) + 24px) 16px 60px; }
+    }
+  </style>
 </head>
 <body>
 
@@ -36,43 +116,42 @@
     </div>
   </nav>
 
-  <div style="max-width:760px;margin:40px auto;padding:0 24px 80px;">
+  <div class="content-wrap">
+    <h1 class="content-title">Moderation Policy</h1>
+    <p class="content-tagline">Transparent by design. Last updated: May 19, 2026</p>
 
-    <h1 style="font-size:32px;font-weight:800;margin-bottom:8px;">Moderation Policy</h1>
-    <p style="color:var(--text-muted);font-size:14px;margin-bottom:40px;">Transparent by design. Last updated: May 19, 2026</p>
+    <div class="content-body">
 
-    <div style="color:var(--text-secondary);line-height:1.8;font-size:15px;">
-
-      <div style="background:rgba(108,99,255,0.1);border:1px solid rgba(108,99,255,0.3);border-radius:12px;padding:20px;margin-bottom:32px;">
-        <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px;">Our Commitment</div>
-        <p style="margin:0;">Voxxee does not shadowban. Every moderation action is logged publicly below. If content is removed you are told why. Every decision can be appealed.</p>
+      <div class="commitment-box">
+        <div class="commitment-box-title">Our Commitment</div>
+        <p>Voxxee does not shadowban. Every moderation action is logged publicly below. If content is removed you are told why. Every decision can be appealed.</p>
       </div>
 
-      <h2 style="font-size:20px;font-weight:700;color:var(--text);margin:32px 0 12px;">What Gets Removed</h2>
+      <h2>What Gets Removed</h2>
       <p>We remove only content that crosses legal or absolute ethical lines:</p>
-      <ul style="margin:12px 0 12px 24px;">
-        <li style="margin-bottom:8px;"><strong style="color:var(--text);">CSAM</strong> — Child sexual abuse material. Immediate removal and NCMEC report. No exceptions.</li>
-        <li style="margin-bottom:8px;"><strong style="color:var(--text);">Credible specific threats</strong> — Explicit threats of imminent violence against named individuals.</li>
-        <li style="margin-bottom:8px;"><strong style="color:var(--text);">Doxxing</strong> — Publishing private personal information of others without consent.</li>
-        <li style="margin-bottom:8px;"><strong style="color:var(--text);">Illegal content</strong> — Content that violates applicable federal law.</li>
+      <ul>
+        <li><strong>CSAM</strong> — Child sexual abuse material. Immediate removal and NCMEC report. No exceptions.</li>
+        <li><strong>Credible specific threats</strong> — Explicit threats of imminent violence against named individuals.</li>
+        <li><strong>Doxxing</strong> — Publishing private personal information of others without consent.</li>
+        <li><strong>Illegal content</strong> — Content that violates applicable federal law.</li>
       </ul>
 
-      <h2 style="font-size:20px;font-weight:700;color:var(--text);margin:32px 0 12px;">What We Do Not Remove</h2>
+      <h2>What We Do Not Remove</h2>
       <p>We do not remove content based on viewpoint, political opinion, unpopular speech, offensive language, controversial topics, or content that mainstream platforms would suppress. Adults are capable of deciding for themselves what to read and engage with.</p>
 
-      <h2 style="font-size:20px;font-weight:700;color:var(--text);margin:32px 0 12px;">The Strike System</h2>
+      <h2>The Strike System</h2>
       <p>Violations result in strikes against your account.</p>
-      <ul style="margin:12px 0 12px 24px;">
-        <li style="margin-bottom:8px;"><strong style="color:var(--text);">Strike 1</strong> — Warning and content removal. Reason provided.</li>
-        <li style="margin-bottom:8px;"><strong style="color:var(--text);">Strike 2</strong> — Temporary posting restriction. Reason provided.</li>
-        <li style="margin-bottom:8px;"><strong style="color:var(--text);">Strike 3</strong> — Account review. Possible suspension.</li>
-        <li style="margin-bottom:8px;"><strong style="color:var(--text);">CSAM</strong> — Immediate permanent ban. No strikes. NCMEC report filed.</li>
+      <ul>
+        <li><strong>Strike 1</strong> — Warning and content removal. Reason provided.</li>
+        <li><strong>Strike 2</strong> — Temporary posting restriction. Reason provided.</li>
+        <li><strong>Strike 3</strong> — Account review. Possible suspension.</li>
+        <li><strong>CSAM</strong> — Immediate permanent ban. No strikes. NCMEC report filed.</li>
       </ul>
 
-      <h2 style="font-size:20px;font-weight:700;color:var(--text);margin:32px 0 12px;">Appeals</h2>
-      <p>Every moderation decision can be appealed. Email info@voxxee.com with your username and the content in question. Appeals are reviewed within 72 hours. Appeal outcomes are final and logged publicly.</p>
+      <h2>Appeals</h2>
+      <p>Every moderation decision can be appealed. Email <a href="mailto:info@voxxee.com">info@voxxee.com</a> with your username and the content in question. Appeals are reviewed within 72 hours. Appeal outcomes are final and logged publicly.</p>
 
-      <h2 style="font-size:20px;font-weight:700;color:var(--text);margin:32px 0 12px;">Public Moderation Log</h2>
+      <h2>Public Moderation Log</h2>
       <p>Every moderation action is logged below. No shadowbanning. No secret suppression. Full transparency.</p>
 
       <div id="moderation-log" style="margin-top:20px;">
@@ -116,18 +195,18 @@
         const container = document.getElementById('moderation-log');
 
         if (!logs || logs.length === 0) {
-          container.innerHTML = '<div style="padding:20px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;color:var(--text-muted);text-align:center;">No moderation actions on record. The log is clean.</div>';
+          container.innerHTML = '<div style="padding:20px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-md);color:var(--text-muted);text-align:center;">No moderation actions on record. The log is clean.</div>';
           return;
         }
 
         container.innerHTML = logs.map(log => `
-          <div style="padding:16px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;margin-bottom:8px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-              <span style="font-size:13px;font-weight:600;color:var(--text);text-transform:capitalize;">${log.action} — ${log.target_type}</span>
-              <span style="font-size:12px;color:var(--text-muted);">${new Date(log.created_at).toLocaleDateString()}</span>
+          <div class="mod-log-item">
+            <div class="mod-log-header">
+              <span class="mod-log-action">${log.action} — ${log.target_type}</span>
+              <span class="mod-log-date">${new Date(log.created_at).toLocaleDateString()}</span>
             </div>
-            <div style="font-size:13px;color:var(--text-secondary);">${log.reason}</div>
-            ${log.is_ai_action ? '<div style="font-size:11px;color:var(--primary-light);margin-top:4px;">AI assisted</div>' : ''}
+            <div class="mod-log-reason">${log.reason}</div>
+            ${log.is_ai_action ? '<div style="font-size:11px;color:var(--primary);margin-top:4px;">AI assisted</div>' : ''}
             ${log.is_appealed ? '<div style="font-size:11px;color:var(--warning);margin-top:4px;">Appealed — ' + (log.appeal_outcome || 'Pending') + '</div>' : ''}
           </div>
         `).join('');
