@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Communities — Voxxee</title>
 
-  <!-- OG Meta Tags -->
   <meta property="og:title" content="Communities — Voxxee" />
   <meta property="og:description" content="Find your people on Voxxee. Browse and join communities across dozens of topics — all free, all uncensored, all verified adults." />
   <meta property="og:type" content="website" />
@@ -14,7 +13,6 @@
   <meta name="twitter:title" content="Communities — Voxxee" />
   <meta name="twitter:description" content="Find your people on Voxxee. Browse and join communities across dozens of topics — all free, all uncensored, all verified adults." />
 
-  <!-- GA4 -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-FSCZJEWZ6F"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -25,6 +23,52 @@
 
   <link rel="stylesheet" href="css/main.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    .mobile-nav {
+      display: none;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 56px;
+      background: rgba(8,8,10,0.97);
+      border-top: 1px solid var(--border);
+      z-index: 1000;
+      backdrop-filter: blur(12px);
+    }
+    .mobile-nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      height: 100%;
+      padding: 0 8px;
+    }
+    .mobile-nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      text-decoration: none;
+      color: #6a6a7a;
+      font-size: 10px;
+      font-weight: 600;
+      transition: color var(--transition);
+    }
+    .mobile-nav-item.active { color: var(--primary); }
+    .mobile-nav-item span { font-size: 20px; line-height: 1; }
+
+    .page-title { font-family: var(--font-display); font-size: 24px; font-weight: 800; margin-bottom: 4px; letter-spacing: -0.02em; }
+    .page-subtitle { color: var(--text-muted); font-size: 15px; }
+
+    @media (max-width: 768px) {
+      .mobile-nav { display: block; }
+      .feed-main { padding-bottom: 72px; }
+      .page-title { font-size: 20px; }
+      #community-search { max-width: 100% !important; }
+    }
+  </style>
 </head>
 <body>
 
@@ -58,18 +102,16 @@
 
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
         <div>
-          <div style="font-size:24px;font-weight:800;margin-bottom:4px;">Communities</div>
-          <div style="color:var(--text-muted);font-size:15px;">Find your people. Say exactly what you mean.</div>
+          <div class="page-title">Communities</div>
+          <div class="page-subtitle">Find your people. Say exactly what you mean.</div>
         </div>
         <a href="/create-community.html" class="btn btn-primary" style="flex-shrink:0;">+ Create Community</a>
       </div>
 
-      <!-- Search -->
       <div style="margin-bottom:20px;">
         <input type="text" id="community-search" class="form-input" placeholder="Search communities..." style="max-width:400px;" />
       </div>
 
-      <!-- Filter tabs -->
       <div style="display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap;">
         <button class="btn btn-primary community-filter-btn" data-filter="all">All</button>
         <button class="btn btn-ghost community-filter-btn" data-filter="local">📍 Near Me</button>
@@ -78,7 +120,6 @@
         <button class="btn btn-ghost community-filter-btn" data-filter="private">Private</button>
       </div>
 
-      <!-- Local discovery banner — shown when Near Me is active -->
       <div id="local-banner" style="display:none;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px;">
         <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px;">📍 Communities Near You</div>
         <div style="font-size:14px;color:var(--text-muted);margin-bottom:16px;">
@@ -93,7 +134,6 @@
         </div>
       </div>
 
-      <!-- Communities Grid -->
       <div id="communities-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;">
         <div class="loading"><div class="spinner"></div>Loading communities...</div>
       </div>
@@ -101,19 +141,39 @@
     </div>
 
     <div class="sidebar-right">
-      <a href="/create-community.html" class="btn btn-primary" style="display:block;text-align:center;margin-bottom:24px;text-decoration:none;">+ Create Community</a>
+      <a href="/create-community.html" class="btn btn-primary btn-block" style="text-align:center;margin-bottom:24px;">+ Create Community</a>
 
-      <!-- Local communities widget -->
       <div id="local-sidebar" style="display:none;margin-bottom:32px;">
-        <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">📍 Local Communities</div>
+        <div style="font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">📍 Local Communities</div>
         <div id="local-sidebar-list"></div>
       </div>
 
-      <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">Most Active</div>
+      <div style="font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">Most Active</div>
       <div id="active-communities"></div>
     </div>
 
   </div>
+
+  <!-- Mobile Bottom Nav -->
+  <nav class="mobile-nav">
+    <div class="mobile-nav-inner">
+      <a href="/feed.html" class="mobile-nav-item">
+        <span>🏠</span>Home
+      </a>
+      <a href="/search.html" class="mobile-nav-item">
+        <span>🔍</span>Search
+      </a>
+      <a href="/communities.html" class="mobile-nav-item active">
+        <span>💬</span>Communities
+      </a>
+      <a href="/notifications.html" class="mobile-nav-item">
+        <span>🔔</span>Alerts
+      </a>
+      <a href="/profile.html" class="mobile-nav-item">
+        <span>👤</span>Profile
+      </a>
+    </div>
+  </nav>
 
   <script src="js/supabase.js"></script>
   <script>
@@ -146,7 +206,6 @@
         window.location.href = '/';
       });
 
-      // Load user profile for location
       const { data: profile } = await window.db
         .from('profiles').select('*').eq('user_id', currentUser.id).single();
       currentProfile = profile;
@@ -169,7 +228,6 @@
     async function loadCommunities() {
       const { data: communities } = await window.db
         .from('communities').select('*').order('name');
-
       if (!communities) return;
       allCommunities = communities;
       renderCommunities(communities);
@@ -183,16 +241,15 @@
           <img src="${c.logo_url}" alt="${escapeHtml(c.name)}"
             style="width:${size}px;height:${size}px;border-radius:10px;object-fit:cover;flex-shrink:0;"
             onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
-          <div style="display:none;width:${size}px;height:${size}px;border-radius:10px;background:var(--primary);color:#fff;align-items:center;justify-content:center;font-size:${Math.round(size*0.4)}px;font-weight:800;flex-shrink:0;">
+          <div style="display:none;width:${size}px;height:${size}px;border-radius:10px;background:var(--primary);color:#000;align-items:center;justify-content:center;font-size:${Math.round(size*0.4)}px;font-weight:800;flex-shrink:0;">
             ${c.name.charAt(0)}
           </div>`;
       }
-      return `<div style="width:${size}px;height:${size}px;border-radius:10px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:${Math.round(size*0.4)}px;font-weight:800;flex-shrink:0;">${c.name.charAt(0)}</div>`;
+      return `<div style="width:${size}px;height:${size}px;border-radius:10px;background:var(--primary-dim);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:${Math.round(size*0.4)}px;font-weight:800;flex-shrink:0;">${c.name.charAt(0)}</div>`;
     }
 
     function renderCommunities(communities) {
       const grid = document.getElementById('communities-grid');
-
       if (!communities || communities.length === 0) {
         const isLocal = currentFilter === 'local';
         grid.innerHTML = `
@@ -206,8 +263,7 @@
                 ? 'Try a different city or <a href="/create-community.html" style="color:var(--primary);">create one</a> for your area.'
                 : 'Try a different search or filter.'}
             </div>
-          </div>
-        `;
+          </div>`;
         return;
       }
 
@@ -215,7 +271,6 @@
         const locationBadge = c.is_local && c.location
           ? `<span style="font-size:11px;padding:2px 8px;border-radius:100px;background:rgba(76,175,125,0.15);color:#4caf7d;font-weight:600;">📍 ${escapeHtml(c.location)}</span>`
           : '';
-
         return `
           <a href="/community.html?slug=${c.slug}" style="text-decoration:none;">
             <div class="community-card" style="height:100%;">
@@ -236,8 +291,7 @@
                 </div>
               </div>
             </div>
-          </a>
-        `;
+          </a>`;
       }).join('');
     }
 
@@ -246,7 +300,6 @@
       const sorted = [...communities]
         .sort((a, b) => (b.member_count || 0) - (a.member_count || 0))
         .slice(0, 6);
-
       container.innerHTML = sorted.map(c => `
         <a href="/community.html?slug=${c.slug}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;margin-bottom:6px;background:var(--bg-card);border:1px solid var(--border);text-decoration:none;transition:all 0.15s ease;">
           ${communityLogoHtml(c, 32)}
@@ -254,21 +307,15 @@
             <div style="font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(c.name)}</div>
             <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">${c.member_count > 0 ? c.member_count.toLocaleString() + ' members' : 'New'}</div>
           </div>
-        </a>
-      `).join('');
+        </a>`).join('');
     }
 
     function renderLocalSidebar(communities) {
       const container = document.getElementById('local-sidebar-list');
       const sidebar = document.getElementById('local-sidebar');
       if (!container || !sidebar) return;
-
       const localCommunities = communities.filter(c => c.is_local).slice(0, 5);
-      if (localCommunities.length === 0) {
-        sidebar.style.display = 'none';
-        return;
-      }
-
+      if (localCommunities.length === 0) { sidebar.style.display = 'none'; return; }
       sidebar.style.display = 'block';
       container.innerHTML = localCommunities.map(c => `
         <a href="/community.html?slug=${c.slug}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;margin-bottom:6px;background:var(--bg-card);border:1px solid var(--border);text-decoration:none;">
@@ -277,8 +324,7 @@
             <div style="font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(c.name)}</div>
             ${c.location ? `<div style="font-size:11px;color:#4caf7d;">📍 ${escapeHtml(c.location)}</div>` : ''}
           </div>
-        </a>
-      `).join('');
+        </a>`).join('');
     }
 
     function setupFilters() {
@@ -287,65 +333,38 @@
           currentFilter = btn.dataset.filter;
           document.querySelectorAll('.community-filter-btn').forEach(b => b.className = 'btn btn-ghost community-filter-btn');
           btn.className = 'btn btn-primary community-filter-btn';
-
           const banner = document.getElementById('local-banner');
-          if (currentFilter === 'local') {
-            banner.style.display = 'block';
-            applyLocalFilter();
-          } else {
-            banner.style.display = 'none';
-            applyFilters();
-          }
+          if (currentFilter === 'local') { banner.style.display = 'block'; applyLocalFilter(); }
+          else { banner.style.display = 'none'; applyFilters(); }
         });
       });
     }
 
     function setupSearch() {
       document.getElementById('community-search').addEventListener('input', () => {
-        if (currentFilter === 'local') {
-          applyLocalFilter();
-        } else {
-          applyFilters();
-        }
+        if (currentFilter === 'local') applyLocalFilter();
+        else applyFilters();
       });
     }
 
     function setupLocalDiscovery() {
       document.getElementById('local-search-btn').addEventListener('click', applyLocalFilter);
-
-      document.getElementById('local-city-input').addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') applyLocalFilter();
-      });
-
+      document.getElementById('local-city-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') applyLocalFilter(); });
       document.getElementById('local-save-btn').addEventListener('click', async () => {
         const city = document.getElementById('local-city-input').value.trim();
         const state = document.getElementById('local-state-input').value.trim();
         if (!city) return;
-
         const btn = document.getElementById('local-save-btn');
-        btn.textContent = 'Saving...';
-        btn.disabled = true;
-
+        btn.textContent = 'Saving...'; btn.disabled = true;
         try {
-          await window.db.from('profiles').update({
-            location_city: city,
-            location_state: state
-          }).eq('user_id', currentUser.id);
-
-          localCity = city;
-          localState = state;
-          document.getElementById('local-location-display').textContent =
-            state ? `${city}, ${state}` : city;
-
+          await window.db.from('profiles').update({ location_city: city, location_state: state }).eq('user_id', currentUser.id);
+          localCity = city; localState = state;
+          document.getElementById('local-location-display').textContent = state ? `${city}, ${state}` : city;
           btn.textContent = '✅ Saved';
-          setTimeout(() => {
-            btn.textContent = 'Save to Profile';
-            btn.disabled = false;
-          }, 2000);
+          setTimeout(() => { btn.textContent = 'Save to Profile'; btn.disabled = false; }, 2000);
         } catch (err) {
-          console.error('Save location error:', err);
-          btn.textContent = 'Save to Profile';
-          btn.disabled = false;
+          console.error(err);
+          btn.textContent = 'Save to Profile'; btn.disabled = false;
         }
       });
     }
@@ -354,55 +373,35 @@
       const city = document.getElementById('local-city-input').value.trim().toLowerCase();
       const state = document.getElementById('local-state-input').value.trim().toLowerCase();
       const search = document.getElementById('community-search').value.toLowerCase();
-
       let filtered = allCommunities;
-
       if (city) {
         filtered = filtered.filter(c => {
           if (!c.location) return false;
           const loc = c.location.toLowerCase();
-          if (state) return loc.includes(city) && loc.includes(state);
-          return loc.includes(city);
+          return state ? loc.includes(city) && loc.includes(state) : loc.includes(city);
         });
-      } else {
-        filtered = filtered.filter(c => c.is_local);
-      }
-
+      } else { filtered = filtered.filter(c => c.is_local); }
       if (search) {
         filtered = filtered.filter(c =>
           c.name.toLowerCase().includes(search) ||
           (c.description || '').toLowerCase().includes(search) ||
-          (c.location || '').toLowerCase().includes(search)
-        );
+          (c.location || '').toLowerCase().includes(search));
       }
-
-      if (city) {
-        document.getElementById('local-location-display').textContent =
-          state ? `${city}, ${state}` : city;
-      }
-
+      if (city) document.getElementById('local-location-display').textContent = state ? `${city}, ${state}` : city;
       renderCommunities(filtered);
     }
 
     function applyFilters() {
       const search = document.getElementById('community-search').value.toLowerCase();
       let filtered = allCommunities;
-
-      if (currentFilter === 'portfolio') {
-        filtered = filtered.filter(c => c.is_official);
-      } else if (currentFilter === 'public') {
-        filtered = filtered.filter(c => c.community_type !== 'private');
-      } else if (currentFilter === 'private') {
-        filtered = filtered.filter(c => c.community_type === 'private');
-      }
-
+      if (currentFilter === 'portfolio') filtered = filtered.filter(c => c.is_official);
+      else if (currentFilter === 'public') filtered = filtered.filter(c => c.community_type !== 'private');
+      else if (currentFilter === 'private') filtered = filtered.filter(c => c.community_type === 'private');
       if (search) {
         filtered = filtered.filter(c =>
           c.name.toLowerCase().includes(search) ||
-          (c.description || '').toLowerCase().includes(search)
-        );
+          (c.description || '').toLowerCase().includes(search));
       }
-
       renderCommunities(filtered);
     }
 
