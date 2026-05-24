@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Events — Voxxee</title>
 
-  <!-- OG Meta Tags -->
   <meta property="og:title" content="Events — Voxxee" />
   <meta property="og:description" content="Community meetups, live discussions, and more on Voxxee — the free speech maximalist social platform for verified adults." />
   <meta property="og:type" content="website" />
@@ -14,7 +13,6 @@
   <meta name="twitter:title" content="Events — Voxxee" />
   <meta name="twitter:description" content="Community meetups, live discussions, and more on Voxxee — the free speech maximalist social platform for verified adults." />
 
-  <!-- GA4 -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-FSCZJEWZ6F"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -25,6 +23,69 @@
 
   <link rel="stylesheet" href="/css/main.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    .mobile-nav {
+      display: none;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 56px;
+      background: rgba(8,8,10,0.97);
+      border-top: 1px solid var(--border);
+      z-index: 1000;
+      backdrop-filter: blur(12px);
+    }
+    .mobile-nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      height: 100%;
+    }
+    .mobile-nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      padding: 6px 12px;
+      text-decoration: none;
+      color: #6a6a7a;
+      font-size: 10px;
+      font-weight: 600;
+    }
+    .mobile-nav-item.active { color: var(--primary); }
+    .mobile-nav-item span { font-size: 20px; line-height: 1; }
+
+    .page-title {
+      font-family: var(--font-display);
+      font-size: 24px;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .page-subtitle { font-size: 15px; color: var(--text-muted); }
+    .widget-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+    }
+
+    .event-date-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 768px) {
+      .mobile-nav { display: block; }
+      .feed-main { padding-bottom: 72px; }
+      .page-title { font-size: 20px; }
+      .event-date-grid { grid-template-columns: 1fr; }
+    }
+  </style>
 </head>
 <body>
 
@@ -55,16 +116,14 @@
 
     <div class="feed-main">
 
-      <!-- Header -->
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
         <div>
-          <div style="font-size:24px;font-weight:800;color:var(--text);margin-bottom:4px;">📅 Events</div>
-          <div style="font-size:15px;color:var(--text-muted);">Community meetups, live discussions, and more.</div>
+          <div class="page-title">📅 Events</div>
+          <div class="page-subtitle">Community meetups, live discussions, and more.</div>
         </div>
-        <button id="create-event-btn" class="btn btn-primary">+ Create Event</button>
+        <button id="create-event-btn" class="btn btn-primary" style="flex-shrink:0;">+ Create Event</button>
       </div>
 
-      <!-- Filter tabs -->
       <div style="display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap;">
         <button class="btn btn-primary event-filter-btn" data-filter="upcoming">Upcoming</button>
         <button class="btn btn-ghost event-filter-btn" data-filter="today">Today</button>
@@ -73,14 +132,12 @@
         <button class="btn btn-ghost event-filter-btn" data-filter="past">Past</button>
       </div>
 
-      <!-- Events List -->
       <div id="events-container">
         <div class="loading"><div class="spinner"></div>Loading events...</div>
       </div>
 
-      <!-- Create Event Form -->
       <div id="create-event-form" style="display:none;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;margin-top:24px;">
-        <div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:20px;">Create Event</div>
+        <div style="font-family:var(--font-display);font-size:18px;font-weight:800;color:var(--text);margin-bottom:20px;">Create Event</div>
 
         <div class="form-group">
           <label class="form-label">Event Title <span style="color:var(--danger);">*</span></label>
@@ -89,10 +146,10 @@
 
         <div class="form-group">
           <label class="form-label">Description</label>
-          <textarea id="event-description" class="form-input" rows="3" placeholder="Tell people about this event..." maxlength="1000" style="resize:vertical;"></textarea>
+          <textarea id="event-description" class="form-textarea" rows="3" placeholder="Tell people about this event..." maxlength="1000"></textarea>
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="event-date-grid">
           <div class="form-group">
             <label class="form-label">Start Date & Time <span style="color:var(--danger);">*</span></label>
             <input type="datetime-local" id="event-date" class="form-input" />
@@ -129,7 +186,7 @@
 
         <div id="create-event-error" style="display:none;color:var(--danger);font-size:14px;margin-bottom:12px;"></div>
 
-        <div style="display:flex;gap:8px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button id="save-event-btn" class="btn btn-primary">Create Event</button>
           <button id="cancel-event-btn" class="btn btn-ghost">Cancel</button>
         </div>
@@ -138,21 +195,27 @@
     </div>
 
     <div class="sidebar-right">
-      <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">
-        📅 This Week
-      </div>
+      <div class="widget-title">📅 This Week</div>
       <div id="this-week-sidebar">
         <div class="loading"><div class="spinner"></div></div>
       </div>
-
-      <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-top:32px;margin-bottom:16px;">
-        🎯 Your RSVPs
-      </div>
+      <div class="widget-title" style="margin-top:32px;">🎯 Your RSVPs</div>
       <div id="my-rsvps-sidebar">
         <div class="loading"><div class="spinner"></div></div>
       </div>
     </div>
   </div>
+
+  <!-- Mobile Bottom Nav -->
+  <nav class="mobile-nav">
+    <div class="mobile-nav-inner">
+      <a href="/feed.html" class="mobile-nav-item"><span>🏠</span>Home</a>
+      <a href="/search.html" class="mobile-nav-item"><span>🔍</span>Search</a>
+      <a href="/communities.html" class="mobile-nav-item"><span>💬</span>Communities</a>
+      <a href="/notifications.html" class="mobile-nav-item"><span>🔔</span>Alerts</a>
+      <a href="/profile.html" class="mobile-nav-item"><span>👤</span>Profile</a>
+    </div>
+  </nav>
 
   <script src="/js/supabase.js"></script>
   <script src="/js/events.js"></script>
