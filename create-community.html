@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Create Community — Voxxee</title>
 
-  <!-- OG Meta Tags -->
   <meta property="og:title" content="Create a Community — Voxxee" />
   <meta property="og:description" content="Build a space for people who share your interests on Voxxee — the free speech maximalist social platform for verified adults." />
   <meta property="og:type" content="website" />
@@ -14,7 +13,6 @@
   <meta name="twitter:title" content="Create a Community — Voxxee" />
   <meta name="twitter:description" content="Build a space for people who share your interests on Voxxee — the free speech maximalist social platform for verified adults." />
 
-  <!-- GA4 -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-FSCZJEWZ6F"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -25,6 +23,53 @@
 
   <link rel="stylesheet" href="/css/main.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    .form-hint { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+    .slug-prefix {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-right: none;
+      border-radius: var(--radius-md) 0 0 var(--radius-md);
+      padding: 10px 12px;
+      font-size: 14px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .slug-input {
+      border-radius: 0 var(--radius-md) var(--radius-md) 0 !important;
+      border-left: none !important;
+    }
+    .radio-group { display: flex; gap: 12px; flex-wrap: wrap; }
+    .radio-label {
+      display: flex; align-items: center; gap: 8px;
+      cursor: pointer; font-size: 14px; color: var(--text);
+    }
+
+    .mobile-nav {
+      display: none;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 56px;
+      background: rgba(8,8,10,0.97);
+      border-top: 1px solid var(--border);
+      z-index: 1000;
+      backdrop-filter: blur(12px);
+    }
+    .mobile-nav-inner { display: flex; align-items: center; justify-content: space-around; height: 100%; }
+    .mobile-nav-item {
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+      padding: 6px 12px; text-decoration: none; color: #6a6a7a; font-size: 10px; font-weight: 600;
+    }
+    .mobile-nav-item.active { color: var(--primary); }
+    .mobile-nav-item span { font-size: 20px; line-height: 1; }
+
+    @media (max-width: 768px) {
+      .mobile-nav { display: block; }
+      .feed-main { padding-bottom: 72px; }
+    }
+  </style>
 </head>
 <body>
 
@@ -52,68 +97,59 @@
     </div>
 
     <div class="feed-main">
-      <div class="post-card" style="max-width:600px;">
+      <div class="card" style="max-width:600px;">
 
         <div style="margin-bottom:24px;">
-          <h1 style="font-size:22px;font-weight:800;color:var(--text);margin:0 0 4px 0;">Create a Community</h1>
+          <h1 style="font-family:var(--font-display);font-size:22px;font-weight:900;letter-spacing:-0.02em;color:var(--text);margin:0 0 4px;">Create a Community</h1>
           <p style="font-size:14px;color:var(--text-muted);margin:0;">Build a space for people who share your interests.</p>
         </div>
 
-        <!-- Community Name -->
         <div class="form-group">
           <label class="form-label">Community Name <span style="color:var(--danger);">*</span></label>
           <input type="text" id="community-name" class="form-input" placeholder="e.g. Northeast Ohio Sports" maxlength="50" autocomplete="off" />
-          <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">50 characters max. No special characters except spaces and hyphens.</div>
+          <div class="form-hint">50 characters max. No special characters except spaces and hyphens.</div>
         </div>
 
-        <!-- Slug -->
         <div class="form-group">
           <label class="form-label">Community URL <span style="color:var(--danger);">*</span></label>
-          <div style="display:flex;align-items:center;gap:0;">
-            <span style="background:var(--bg-input);border:1px solid var(--border);border-right:none;border-radius:8px 0 0 8px;padding:10px 12px;font-size:14px;color:var(--text-muted);white-space:nowrap;">v/</span>
-            <input type="text" id="community-slug" class="form-input" placeholder="northeast-ohio-sports"
-              maxlength="50" autocomplete="off"
-              style="border-radius:0 8px 8px 0;border-left:none;" />
+          <div style="display:flex;align-items:center;">
+            <span class="slug-prefix">v/</span>
+            <input type="text" id="community-slug" class="form-input slug-input" placeholder="northeast-ohio-sports" maxlength="50" autocomplete="off" />
           </div>
-          <div id="slug-status" style="font-size:12px;margin-top:4px;color:var(--text-muted);">Lowercase letters, numbers, and hyphens only.</div>
+          <div id="slug-status" class="form-hint">Lowercase letters, numbers, and hyphens only.</div>
         </div>
 
-        <!-- Description -->
         <div class="form-group">
           <label class="form-label">Description <span style="color:var(--danger);">*</span></label>
-          <textarea id="community-description" class="form-input" rows="3" placeholder="What is this community about?" maxlength="300" style="resize:vertical;"></textarea>
-          <div style="font-size:12px;color:var(--text-muted);margin-top:4px;"><span id="desc-count">0</span>/300</div>
+          <textarea id="community-description" class="form-textarea" rows="3" placeholder="What is this community about?" maxlength="300"></textarea>
+          <div class="form-hint"><span id="desc-count">0</span>/300</div>
         </div>
 
-        <!-- Community Type -->
         <div class="form-group">
           <label class="form-label">Type</label>
-          <div style="display:flex;gap:12px;flex-wrap:wrap;">
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;color:var(--text);">
+          <div class="radio-group">
+            <label class="radio-label">
               <input type="radio" name="community-type" value="public" checked style="accent-color:var(--primary);" />
               🌐 Public — Anyone can view and post
             </label>
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;color:var(--text);">
+            <label class="radio-label">
               <input type="radio" name="community-type" value="private" style="accent-color:var(--primary);" />
               🔒 Private — Members only
             </label>
           </div>
         </div>
 
-        <!-- Rules -->
         <div class="form-group">
           <label class="form-label">Community Rules <span style="font-size:12px;color:var(--text-muted);font-weight:400;">(optional)</span></label>
           <div id="rules-container">
             <input type="text" class="form-input rule-input" placeholder="Rule 1" maxlength="150" style="margin-bottom:8px;" />
           </div>
-          <button id="add-rule-btn" class="btn btn-ghost" style="font-size:13px;margin-top:4px;">+ Add Rule</button>
+          <button id="add-rule-btn" class="btn btn-ghost btn-sm" style="margin-top:4px;">+ Add Rule</button>
         </div>
 
-        <!-- Error -->
-        <div id="create-error" style="display:none;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:10px 14px;font-size:14px;color:#ef4444;margin-bottom:16px;"></div>
+        <div id="create-error" style="display:none;" class="alert alert-danger"></div>
 
-        <!-- Submit -->
-        <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">
           <a href="/communities.html" class="btn btn-ghost">Cancel</a>
           <button id="create-btn" class="btn btn-primary">Create Community</button>
         </div>
@@ -123,6 +159,17 @@
 
     <div class="sidebar-right"></div>
   </div>
+
+  <!-- Mobile Bottom Nav -->
+  <nav class="mobile-nav">
+    <div class="mobile-nav-inner">
+      <a href="/feed.html" class="mobile-nav-item"><span>🏠</span>Home</a>
+      <a href="/search.html" class="mobile-nav-item"><span>🔍</span>Search</a>
+      <a href="/communities.html" class="mobile-nav-item active"><span>💬</span>Communities</a>
+      <a href="/notifications.html" class="mobile-nav-item"><span>🔔</span>Alerts</a>
+      <a href="/profile.html" class="mobile-nav-item"><span>👤</span>Profile</a>
+    </div>
+  </nav>
 
   <script src="/js/supabase.js"></script>
   <script src="/js/create-community.js"></script>
