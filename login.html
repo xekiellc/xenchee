@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Log In — Voxxee</title>
 
-  <!-- OG Meta Tags -->
   <meta property="og:title" content="Log In — Voxxee" />
   <meta property="og:description" content="Log in to your Voxxee account. Say exactly what you mean." />
   <meta property="og:type" content="website" />
@@ -14,7 +13,6 @@
   <meta name="twitter:title" content="Log In — Voxxee" />
   <meta name="twitter:description" content="Log in to your Voxxee account. Say exactly what you mean." />
 
-  <!-- GA4 -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-FSCZJEWZ6F"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -25,38 +23,108 @@
 
   <link rel="stylesheet" href="css/main.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    .auth-wrap {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      padding-top: calc(var(--nav-height) + 32px);
+    }
+    .auth-card {
+      width: 100%;
+      max-width: 420px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 36px;
+    }
+    .auth-title {
+      font-family: var(--font-display);
+      font-size: 1.75rem;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .auth-subtitle {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 28px;
+    }
+    .auth-footer {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+    .auth-footer a {
+      color: var(--primary);
+      font-weight: 600;
+    }
+    .password-wrap {
+      position: relative;
+    }
+    .password-toggle {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 18px;
+      color: var(--text-dim);
+      padding: 0;
+    }
+
+    @media (max-width: 480px) {
+      .auth-card { padding: 24px 20px; border-radius: var(--radius-lg); }
+      .auth-title { font-size: 1.5rem; }
+    }
+  </style>
 </head>
 <body>
+
   <nav class="nav">
     <a href="/" class="nav-brand">Voxxee</a>
     <div class="nav-actions">
       <a href="/signup.html" class="btn btn-primary">Join Free</a>
     </div>
   </nav>
-  <div class="form-container">
-    <div class="form-card">
-      <div class="form-title">Welcome Back</div>
-      <div class="form-subtitle">Log in to your Voxxee account</div>
+
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <div class="auth-title">Welcome Back</div>
+      <div class="auth-subtitle">Log in to your Voxxee account</div>
+
       <div id="alert-container"></div>
+
       <div class="form-group">
         <label class="form-label">Email</label>
-        <input type="email" id="email" class="form-input" placeholder="you@example.com" />
+        <input type="email" id="email" class="form-input" placeholder="you@example.com" autocomplete="email" />
       </div>
+
       <div class="form-group">
         <label class="form-label">Password</label>
-        <div style="position:relative;">
-          <input type="password" id="password" class="form-input" placeholder="Your password" style="padding-right:48px;" />
-          <button id="password-toggle" type="button" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-muted);">👁️</button>
+        <div class="password-wrap">
+          <input type="password" id="password" class="form-input" placeholder="Your password" style="padding-right:48px;" autocomplete="current-password" />
+          <button id="password-toggle" type="button" class="password-toggle">👁️</button>
         </div>
       </div>
-      <button id="login-btn" class="btn btn-primary" style="width:100%;justify-content:center;">
+
+      <button id="login-btn" class="btn btn-primary btn-block" style="justify-content:center;padding:11px;">
         Log In
       </button>
-      <div class="form-footer">
+
+      <div class="auth-footer">
         Don't have an account? <a href="/signup.html">Join free</a>
       </div>
     </div>
   </div>
+
   <script src="js/supabase.js"></script>
   <script src="js/login.js"></script>
 </body>
