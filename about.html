@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>About — Voxxee</title>
 
-  <!-- OG Meta Tags -->
   <meta property="og:title" content="About Voxxee" />
   <meta property="og:description" content="Voxxee is a free speech maximalist social platform for verified adults. No shadowbans. No algorithms. No ads. Say exactly what you mean." />
   <meta property="og:type" content="website" />
@@ -14,7 +13,6 @@
   <meta name="twitter:title" content="About Voxxee" />
   <meta name="twitter:description" content="Voxxee is a free speech maximalist social platform for verified adults. No shadowbans. No algorithms. No ads. Say exactly what you mean." />
 
-  <!-- GA4 -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-FSCZJEWZ6F"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -24,6 +22,72 @@
   </script>
 
   <link rel="stylesheet" href="css/main.css" />
+
+  <style>
+    .content-wrap {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: calc(var(--nav-height) + 40px) 24px 80px;
+    }
+    .content-title {
+      font-family: var(--font-display);
+      font-size: clamp(1.75rem, 5vw, 2.25rem);
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    .content-tagline {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 40px;
+    }
+    .content-body {
+      color: #b0b0be;
+      line-height: 1.8;
+      font-size: 15px;
+    }
+    .content-body h2 {
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--text);
+      margin: 36px 0 12px;
+      letter-spacing: -0.02em;
+    }
+    .content-body p { margin-bottom: 16px; }
+    .content-body strong { color: var(--text); }
+    .content-body a { color: var(--primary); }
+
+    .footer {
+      text-align: center;
+      padding: 48px 24px;
+      border-top: 1px solid var(--border);
+    }
+    .footer-brand {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .footer-tagline { font-size: 14px; color: var(--text-muted); margin-bottom: 20px; }
+    .footer-links {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .footer-links a { font-size: 13px; color: var(--text-muted); transition: color 0.15s; }
+    .footer-links a:hover { color: var(--text); }
+    .footer-legal { font-size: 12px; color: var(--text-dim); }
+
+    @media (max-width: 768px) {
+      .content-wrap { padding: calc(var(--nav-height) + 24px) 16px 60px; }
+    }
+  </style>
 </head>
 <body>
 
@@ -35,36 +99,35 @@
     </div>
   </nav>
 
-  <div style="max-width:760px;margin:40px auto;padding:0 24px 80px;">
+  <div class="content-wrap">
+    <h1 class="content-title">About Voxxee</h1>
+    <p class="content-tagline">Say Exactly What You Mean</p>
 
-    <h1 style="font-size:32px;font-weight:800;margin-bottom:8px;">About Voxxee</h1>
-    <p style="color:var(--text-muted);font-size:14px;margin-bottom:40px;">Say Exactly What You Mean</p>
+    <div class="content-body">
 
-    <div style="color:var(--text-secondary);line-height:1.8;font-size:15px;">
-
-      <h2 style="font-size:20px;font-weight:700;color:var(--text);margin:32px 0 12px;">What is Voxxee?</h2>
+      <h2>What is Voxxee?</h2>
       <p>Voxxee is a free speech maximalist social platform for verified adults. We built it because we believe adults have the right to speak freely, connect authentically, and participate in communities without algorithmic manipulation or arbitrary censorship.</p>
 
-      <h2 style="font-size:20px;font-weight:700;color:var(--text);margin:32px 0 12px;">Why Voxxee?</h2>
+      <h2>Why Voxxee?</h2>
       <p>The major social platforms have become increasingly restrictive — shadowbanning users, suppressing viewpoints, and making moderation decisions without transparency or accountability. We believe there is a better way. Voxxee is that better way.</p>
 
-      <h2 style="font-size:20px;font-weight:700;color:var(--text);margin:32px 0 12px;">Our Principles</h2>
+      <h2>Our Principles</h2>
 
-      <p><strong style="color:var(--text);">No shadowbans — ever.</strong> If your content is removed you will always be told why. We do not quietly suppress your reach. Every moderation action is documented in our public moderation log.</p>
+      <p><strong>No shadowbans — ever.</strong> If your content is removed you will always be told why. We do not quietly suppress your reach. Every moderation action is documented in our public moderation log.</p>
 
-      <p style="margin-top:16px;"><strong style="color:var(--text);">Chronological feed.</strong> You see posts in the order they were posted. We do not use algorithms to decide what you see or what gets suppressed. The feed is yours.</p>
+      <p><strong>Chronological feed.</strong> You see posts in the order they were posted. We do not use algorithms to decide what you see or what gets suppressed. The feed is yours.</p>
 
-      <p style="margin-top:16px;"><strong style="color:var(--text);">Verified adults only.</strong> Voxxee is an 18+ platform. Age verification at signup ensures every voice here belongs to a real adult.</p>
+      <p><strong>Verified adults only.</strong> Voxxee is an 18+ platform. Age verification at signup ensures every voice here belongs to a real adult.</p>
 
-      <p style="margin-top:16px;"><strong style="color:var(--text);">Your data is yours.</strong> We do not sell your data. We do not build advertising profiles. We collect only what is necessary to operate the platform.</p>
+      <p><strong>Your data is yours.</strong> We do not sell your data. We do not build advertising profiles. We collect only what is necessary to operate the platform.</p>
 
-      <p style="margin-top:16px;"><strong style="color:var(--text);">Transparent moderation.</strong> Our moderation decisions are public. Every removal, every strike, every appeal outcome is logged and visible. We have nothing to hide.</p>
+      <p><strong>Transparent moderation.</strong> Our moderation decisions are public. Every removal, every strike, every appeal outcome is logged and visible. We have nothing to hide.</p>
 
-      <h2 style="font-size:20px;font-weight:700;color:var(--text);margin:32px 0 12px;">The Ecosystem</h2>
+      <h2>The Ecosystem</h2>
       <p>Voxxee is part of a larger ecosystem of platforms built for audiences the mainstream internet underserves. Our communities span politics, science, sports, entertainment, crypto, and more — each one a home for voices that deserve to be heard.</p>
 
-      <h2 style="font-size:20px;font-weight:700;color:var(--text);margin:32px 0 12px;">Contact</h2>
-      <p>Questions, feedback, or press inquiries: info@voxxee.com</p>
+      <h2>Contact</h2>
+      <p>Questions, feedback, or press inquiries: <a href="mailto:info@voxxee.com">info@voxxee.com</a></p>
 
     </div>
   </div>
