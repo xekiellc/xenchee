@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Search — Voxxee</title>
 
-  <!-- OG Meta Tags -->
   <meta property="og:title" content="Search — Voxxee" />
   <meta property="og:description" content="Search users, posts, and communities on Voxxee — the free speech maximalist social platform for verified adults." />
   <meta property="og:type" content="website" />
@@ -14,7 +13,6 @@
   <meta name="twitter:title" content="Search — Voxxee" />
   <meta name="twitter:description" content="Search users, posts, and communities on Voxxee — the free speech maximalist social platform for verified adults." />
 
-  <!-- GA4 -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-FSCZJEWZ6F"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -24,9 +22,77 @@
   </script>
 
   <link rel="stylesheet" href="/css/main.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    .search-wrap {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: calc(var(--nav-height) + 24px) 16px 40px;
+    }
+    .search-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .search-tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .search-tab {
+      font-size: 13px;
+      padding: 6px 16px;
+      border-radius: var(--radius-full);
+    }
+    .search-empty {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 15px;
+      padding: 48px 0;
+    }
+
+    .mobile-nav {
+      display: none;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 56px;
+      background: rgba(8,8,10,0.97);
+      border-top: 1px solid var(--border);
+      z-index: 1000;
+      backdrop-filter: blur(12px);
+    }
+    .mobile-nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      height: 100%;
+    }
+    .mobile-nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      padding: 6px 12px;
+      text-decoration: none;
+      color: #6a6a7a;
+      font-size: 10px;
+      font-weight: 600;
+    }
+    .mobile-nav-item.active { color: var(--primary); }
+    .mobile-nav-item span { font-size: 20px; line-height: 1; }
+
+    @media (max-width: 768px) {
+      .mobile-nav { display: block; }
+      .search-wrap { padding-bottom: 80px; }
+      .search-bar input { font-size: 15px; }
+    }
+  </style>
 </head>
 <body>
-  <nav class="navbar">
+
+  <nav class="nav">
     <a href="/feed.html" class="nav-brand">Voxxee</a>
     <div class="nav-actions">
       <a href="/feed.html" class="btn btn-ghost">Feed</a>
@@ -35,39 +101,43 @@
     </div>
   </nav>
 
-  <div class="container" style="max-width:720px;margin:0 auto;padding:24px 16px;">
+  <div class="search-wrap">
 
-    <!-- Search Bar -->
-    <div style="margin-bottom:24px;">
-      <div style="display:flex;gap:8px;">
-        <input
-          type="text"
-          id="search-input"
-          class="form-input"
-          placeholder="Search users, posts, communities..."
-          maxlength="100"
-          autocomplete="off"
-          style="flex:1;font-size:16px;padding:12px 16px;"
-        />
-        <button id="search-btn" class="btn btn-primary" style="padding:0 24px;">Search</button>
-      </div>
+    <div class="search-bar">
+      <input
+        type="text"
+        id="search-input"
+        class="form-input"
+        placeholder="Search users, posts, communities..."
+        maxlength="100"
+        autocomplete="off"
+        style="flex:1;font-size:15px;"
+      />
+      <button id="search-btn" class="btn btn-primary">Search</button>
     </div>
 
-    <!-- Search Type Tabs -->
-    <div style="display:flex;gap:8px;margin-bottom:24px;">
-      <button class="btn btn-primary search-tab" data-tab="users" style="font-size:13px;">👤 Users</button>
-      <button class="btn btn-ghost search-tab" data-tab="posts" style="font-size:13px;">📝 Posts</button>
-      <button class="btn btn-ghost search-tab" data-tab="communities" style="font-size:13px;">💬 Communities</button>
+    <div class="search-tabs">
+      <button class="btn btn-primary search-tab" data-tab="users">👤 Users</button>
+      <button class="btn btn-ghost search-tab" data-tab="posts">📝 Posts</button>
+      <button class="btn btn-ghost search-tab" data-tab="communities">💬 Communities</button>
     </div>
 
-    <!-- Results -->
     <div id="search-results">
-      <div style="text-align:center;color:var(--text-muted);font-size:15px;padding:48px 0;">
-        Search for users, posts, or communities.
-      </div>
+      <div class="search-empty">Search for users, posts, or communities.</div>
     </div>
 
   </div>
+
+  <!-- Mobile Bottom Nav -->
+  <nav class="mobile-nav">
+    <div class="mobile-nav-inner">
+      <a href="/feed.html" class="mobile-nav-item"><span>🏠</span>Home</a>
+      <a href="/search.html" class="mobile-nav-item active"><span>🔍</span>Search</a>
+      <a href="/communities.html" class="mobile-nav-item"><span>💬</span>Communities</a>
+      <a href="/notifications.html" class="mobile-nav-item"><span>🔔</span>Alerts</a>
+      <a href="/profile.html" class="mobile-nav-item"><span>👤</span>Profile</a>
+    </div>
+  </nav>
 
   <script src="/js/supabase.js"></script>
   <script src="/js/search.js"></script>
