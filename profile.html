@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Profile — Voxxee</title>
 
-  <!-- OG Meta Tags -->
   <meta property="og:title" content="Profile — Voxxee" />
   <meta property="og:description" content="View profiles on Voxxee — the free speech maximalist social platform for verified adults." />
   <meta property="og:type" content="profile" />
@@ -14,7 +13,6 @@
   <meta name="twitter:title" content="Profile — Voxxee" />
   <meta name="twitter:description" content="View profiles on Voxxee — the free speech maximalist social platform for verified adults." />
 
-  <!-- GA4 -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-FSCZJEWZ6F"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -25,6 +23,150 @@
 
   <link rel="stylesheet" href="css/main.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    .profile-banner {
+      height: 160px;
+      background: linear-gradient(135deg, var(--primary) 0%, #a78bfa 100%);
+      position: relative;
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    }
+    .profile-avatar-large {
+      position: absolute;
+      bottom: -36px;
+      left: 24px;
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: var(--bg-card);
+      border: 4px solid var(--bg-card);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--primary);
+      font-family: var(--font-display);
+    }
+    .profile-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    .profile-body {
+      padding: 52px 24px 24px;
+    }
+    .profile-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .profile-name-block { min-width: 0; }
+    .profile-display-name {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .profile-username-text {
+      font-size: 15px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .profile-stats {
+      display: flex;
+      gap: 24px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+    .profile-stat {
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+    .profile-stat strong {
+      font-weight: 700;
+      color: var(--text);
+    }
+    .form-hint {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+    .section-heading {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+    .widget-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+    }
+
+    /* Mobile nav */
+    .mobile-nav {
+      display: none;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 56px;
+      background: rgba(8,8,10,0.97);
+      border-top: 1px solid var(--border);
+      z-index: 1000;
+      backdrop-filter: blur(12px);
+    }
+    .mobile-nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      height: 100%;
+      padding: 0 8px;
+    }
+    .mobile-nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      text-decoration: none;
+      color: #6a6a7a;
+      font-size: 10px;
+      font-weight: 600;
+      transition: color var(--transition);
+    }
+    .mobile-nav-item.active { color: var(--primary); }
+    .mobile-nav-item span { font-size: 20px; line-height: 1; }
+
+    @media (max-width: 768px) {
+      .mobile-nav { display: block; }
+      .feed-main { padding-bottom: 72px; }
+      .profile-body { padding: 52px 16px 20px; }
+      .profile-display-name { font-size: 18px; }
+      .profile-banner { height: 120px; }
+      .profile-avatar-large { width: 64px; height: 64px; font-size: 24px; bottom: -28px; }
+      .profile-body { padding-top: 44px; }
+    }
+
+    @media (max-width: 480px) {
+      .profile-stats { gap: 16px; }
+    }
+  </style>
 </head>
 <body>
 
@@ -56,18 +198,18 @@
     <div class="feed-main">
 
       <!-- Profile Header -->
-      <div id="profile-header" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:20px;overflow:hidden;">
-        <div style="height:160px;background:linear-gradient(135deg,var(--primary),#a78bfa);position:relative;">
-          <div id="profile-avatar-large" style="position:absolute;bottom:-32px;left:24px;width:80px;height:80px;border-radius:50%;background:var(--bg-card);border:4px solid var(--bg-card);display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:800;color:var(--primary);">?</div>
+      <div class="profile-card" id="profile-header">
+        <div class="profile-banner">
+          <div class="profile-avatar-large" id="profile-avatar-large">?</div>
         </div>
-        <div style="padding:48px 24px 24px;">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
-            <div>
-              <div style="display:flex;align-items:center;gap:8px;">
-                <div id="profile-display-name" style="font-size:22px;font-weight:800;margin-bottom:4px;">Loading...</div>
+        <div class="profile-body">
+          <div class="profile-top-row">
+            <div class="profile-name-block">
+              <div class="profile-display-name">
+                <span id="profile-display-name">Loading...</span>
                 <span id="verified-badge" style="display:none;font-size:16px;" title="Verified">✅</span>
               </div>
-              <div id="profile-username" style="font-size:15px;color:var(--text-muted);">@...</div>
+              <div class="profile-username-text" id="profile-username">@...</div>
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
               <button id="follow-btn" class="btn btn-primary" style="display:none;">Follow</button>
@@ -75,29 +217,21 @@
             </div>
           </div>
 
-          <div id="profile-bio" style="margin-top:12px;font-size:15px;color:var(--text-secondary);line-height:1.6;"></div>
-          <div id="profile-meta" style="display:flex;gap:16px;margin-top:8px;flex-wrap:wrap;font-size:13px;color:var(--text-muted);"></div>
-
-          <!-- Reputation -->
+          <div id="profile-bio" style="font-size:15px;color:var(--text-muted);line-height:1.6;"></div>
+          <div id="profile-meta" style="display:flex;gap:16px;margin-top:8px;flex-wrap:wrap;font-size:13px;color:var(--text-dim);"></div>
           <div id="profile-reputation" style="margin-top:10px;display:flex;align-items:center;gap:8px;"></div>
 
-          <div style="display:flex;gap:24px;margin-top:16px;flex-wrap:wrap;">
-            <div style="font-size:14px;color:var(--text-secondary);">
-              <span id="profile-post-count" style="font-weight:700;color:var(--text);">0</span> Posts
-            </div>
-            <div style="font-size:14px;color:var(--text-secondary);">
-              <span id="profile-follower-count" style="font-weight:700;color:var(--text);">0</span> Followers
-            </div>
-            <div style="font-size:14px;color:var(--text-secondary);">
-              <span id="profile-following-count" style="font-weight:700;color:var(--text);">0</span> Following
-            </div>
+          <div class="profile-stats">
+            <div class="profile-stat"><strong id="profile-post-count">0</strong> Posts</div>
+            <div class="profile-stat"><strong id="profile-follower-count">0</strong> Followers</div>
+            <div class="profile-stat"><strong id="profile-following-count">0</strong> Following</div>
           </div>
         </div>
       </div>
 
       <!-- Edit Profile Form -->
       <div id="edit-profile-form" style="display:none;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;margin-bottom:20px;">
-        <div style="font-size:18px;font-weight:700;margin-bottom:20px;">Edit Profile</div>
+        <div class="section-heading">Edit Profile</div>
 
         <div class="form-group">
           <label class="form-label">Display Name</label>
@@ -106,7 +240,7 @@
 
         <div class="form-group">
           <label class="form-label">Bio</label>
-          <textarea id="edit-bio" class="form-input" placeholder="Tell people about yourself..." maxlength="160" style="resize:none;min-height:80px;"></textarea>
+          <textarea id="edit-bio" class="form-textarea" placeholder="Tell people about yourself..." maxlength="160"></textarea>
           <div class="form-hint">160 characters max</div>
         </div>
 
@@ -120,12 +254,11 @@
           <input type="url" id="edit-website" class="form-input" placeholder="https://yoursite.com" />
         </div>
 
-        <!-- Content Settings -->
         <div style="border-top:1px solid var(--border);margin-top:20px;padding-top:20px;">
-          <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:16px;">🔞 Content Settings</div>
+          <div class="section-heading">🔞 Content Settings</div>
 
           <div style="background:var(--bg-input);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
               <div>
                 <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:2px;">Show Adult Content</div>
                 <div style="font-size:12px;color:var(--text-muted);">See 18+ posts in your feed. You must be 18+ to enable.</div>
@@ -138,7 +271,7 @@
           </div>
 
           <div style="background:var(--bg-input);border:1px solid var(--border);border-radius:10px;padding:16px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
               <div>
                 <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:2px;">I Create Adult Content</div>
                 <div style="font-size:12px;color:var(--text-muted);">Mark your posts as 18+ by default.</div>
@@ -151,26 +284,25 @@
           </div>
         </div>
 
-        <!-- Keyword Muting -->
         <div style="border-top:1px solid var(--border);margin-top:20px;padding-top:20px;">
-          <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px;">🔇 Muted Keywords</div>
+          <div class="section-heading">🔇 Muted Keywords</div>
           <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Posts containing these words won't appear in your feed.</div>
           <div id="muted-keywords-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;min-height:32px;"></div>
           <div style="display:flex;gap:8px;">
             <input type="text" id="keyword-input" class="form-input" placeholder="Add a keyword..." maxlength="50" style="flex:1;" />
             <button id="add-keyword-btn" class="btn btn-ghost" style="flex-shrink:0;">+ Add</button>
           </div>
-          <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">Up to 50 keywords. Case-insensitive.</div>
+          <div class="form-hint" style="margin-top:6px;">Up to 50 keywords. Case-insensitive.</div>
         </div>
 
-        <div style="display:flex;gap:12px;margin-top:20px;">
+        <div style="display:flex;gap:12px;margin-top:20px;flex-wrap:wrap;">
           <button id="save-profile-btn" class="btn btn-primary">Save Profile</button>
           <button id="cancel-edit-btn" class="btn btn-ghost">Cancel</button>
         </div>
       </div>
 
       <!-- Profile Posts -->
-      <div style="font-size:16px;font-weight:700;margin-bottom:16px;color:var(--text-secondary);">Posts</div>
+      <div class="section-heading">Posts</div>
       <div id="profile-posts">
         <div class="loading"><div class="spinner"></div>Loading posts...</div>
       </div>
@@ -178,23 +310,43 @@
     </div>
 
     <div class="sidebar-right">
-      <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">Communities</div>
+      <div class="widget-title">Communities</div>
       <div id="profile-communities"></div>
 
-      <!-- Reputation Legend -->
-      <div style="margin-top:32px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px;">
-        <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Reputation Ranks</div>
+      <div style="margin-top:32px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;">
+        <div class="widget-title">Reputation Ranks</div>
         <div style="display:flex;flex-direction:column;gap:8px;">
-          <div style="font-size:13px;color:var(--text);">👑 <span style="font-weight:600;">Legend</span> <span style="color:var(--text-muted);">1000+</span></div>
-          <div style="font-size:13px;color:var(--text);">🔥 <span style="font-weight:600;">Veteran</span> <span style="color:var(--text-muted);">500+</span></div>
-          <div style="font-size:13px;color:var(--text);">⭐ <span style="font-weight:600;">Contributor</span> <span style="color:var(--text-muted);">200+</span></div>
-          <div style="font-size:13px;color:var(--text);">💬 <span style="font-weight:600;">Regular</span> <span style="color:var(--text-muted);">50+</span></div>
-          <div style="font-size:13px;color:var(--text);">🌱 <span style="font-weight:600;">Seedling</span> <span style="color:var(--text-muted);">0+</span></div>
+          <div style="font-size:13px;color:var(--text);">👑 <span style="font-weight:600;">Legend</span> <span style="color:var(--text-dim);">1000+</span></div>
+          <div style="font-size:13px;color:var(--text);">🔥 <span style="font-weight:600;">Veteran</span> <span style="color:var(--text-dim);">500+</span></div>
+          <div style="font-size:13px;color:var(--text);">⭐ <span style="font-weight:600;">Contributor</span> <span style="color:var(--text-dim);">200+</span></div>
+          <div style="font-size:13px;color:var(--text);">💬 <span style="font-weight:600;">Regular</span> <span style="color:var(--text-dim);">50+</span></div>
+          <div style="font-size:13px;color:var(--text);">🌱 <span style="font-weight:600;">Seedling</span> <span style="color:var(--text-dim);">0+</span></div>
         </div>
       </div>
     </div>
 
   </div>
+
+  <!-- Mobile Bottom Nav -->
+  <nav class="mobile-nav">
+    <div class="mobile-nav-inner">
+      <a href="/feed.html" class="mobile-nav-item">
+        <span>🏠</span>Home
+      </a>
+      <a href="/search.html" class="mobile-nav-item">
+        <span>🔍</span>Search
+      </a>
+      <a href="/communities.html" class="mobile-nav-item">
+        <span>💬</span>Communities
+      </a>
+      <a href="/notifications.html" class="mobile-nav-item">
+        <span>🔔</span>Alerts
+      </a>
+      <a href="/profile.html" class="mobile-nav-item active">
+        <span>👤</span>Profile
+      </a>
+    </div>
+  </nav>
 
   <script src="js/supabase.js"></script>
   <script src="js/reputation.js"></script>
