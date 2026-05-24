@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Community — Voxxee</title>
 
-  <!-- OG Meta Tags — updated dynamically by community.js after data loads -->
   <meta property="og:title" content="Community — Voxxee" />
   <meta property="og:description" content="Join the conversation on Voxxee — the free speech maximalist social platform for verified adults." />
   <meta property="og:type" content="website" />
@@ -14,7 +13,6 @@
   <meta name="twitter:title" content="Community — Voxxee" />
   <meta name="twitter:description" content="Join the conversation on Voxxee — the free speech maximalist social platform for verified adults." />
 
-  <!-- GA4 -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-FSCZJEWZ6F"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -25,6 +23,168 @@
 
   <link rel="stylesheet" href="css/main.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    .community-banner {
+      height: 120px;
+      background: linear-gradient(135deg, var(--primary) 0%, #a78bfa 100%);
+      position: relative;
+    }
+    .community-header-body {
+      padding: 0 24px 24px;
+    }
+    .community-header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-top: -32px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .community-logo-name {
+      display: flex;
+      align-items: flex-end;
+      gap: 16px;
+    }
+    .community-logo {
+      width: 64px;
+      height: 64px;
+      border-radius: 12px;
+      background: var(--primary-dim);
+      border: 3px solid var(--bg-card);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--primary);
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+    .community-name-text {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      color: var(--text);
+      margin-bottom: 2px;
+      padding-bottom: 4px;
+    }
+    .community-slug-text {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .community-stats {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .community-stat {
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+    .community-stat strong {
+      font-weight: 700;
+      color: var(--text);
+    }
+    .create-post {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    .create-post-header {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+    .post-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--primary-dim);
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 14px;
+      flex-shrink: 0;
+      font-family: var(--font-display);
+    }
+    .create-post-input {
+      flex: 1;
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 14px;
+      padding: 10px 14px;
+      resize: vertical;
+      min-height: 80px;
+      outline: none;
+      transition: border-color var(--transition);
+    }
+    .create-post-input:focus { border-color: var(--primary); }
+    .create-post-input::placeholder { color: var(--text-dim); }
+    .create-post-footer {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+    }
+    .widget-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+    }
+
+    .mobile-nav {
+      display: none;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 56px;
+      background: rgba(8,8,10,0.97);
+      border-top: 1px solid var(--border);
+      z-index: 1000;
+      backdrop-filter: blur(12px);
+    }
+    .mobile-nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      height: 100%;
+    }
+    .mobile-nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      padding: 6px 12px;
+      text-decoration: none;
+      color: #6a6a7a;
+      font-size: 10px;
+      font-weight: 600;
+    }
+    .mobile-nav-item.active { color: var(--primary); }
+    .mobile-nav-item span { font-size: 20px; line-height: 1; }
+
+    @media (max-width: 768px) {
+      .mobile-nav { display: block; }
+      .feed-main { padding-bottom: 72px; }
+      .community-header-body { padding: 0 16px 20px; }
+      .community-name-text { font-size: 18px; }
+      .community-banner { height: 90px; }
+      .community-logo { width: 52px; height: 52px; font-size: 22px; }
+    }
+  </style>
 </head>
 <body>
 
@@ -58,49 +218,43 @@
 
       <!-- Community Header -->
       <div id="community-header" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:20px;overflow:hidden;">
-        <div style="height:120px;background:linear-gradient(135deg,var(--primary),#a78bfa);position:relative;"></div>
-        <div style="padding:0 24px 24px;">
-          <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:-32px;margin-bottom:12px;flex-wrap:wrap;gap:12px;">
-            <div style="display:flex;align-items:flex-end;gap:16px;">
-              <div id="community-logo"
-                style="width:64px;height:64px;border-radius:12px;background:var(--primary);border:3px solid var(--bg-card);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:#fff;flex-shrink:0;overflow:hidden;">
-              </div>
-              <div style="padding-bottom:4px;">
-                <div id="community-name" style="font-size:22px;font-weight:800;color:var(--text);margin-bottom:2px;">Loading...</div>
-                <div id="community-slug" style="font-size:13px;color:var(--text-muted);"></div>
+        <div class="community-banner"></div>
+        <div class="community-header-body">
+          <div class="community-header-top">
+            <div class="community-logo-name">
+              <div id="community-logo" class="community-logo"></div>
+              <div>
+                <div id="community-name" class="community-name-text">Loading...</div>
+                <div id="community-slug" class="community-slug-text"></div>
               </div>
             </div>
-            <div style="display:flex;gap:8px;align-items:center;">
-              <button id="wiki-btn" class="btn btn-ghost" style="display:none;font-size:13px;">📖 Wiki</button>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <button id="wiki-btn" class="btn btn-ghost btn-sm" style="display:none;">📖 Wiki</button>
               <button id="join-btn" class="btn btn-primary" style="display:none;">Join Community</button>
             </div>
           </div>
 
-          <div id="community-description" style="font-size:15px;color:var(--text-secondary);line-height:1.6;margin-bottom:16px;"></div>
+          <div id="community-description" style="font-size:15px;color:var(--text-muted);line-height:1.6;margin-bottom:16px;"></div>
 
-          <div style="display:flex;gap:24px;flex-wrap:wrap;">
-            <div style="font-size:14px;color:var(--text-secondary);">
-              <span id="community-member-count" style="font-weight:700;color:var(--text);">0</span> Members
-            </div>
-            <div style="font-size:14px;color:var(--text-secondary);">
-              <span id="community-post-count" style="font-weight:700;color:var(--text);">0</span> Posts
-            </div>
+          <div class="community-stats">
+            <div class="community-stat"><strong id="community-member-count">0</strong> Members</div>
+            <div class="community-stat"><strong id="community-post-count">0</strong> Posts</div>
           </div>
         </div>
       </div>
 
       <!-- Wiki Panel -->
       <div id="wiki-panel" style="display:none;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;margin-bottom:20px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-          <div style="font-size:18px;font-weight:700;color:var(--text);">📖 Community Wiki</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:8px;">
+          <div style="font-family:var(--font-display);font-size:18px;font-weight:800;color:var(--text);">📖 Community Wiki</div>
           <div style="display:flex;gap:8px;">
-            <button id="wiki-edit-btn" class="btn btn-ghost" style="display:none;font-size:13px;">✏️ Edit</button>
-            <button id="wiki-close-btn" class="btn btn-ghost" style="font-size:13px;">✕ Close</button>
+            <button id="wiki-edit-btn" class="btn btn-ghost btn-sm" style="display:none;">✏️ Edit</button>
+            <button id="wiki-close-btn" class="btn btn-ghost btn-sm">✕ Close</button>
           </div>
         </div>
 
         <div id="wiki-view">
-          <div id="wiki-content" style="font-size:15px;color:var(--text-secondary);line-height:1.7;white-space:pre-wrap;"></div>
+          <div id="wiki-content" style="font-size:15px;color:var(--text-muted);line-height:1.7;white-space:pre-wrap;"></div>
           <div id="wiki-empty" style="display:none;text-align:center;padding:40px 0;">
             <div style="font-size:36px;margin-bottom:12px;">📝</div>
             <div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:8px;">No wiki yet</div>
@@ -110,11 +264,8 @@
 
         <div id="wiki-edit" style="display:none;">
           <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px;">Supports plain text. Use blank lines to separate sections.</div>
-          <textarea id="wiki-textarea" class="form-input"
-            style="width:100%;min-height:300px;resize:vertical;font-size:14px;line-height:1.6;font-family:inherit;"
-            placeholder="Write your community wiki here..."
-            maxlength="10000"></textarea>
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;">
+          <textarea id="wiki-textarea" class="form-textarea" placeholder="Write your community wiki here..." maxlength="10000"></textarea>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;flex-wrap:wrap;gap:8px;">
             <span id="wiki-char-count" style="font-size:12px;color:var(--text-muted);">0 / 10,000</span>
             <div style="display:flex;gap:8px;">
               <button id="wiki-cancel-edit-btn" class="btn btn-ghost">Cancel</button>
@@ -128,10 +279,7 @@
           <div id="wiki-rules-list"></div>
           <div id="wiki-rules-editor" style="display:none;margin-top:16px;">
             <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px;">One rule per line.</div>
-            <textarea id="rules-textarea" class="form-input"
-              style="width:100%;min-height:120px;resize:vertical;font-size:14px;"
-              placeholder="Be respectful&#10;No spam&#10;Stay on topic"
-              maxlength="2000"></textarea>
+            <textarea id="rules-textarea" class="form-textarea" placeholder="Be respectful&#10;No spam&#10;Stay on topic" maxlength="2000" style="min-height:120px;"></textarea>
             <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;">
               <button id="rules-cancel-btn" class="btn btn-ghost">Cancel</button>
               <button id="rules-save-btn" class="btn btn-primary">Save Rules</button>
@@ -141,13 +289,12 @@
       </div>
 
       <!-- Create Post -->
-      <div class="create-post" style="margin-bottom:20px;">
+      <div class="create-post">
         <div class="create-post-header">
           <div class="post-avatar" id="user-avatar">?</div>
           <textarea class="create-post-input" id="post-content" placeholder="Post in this community..." maxlength="2000"></textarea>
         </div>
         <div class="create-post-footer">
-          <div></div>
           <button class="btn btn-primary" id="post-btn">Post</button>
         </div>
       </div>
@@ -161,11 +308,22 @@
 
     <div class="sidebar-right">
       <div id="community-rules-sidebar"></div>
-      <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-top:24px;margin-bottom:16px;">Other Communities</div>
+      <div class="widget-title" style="margin-top:24px;">Other Communities</div>
       <div id="other-communities"></div>
     </div>
 
   </div>
+
+  <!-- Mobile Bottom Nav -->
+  <nav class="mobile-nav">
+    <div class="mobile-nav-inner">
+      <a href="/feed.html" class="mobile-nav-item"><span>🏠</span>Home</a>
+      <a href="/search.html" class="mobile-nav-item"><span>🔍</span>Search</a>
+      <a href="/communities.html" class="mobile-nav-item active"><span>💬</span>Communities</a>
+      <a href="/notifications.html" class="mobile-nav-item"><span>🔔</span>Alerts</a>
+      <a href="/profile.html" class="mobile-nav-item"><span>👤</span>Profile</a>
+    </div>
+  </nav>
 
   <script src="js/supabase.js"></script>
   <script src="js/reputation.js"></script>
