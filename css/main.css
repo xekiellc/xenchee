@@ -925,3 +925,14 @@ p { color: #b0b0be; line-height: 1.7; }
   white-space: nowrap;
   border-width: 0;
 }
+
+/* ── Force overrides ──────────────────────────────────────── */
+.nav-brand,
+.nav-brand:visited,
+.nav-brand:hover { color: #f0f0f4 !important; }
+
+.btn-primary,
+.btn-primary:visited,
+.btn-primary:hover { background: #00e5ff !important; color: #000 !important; }
+
+.sidebar-nav a.active { color: #00e5ff !important; background: rgba(0,229,255,0.12) !important; border-left-color: #00e5ff !important; }
