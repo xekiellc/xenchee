@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Memories — Voxxee</title>
 
-  <!-- OG Meta Tags -->
   <meta property="og:title" content="Memories — Voxxee" />
   <meta property="og:description" content="Look back on what you posted on this day in previous years on Voxxee." />
   <meta property="og:type" content="website" />
@@ -14,7 +13,6 @@
   <meta name="twitter:title" content="Memories — Voxxee" />
   <meta name="twitter:description" content="Look back on what you posted on this day in previous years on Voxxee." />
 
-  <!-- GA4 -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-FSCZJEWZ6F"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -25,6 +23,37 @@
 
   <link rel="stylesheet" href="/css/main.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    .page-title { font-family: var(--font-display); font-size: 24px; font-weight: 900; letter-spacing: -0.02em; color: var(--text); margin-bottom: 4px; }
+    .page-subtitle { font-size: 15px; color: var(--text-muted); }
+    .widget-title { font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; }
+
+    .mobile-nav {
+      display: none;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 56px;
+      background: rgba(8,8,10,0.97);
+      border-top: 1px solid var(--border);
+      z-index: 1000;
+      backdrop-filter: blur(12px);
+    }
+    .mobile-nav-inner { display: flex; align-items: center; justify-content: space-around; height: 100%; }
+    .mobile-nav-item {
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+      padding: 6px 12px; text-decoration: none; color: #6a6a7a; font-size: 10px; font-weight: 600;
+    }
+    .mobile-nav-item.active { color: var(--primary); }
+    .mobile-nav-item span { font-size: 20px; line-height: 1; }
+
+    @media (max-width: 768px) {
+      .mobile-nav { display: block; }
+      .feed-main { padding-bottom: 72px; }
+      .page-title { font-size: 20px; }
+      #memory-date { max-width: 100% !important; }
+    }
+  </style>
 </head>
 <body>
 
@@ -54,28 +83,24 @@
 
     <div class="feed-main">
 
-      <!-- Header -->
       <div style="margin-bottom:24px;">
-        <div style="font-size:24px;font-weight:800;color:var(--text);margin-bottom:4px;">🕰️ Memories</div>
-        <div style="font-size:15px;color:var(--text-muted);">Look back on what you posted on this day in previous years.</div>
+        <div class="page-title">🕰️ Memories</div>
+        <div class="page-subtitle">Look back on what you posted on this day in previous years.</div>
       </div>
 
-      <!-- Date Filter -->
-      <div class="post-card" style="margin-bottom:24px;">
-        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
-          <div style="flex:1;">
-            <label class="form-label" style="margin-bottom:6px;display:block;">Browse a specific date</label>
+      <div class="card" style="margin-bottom:24px;">
+        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+          <div style="flex:1;min-width:180px;">
+            <label class="form-label">Browse a specific date</label>
             <input type="date" id="memory-date" class="form-input" style="max-width:220px;" />
           </div>
-          <button id="browse-btn" class="btn btn-primary" style="align-self:flex-end;">Browse</button>
-          <button id="today-btn" class="btn btn-ghost" style="align-self:flex-end;">Today</button>
+          <button id="browse-btn" class="btn btn-primary">Browse</button>
+          <button id="today-btn" class="btn btn-ghost">Today</button>
         </div>
       </div>
 
-      <!-- On This Day Header -->
-      <div id="memory-date-label" style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:16px;"></div>
+      <div id="memory-date-label" style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--text);margin-bottom:16px;"></div>
 
-      <!-- Memories Feed -->
       <div id="memories-container">
         <div class="loading"><div class="spinner"></div>Loading memories...</div>
       </div>
@@ -83,12 +108,21 @@
     </div>
 
     <div class="sidebar-right">
-      <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">
-        On This Day
-      </div>
+      <div class="widget-title">On This Day</div>
       <div id="memory-years-sidebar" style="font-size:14px;color:var(--text-muted);">Loading...</div>
     </div>
   </div>
+
+  <!-- Mobile Bottom Nav -->
+  <nav class="mobile-nav">
+    <div class="mobile-nav-inner">
+      <a href="/feed.html" class="mobile-nav-item"><span>🏠</span>Home</a>
+      <a href="/search.html" class="mobile-nav-item"><span>🔍</span>Search</a>
+      <a href="/communities.html" class="mobile-nav-item"><span>💬</span>Communities</a>
+      <a href="/notifications.html" class="mobile-nav-item"><span>🔔</span>Alerts</a>
+      <a href="/profile.html" class="mobile-nav-item"><span>👤</span>Profile</a>
+    </div>
+  </nav>
 
   <script src="/js/supabase.js"></script>
   <script src="/js/memories.js"></script>
