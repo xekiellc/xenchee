@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Welcome to Voxxee</title>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-FSCZJEWZ6F"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-FSCZJEWZ6F');
+  </script>
+  <link rel="stylesheet" href="css/main.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    .onboarding-wrap {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: var(--bg);
+    }
+    .onboarding-box {
+      width: 100%;
+      max-width: 620px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 40px;
+    }
+    .onboarding-logo {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 32px;
+    }
+    .onboarding-logo::before {
+      content: 'VX';
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      background: var(--primary);
+      color: #000;
+      font-size: 12px;
+      font-weight: 900;
+      border-radius: 8px;
+    }
+    .step-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 32px;
+    }
+    .step-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--border);
+      transition: all 0.2s ease;
+    }
+    .step-dot.active {
+      background: var(--primary);
+      width: 24px;
+      border-radius: 4px;
+    }
+    .step-dot.done {
+      background: var(--primary);
+      opacity: 0.4;
+    }
+    .step { display: none; }
+    .step.active { display: block; }
+    .step-title {
+      font-family: var(--font-display);
+      font-size: 1.75rem;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    .step-subtitle {
+      font-size: 15px;
+      color: #6a6a7a;
+      margin-bottom: 28px;
+      line-height: 1.6;
+    }
+    .interest-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+    .interest-btn {
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: #6a6a7a;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: var(--font-body);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-align: center;
+    }
+    .interest-btn:hover {
+      border-color: var(--primary);
+      color: var(--text);
+    }
+    .interest-btn.selected {
+      border-color: var(--primary);
+      background: var(--primary-dim);
+      color: var(--primary);
+    }
+    .community-pick-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 28px;
+      max-height: 360px;
+      overflow-y: auto;
+    }
+    .community-pick-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      background: transparent;
+    }
+    .community-pick-item:hover {
+      border-color: var(--primary);
+      background: var(--bg-hover);
+    }
+    .community-pick-item.selected {
+      border-color: var(--primary);
+      background: var(--primary-dim);
+    }
+    .community-pick-logo {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      object-fit: cover;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 14px;
+      background: var(--primary-dim);
+      color: var(--primary);
+    }
+    .community-pick-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .community-pick-desc {
+      font-size: 12px;
+      color: #6a6a7a;
+      margin-top: 2px;
+    }
+    .community-pick-check {
+      margin-left: auto;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      flex-shrink: 0;
+      transition: all 0.15s ease;
+    }
+    .community-pick-item.selected .community-pick-check {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #000;
+    }
+    .step-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .welcome-icon {
+      font-size: 64px;
+      margin-bottom: 16px;
+    }
+    .welcome-features {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+    .welcome-feature {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: var(--bg);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+    .welcome-feature-icon {
+      font-size: 20px;
+      width: 32px;
+      text-align: center;
+    }
+    .welcome-feature-text {
+      font-size: 14px;
+      color: #b0b0be;
+    }
+    .welcome-feature-text strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="onboarding-wrap">
+    <div class="onboarding-box">
+
+      <div class="onboarding-logo">Voxxee</div>
+
+      <!-- Step indicator -->
+      <div class="step-indicator">
+        <div class="step-dot active" id="dot-1"></div>
+        <div class="step-dot" id="dot-2"></div>
+        <div class="step-dot" id="dot-3"></div>
+      </div>
+
+      <!-- Step 1: Interests -->
+      <div class="step active" id="step-1">
+        <div class="step-title">What are you into?</div>
+        <div class="step-subtitle">Pick your interests and we'll show you the right communities.</div>
+        <div class="interest-grid" id="interest-grid">
+          <button class="interest-btn" data-interest="politics">🏛️ Politics</button>
+          <button class="interest-btn" data-interest="tech">💻 Tech</button>
+          <button class="interest-btn" data-interest="finance">📈 Finance</button>
+          <button class="interest-btn" data-interest="science">🔬 Science</button>
+          <button class="interest-btn" data-interest="health">💊 Health</button>
+          <button class="interest-btn" data-interest="sports">⚽ Sports</button>
+          <button class="interest-btn" data-interest="entertainment">🎬 Entertainment</button>
+          <button class="interest-btn" data-interest="gaming">🎮 Gaming</button>
+          <button class="interest-btn" data-interest="music">🎵 Music</button>
+          <button class="interest-btn" data-interest="art">🎨 Art</button>
+          <button class="interest-btn" data-interest="news">📰 News</button>
+          <button class="interest-btn" data-interest="crypto">₿ Crypto</button>
+          <button class="interest-btn" data-interest="local">📍 Local</button>
+          <button class="interest-btn" data-interest="philosophy">🧠 Philosophy</button>
+          <button class="interest-btn" data-interest="freedom">🗽 Free Speech</button>
+          <button class="interest-btn" data-interest="other">✨ Other</button>
+        </div>
+        <div class="step-actions">
+          <span style="font-size:13px;color:#6a6a7a;">Pick at least one</span>
+          <button class="btn btn-primary" id="step1-next" disabled>Continue →</button>
+        </div>
+      </div>
+
+      <!-- Step 2: Join Communities -->
+      <div class="step" id="step-2">
+        <div class="step-title">Join some communities</div>
+        <div class="step-subtitle">Based on your interests — join at least one to get started.</div>
+        <div class="community-pick-grid" id="community-pick-grid">
+          <div class="loading"><div class="spinner"></div>Loading communities...</div>
+        </div>
+        <div class="step-actions">
+          <button class="btn btn-ghost" id="step2-back">← Back</button>
+          <button class="btn btn-primary" id="step2-next" disabled>Join & Continue →</button>
+        </div>
+      </div>
+
+      <!-- Step 3: Done -->
+      <div class="step" id="step-3">
+        <div class="welcome-icon">🎉</div>
+        <div class="step-title">You're all set!</div>
+        <div class="step-subtitle">Welcome to Voxxee — where real conversations happen.</div>
+        <div class="welcome-features">
+          <div class="welcome-feature">
+            <div class="welcome-feature-icon">💬</div>
+            <div class="welcome-feature-text"><strong>Say what you mean.</strong> No shadowbans, no algorithm suppression.</div>
+          </div>
+          <div class="welcome-feature">
+            <div class="welcome-feature-icon">📊</div>
+            <div class="welcome-feature-text"><strong>Polls are first-class.</strong> Vote, create, and see real-time results.</div>
+          </div>
+          <div class="welcome-feature">
+            <div class="welcome-feature-icon">👁️</div>
+            <div class="welcome-feature-text"><strong>Views are visible.</strong> See exactly how far your voice reaches.</div>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-block" id="finish-btn" style="font-size:15px;padding:14px;">
+          Enter Voxxee →
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="js/supabase.js"></script>
+  <script>
+    async function waitForDb(timeout = 5000) {
+      const start = Date.now();
+      while (!window.db) {
+        if (Date.now() - start > timeout) throw new Error('timeout');
+        await new Promise(r => setTimeout(r, 50));
+      }
+    }
+
+    let currentStep = 1;
+    let selectedInterests = [];
+    let selectedCommunities = [];
+    let currentUser = null;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      await waitForDb();
+
+      currentUser = await window.auth.getUser();
+      if (!currentUser) {
+        window.location.href = '/login.html';
+        return;
+      }
+
+      // Check if already onboarded
+      const { data: profile } = await window.db
+        .from('profiles')
+        .select('onboarding_complete')
+        .eq('user_id', currentUser.id)
+        .single();
+
+      if (profile?.onboarding_complete) {
+        window.location.href = '/feed.html';
+        return;
+      }
+
+      setupInterests();
+      setupNavigation();
+    });
+
+    function setupInterests() {
+      document.querySelectorAll('.interest-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          btn.classList.toggle('selected');
+          const interest = btn.dataset.interest;
+          if (btn.classList.contains('selected')) {
+            selectedInterests.push(interest);
+          } else {
+            selectedInterests = selectedInterests.filter(i => i !== interest);
+          }
+          document.getElementById('step1-next').disabled = selectedInterests.length === 0;
+        });
+      });
+    }
+
+    function setupNavigation() {
+      document.getElementById('step1-next').addEventListener('click', async () => {
+        goToStep(2);
+        await loadFilteredCommunities();
+      });
+
+      document.getElementById('step2-back').addEventListener('click', () => goToStep(1));
+
+      document.getElementById('step2-next').addEventListener('click', async () => {
+        await joinSelectedCommunities();
+        goToStep(3);
+      });
+
+      document.getElementById('finish-btn').addEventListener('click', async () => {
+        await window.db.from('profiles')
+          .update({ onboarding_complete: true })
+          .eq('user_id', currentUser.id);
+        window.location.href = '/feed.html';
+      });
+    }
+
+    function goToStep(n) {
+      document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+      document.getElementById(`step-${n}`).classList.add('active');
+
+      for (let i = 1; i <= 3; i++) {
+        const dot = document.getElementById(`dot-${i}`);
+        dot.classList.remove('active', 'done');
+        if (i === n) dot.classList.add('active');
+        else if (i < n) dot.classList.add('done');
+      }
+
+      currentStep = n;
+    }
+
+    async function loadFilteredCommunities() {
+      const grid = document.getElementById('community-pick-grid');
+      grid.innerHTML = '<div class="loading"><div class="spinner"></div>Loading communities...</div>';
+
+      const { data: communities } = await window.db
+        .from('communities')
+        .select('*')
+        .order('member_count', { ascending: false });
+
+      if (!communities || communities.length === 0) {
+        grid.innerHTML = '<p style="color:#6a6a7a;font-size:14px;">No communities yet.</p>';
+        return;
+      }
+
+      grid.innerHTML = communities.map(c => {
+        const logoHtml = c.logo_url
+          ? `<img src="${c.logo_url}" style="width:40px;height:40px;border-radius:8px;object-fit:cover;" onerror="this.style.display='none'" />`
+          : `<div class="community-pick-logo">${c.name.charAt(0)}</div>`;
+
+        return `
+          <div class="community-pick-item" data-id="${c.id}" data-slug="${c.slug}">
+            ${logoHtml}
+            <div>
+              <div class="community-pick-name">${escapeHtml(c.name)}</div>
+              <div class="community-pick-desc">${escapeHtml(c.description || '')}</div>
+            </div>
+            <div class="community-pick-check">✓</div>
+          </div>
+        `;
+      }).join('');
+
+      document.querySelectorAll('.community-pick-item').forEach(item => {
+        item.addEventListener('click', () => {
+          item.classList.toggle('selected');
+          const id = item.dataset.id;
+          if (item.classList.contains('selected')) {
+            selectedCommunities.push(id);
+          } else {
+            selectedCommunities = selectedCommunities.filter(c => c !== id);
+          }
+          document.getElementById('step2-next').disabled = selectedCommunities.length === 0;
+        });
+      });
+    }
+
+    async function joinSelectedCommunities() {
+      if (selectedCommunities.length === 0) return;
+
+      const inserts = selectedCommunities.map(communityId => ({
+        user_id: currentUser.id,
+        community_id: communityId,
+        role: 'member'
+      }));
+
+      await window.db.from('community_members').insert(inserts);
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.appendChild(document.createTextNode(text || ''));
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>
