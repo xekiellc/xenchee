@@ -33,18 +33,13 @@
     }
     .profile-avatar-large {
       position: absolute;
-      bottom: -36px;
-      left: 24px;
-      width: 80px;
-      height: 80px;
+      bottom: -36px; left: 24px;
+      width: 80px; height: 80px;
       border-radius: 50%;
       background: var(--bg-card);
       border: 4px solid var(--bg-card);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 32px;
-      font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 32px; font-weight: 800;
       color: var(--primary);
       font-family: var(--font-display);
     }
@@ -55,9 +50,7 @@
       margin-bottom: 20px;
       overflow: hidden;
     }
-    .profile-body {
-      padding: 52px 24px 24px;
-    }
+    .profile-body { padding: 52px 24px 24px; }
     .profile-top-row {
       display: flex;
       justify-content: space-between;
@@ -69,60 +62,53 @@
     .profile-name-block { min-width: 0; }
     .profile-display-name {
       font-family: var(--font-display);
-      font-size: 22px;
-      font-weight: 900;
+      font-size: 22px; font-weight: 900;
       letter-spacing: -0.03em;
       color: var(--text);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
+      display: flex; align-items: center;
+      gap: 8px; flex-wrap: wrap;
     }
-    .profile-username-text {
-      font-size: 15px;
-      color: var(--text-muted);
-      margin-top: 2px;
-    }
-    .profile-stats {
-      display: flex;
-      gap: 24px;
-      margin-top: 16px;
-      flex-wrap: wrap;
-    }
-    .profile-stat {
-      font-size: 14px;
-      color: var(--text-muted);
-    }
-    .profile-stat strong {
-      font-weight: 700;
-      color: var(--text);
-    }
-    .form-hint {
-      font-size: 12px;
-      color: var(--text-dim);
-      margin-top: 4px;
-    }
+    .profile-username-text { font-size: 15px; color: var(--text-muted); margin-top: 2px; }
+    .profile-stats { display: flex; gap: 24px; margin-top: 16px; flex-wrap: wrap; }
+    .profile-stat { font-size: 14px; color: var(--text-muted); }
+    .profile-stat strong { font-weight: 700; color: var(--text); }
+    .form-hint { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
     .section-heading {
       font-family: var(--font-display);
-      font-size: 16px;
-      font-weight: 700;
-      color: var(--text);
-      margin-bottom: 16px;
+      font-size: 16px; font-weight: 700;
+      color: var(--text); margin-bottom: 16px;
     }
     .widget-title {
-      font-size: 11px;
-      font-weight: 700;
+      font-size: 11px; font-weight: 700;
       color: var(--text-dim);
-      text-transform: uppercase;
-      letter-spacing: 1px;
+      text-transform: uppercase; letter-spacing: 1px;
       margin-bottom: 16px;
     }
-
-    /* Mobile nav */
+    .analytics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .analytics-cell {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 12px;
+      text-align: center;
+    }
+    .analytics-cell .val {
+      font-family: var(--font-display);
+      font-size: 20px; font-weight: 900;
+      color: var(--primary);
+    }
+    .analytics-cell .lbl {
+      font-size: 11px; color: var(--text-dim);
+      margin-top: 2px;
+    }
     .mobile-nav {
       display: none;
-      position: fixed;
-      bottom: 0; left: 0; right: 0;
+      position: fixed; bottom: 0; left: 0; right: 0;
       height: 56px;
       background: rgba(8,8,10,0.97);
       border-top: 1px solid var(--border);
@@ -130,24 +116,17 @@
       backdrop-filter: blur(12px);
     }
     .mobile-nav-inner {
-      display: flex;
-      align-items: center;
+      display: flex; align-items: center;
       justify-content: space-around;
-      height: 100%;
-      padding: 0 8px;
+      height: 100%; padding: 0 8px;
     }
     .mobile-nav-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 2px;
-      padding: 6px 12px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 2px; padding: 6px 12px;
       border-radius: var(--radius-sm);
-      text-decoration: none;
-      color: #6a6a7a;
-      font-size: 10px;
-      font-weight: 600;
+      text-decoration: none; color: #6a6a7a;
+      font-size: 10px; font-weight: 600;
       transition: color var(--transition);
     }
     .mobile-nav-item.active { color: var(--primary); }
@@ -162,7 +141,6 @@
       .profile-avatar-large { width: 64px; height: 64px; font-size: 24px; bottom: -28px; }
       .profile-body { padding-top: 44px; }
     }
-
     @media (max-width: 480px) {
       .profile-stats { gap: 16px; }
     }
@@ -310,6 +288,30 @@
     </div>
 
     <div class="sidebar-right">
+
+      <!-- Profile Analytics — own profile only -->
+      <div id="profile-analytics" style="display:none;margin-bottom:32px;">
+        <div class="widget-title">📊 Your Analytics</div>
+        <div class="analytics-grid">
+          <div class="analytics-cell">
+            <div class="val" id="analytics-views">—</div>
+            <div class="lbl">👁 Total Views</div>
+          </div>
+          <div class="analytics-cell">
+            <div class="val" id="analytics-reactions">—</div>
+            <div class="lbl">❤️ Reactions</div>
+          </div>
+          <div class="analytics-cell">
+            <div class="val" id="analytics-comments">—</div>
+            <div class="lbl">💬 Comments</div>
+          </div>
+          <div class="analytics-cell">
+            <div class="val" id="analytics-engagement">—</div>
+            <div class="lbl">📈 Eng. Rate</div>
+          </div>
+        </div>
+      </div>
+
       <div class="widget-title">Communities</div>
       <div id="profile-communities"></div>
 
@@ -330,21 +332,11 @@
   <!-- Mobile Bottom Nav -->
   <nav class="mobile-nav">
     <div class="mobile-nav-inner">
-      <a href="/feed.html" class="mobile-nav-item">
-        <span>🏠</span>Home
-      </a>
-      <a href="/search.html" class="mobile-nav-item">
-        <span>🔍</span>Search
-      </a>
-      <a href="/communities.html" class="mobile-nav-item">
-        <span>💬</span>Communities
-      </a>
-      <a href="/notifications.html" class="mobile-nav-item">
-        <span>🔔</span>Alerts
-      </a>
-      <a href="/profile.html" class="mobile-nav-item active">
-        <span>👤</span>Profile
-      </a>
+      <a href="/feed.html" class="mobile-nav-item"><span>🏠</span>Home</a>
+      <a href="/search.html" class="mobile-nav-item"><span>🔍</span>Search</a>
+      <a href="/communities.html" class="mobile-nav-item"><span>💬</span>Communities</a>
+      <a href="/notifications.html" class="mobile-nav-item"><span>🔔</span>Alerts</a>
+      <a href="/profile.html" class="mobile-nav-item active"><span>👤</span>Profile</a>
     </div>
   </nav>
 
