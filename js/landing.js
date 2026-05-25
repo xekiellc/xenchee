@@ -104,11 +104,18 @@ async function loadEcosystemCards() {
 
     grid.innerHTML = cards.map(card => `
       <div class="ecosystem-card">
-        <div class="ecosystem-card-header">
-          <div class="ecosystem-name">${card.name}</div>
-          <span class="ecosystem-status ${card.status === 'live' ? 'status-live' : 'status-coming-soon'}">
-            ${card.status === 'live' ? 'Live' : 'Coming Soon'}
-          </span>
+        <div class="ecosystem-card-header" style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+          ${card.logo_url ? `
+            <img src="${card.logo_url}" alt="${card.name}"
+              style="width:40px;height:40px;border-radius:8px;object-fit:cover;flex-shrink:0;"
+              onerror="this.style.display='none'" />
+          ` : ''}
+          <div style="flex:1;display:flex;align-items:center;justify-content:space-between;">
+            <div class="ecosystem-name">${card.name}</div>
+            <span class="ecosystem-status ${card.status === 'live' ? 'status-live' : 'status-coming-soon'}">
+              ${card.status === 'live' ? 'Live' : 'Coming Soon'}
+            </span>
+          </div>
         </div>
         <div class="ecosystem-tagline">${card.tagline || ''}</div>
         <div class="ecosystem-description">${card.description || ''}</div>
