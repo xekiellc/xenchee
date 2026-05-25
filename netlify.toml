@@ -4,3 +4,4 @@
 
 [functions."voxxee-seed"]
   schedule = "0 */6 * * *"
+  timeout = 300
