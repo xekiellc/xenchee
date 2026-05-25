@@ -49,8 +49,11 @@ async function loadOwnProfile() {
   isOwnProfile = true;
   mutedKeywords = profile.muted_keywords || [];
   renderProfile(profile);
-  await loadProfilePosts(profile.user_id);
-  await loadProfileCommunities();
+  await Promise.all([
+    loadProfilePosts(profile.user_id),
+    loadProfileCommunities(),
+    loadProfileAnalytics(profile.user_id)
+  ]);
 }
 
 async function loadProfileByUsername(username) {
@@ -74,8 +77,54 @@ async function loadProfileByUsername(username) {
   }
 
   renderProfile(profile);
-  await loadProfilePosts(profile.user_id);
-  await loadProfileCommunities();
+  await Promise.all([
+    loadProfilePosts(profile.user_id),
+    loadProfileCommunities(),
+    isOwnProfile ? loadProfileAnalytics(profile.user_id) : Promise.resolve()
+  ]);
+}
+
+async function loadProfileAnalytics(userId) {
+  const analyticsEl = document.getElementById('profile-analytics');
+  if (!analyticsEl) return;
+
+  try {
+    const { data: posts } = await window.db
+      .from('posts').select('id').eq('user_id', userId).eq('is_removed', false);
+
+    if (!posts || posts.length === 0) {
+      analyticsEl.style.display = 'block';
+      document.getElementById('analytics-views').textContent = '0';
+      document.getElementById('analytics-reactions').textContent = '0';
+      document.getElementById('analytics-comments').textContent = '0';
+      document.getElementById('analytics-engagement').textContent = '0%';
+      return;
+    }
+
+    const postIds = posts.map(p => p.id);
+
+    const [viewsRes, reactionsRes, commentsRes] = await Promise.all([
+      window.db.from('post_views').select('post_id', { count: 'exact', head: true }).in('post_id', postIds),
+      window.db.from('reactions').select('id', { count: 'exact', head: true }).in('target_id', postIds).eq('target_type', 'post'),
+      window.db.from('comments').select('id', { count: 'exact', head: true }).in('post_id', postIds).eq('is_removed', false)
+    ]);
+
+    const totalViews = viewsRes.count || 0;
+    const totalReactions = reactionsRes.count || 0;
+    const totalComments = commentsRes.count || 0;
+    const engagementRate = totalViews > 0
+      ? ((totalReactions + totalComments) / totalViews * 100).toFixed(1)
+      : '0.0';
+
+    analyticsEl.style.display = 'block';
+    document.getElementById('analytics-views').textContent = totalViews.toLocaleString();
+    document.getElementById('analytics-reactions').textContent = totalReactions.toLocaleString();
+    document.getElementById('analytics-comments').textContent = totalComments.toLocaleString();
+    document.getElementById('analytics-engagement').textContent = engagementRate + '%';
+
+  } catch (err) {
+    console.error('Analytics error:', err);
+  }
 }
 
 function renderProfile(profile) {
@@ -89,7 +138,6 @@ function renderProfile(profile) {
 
   if (profile.bio) document.getElementById('profile-bio').textContent = profile.bio;
 
-  // Meta row
   const metaEl = document.getElementById('profile-meta');
   if (metaEl) {
     const parts = [];
@@ -98,11 +146,9 @@ function renderProfile(profile) {
     metaEl.innerHTML = parts.join('<span style="margin:0 4px;">·</span>');
   }
 
-  // Verified badge
   const badge = document.getElementById('verified-badge');
   if (badge && profile.is_verified) badge.style.display = 'inline';
 
-  // Reputation display
   const repEl = document.getElementById('profile-reputation');
   if (repEl) {
     const rep = profile.reputation || 0;
@@ -114,7 +160,6 @@ function renderProfile(profile) {
     `;
   }
 
-  // Adult creator badge
   if (profile.is_adult_creator && !isOwnProfile) {
     const nameEl = document.getElementById('profile-display-name');
     if (nameEl && !document.querySelector('.adult-badge')) {
@@ -184,24 +229,14 @@ function initToggle(checkboxId, trackId) {
   const checkbox = document.getElementById(checkboxId);
   const track = document.getElementById(trackId);
   if (!checkbox || !track || track.querySelector('span')) return;
-
   const knob = document.createElement('span');
-  knob.style.cssText = `
-    position:absolute;height:18px;width:18px;
-    left:3px;bottom:3px;background:#fff;
-    border-radius:50%;transition:0.2s;pointer-events:none;
-  `;
+  knob.style.cssText = 'position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:0.2s;pointer-events:none;';
   track.appendChild(knob);
-
   function update() {
     track.style.background = checkbox.checked ? 'var(--primary)' : 'var(--border)';
     knob.style.transform = checkbox.checked ? 'translateX(20px)' : 'translateX(0)';
   }
-
-  track.addEventListener('click', () => {
-    checkbox.checked = !checkbox.checked;
-    update();
-  });
+  track.addEventListener('click', () => { checkbox.checked = !checkbox.checked; update(); });
   update();
 }
 
@@ -218,25 +253,19 @@ function setToggle(checkboxId, trackId, value) {
 function renderKeywordTags() {
   const container = document.getElementById('muted-keywords-list');
   if (!container) return;
-
   if (mutedKeywords.length === 0) {
     container.innerHTML = '<span style="font-size:13px;color:var(--text-muted);font-style:italic;">No muted keywords yet.</span>';
     return;
   }
-
   container.innerHTML = mutedKeywords.map((kw, idx) => `
     <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:var(--bg-input);border:1px solid var(--border);border-radius:100px;font-size:13px;color:var(--text);">
       ${escapeHtml(kw)}
-      <button data-idx="${idx}" class="remove-keyword-btn"
-        style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:14px;line-height:1;padding:0;display:flex;align-items:center;"
-        onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--text-muted)'">×</button>
+      <button data-idx="${idx}" class="remove-keyword-btn" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:14px;line-height:1;padding:0;">×</button>
     </span>
   `).join('');
-
   container.querySelectorAll('.remove-keyword-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      const idx = parseInt(btn.dataset.idx);
-      mutedKeywords.splice(idx, 1);
+      mutedKeywords.splice(parseInt(btn.dataset.idx), 1);
       renderKeywordTags();
     });
   });
@@ -248,20 +277,16 @@ function showEditForm(profile) {
   document.getElementById('edit-bio').value = profile.bio || '';
   document.getElementById('edit-location').value = profile.location || '';
   document.getElementById('edit-website').value = profile.website || '';
-
   mutedKeywords = [...(profile.muted_keywords || [])];
   renderKeywordTags();
-
   initToggle('toggle-show-adult', 'toggle-show-adult-track');
   initToggle('toggle-is-adult-creator', 'toggle-is-adult-creator-track');
   setToggle('toggle-show-adult', 'toggle-show-adult-track', !!profile.show_adult_content);
   setToggle('toggle-is-adult-creator', 'toggle-is-adult-creator-track', !!profile.is_adult_creator);
-
   const addBtn = document.getElementById('add-keyword-btn');
   const keywordInput = document.getElementById('keyword-input');
   addBtn.onclick = () => addKeyword();
   keywordInput.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); addKeyword(); } };
-
   document.getElementById('save-profile-btn').onclick = saveProfile;
   document.getElementById('cancel-edit-btn').onclick = () => {
     document.getElementById('edit-profile-form').style.display = 'none';
@@ -286,11 +311,9 @@ async function saveProfile() {
   const website = document.getElementById('edit-website').value.trim();
   const showAdultContent = document.getElementById('toggle-show-adult')?.checked || false;
   const isAdultCreator = document.getElementById('toggle-is-adult-creator')?.checked || false;
-
   const btn = document.getElementById('save-profile-btn');
   btn.textContent = 'Saving...';
   btn.disabled = true;
-
   try {
     const { error } = await window.db.from('profiles').update({
       display_name: displayName, bio, location, website,
@@ -298,20 +321,10 @@ async function saveProfile() {
       is_adult_creator: isAdultCreator,
       muted_keywords: mutedKeywords
     }).eq('user_id', currentUser.id);
-
     if (error) throw error;
-
-    viewingProfile.display_name = displayName;
-    viewingProfile.bio = bio;
-    viewingProfile.location = location;
-    viewingProfile.website = website;
-    viewingProfile.show_adult_content = showAdultContent;
-    viewingProfile.is_adult_creator = isAdultCreator;
-    viewingProfile.muted_keywords = mutedKeywords;
-
+    viewingProfile = { ...viewingProfile, display_name: displayName, bio, location, website, show_adult_content: showAdultContent, is_adult_creator: isAdultCreator, muted_keywords: mutedKeywords };
     document.getElementById('profile-display-name').textContent = displayName || viewingProfile.username;
     document.getElementById('profile-bio').textContent = bio;
-
     const metaEl = document.getElementById('profile-meta');
     if (metaEl) {
       const parts = [];
@@ -319,21 +332,16 @@ async function saveProfile() {
       if (website) parts.push(`🔗 <a href="${escapeHtml(website)}" target="_blank" rel="noopener" style="color:var(--primary);text-decoration:none;">${escapeHtml(website.replace(/^https?:\/\//, ''))}</a>`);
       metaEl.innerHTML = parts.join('<span style="margin:0 4px;">·</span>');
     }
-
     document.getElementById('edit-profile-form').style.display = 'none';
-    btn.textContent = 'Save Profile';
-    btn.disabled = false;
-
   } catch (err) {
     console.error('Save profile error:', err);
-    btn.textContent = 'Save Profile';
-    btn.disabled = false;
   }
+  btn.textContent = 'Save Profile';
+  btn.disabled = false;
 }
 
 async function loadProfilePosts(userId) {
   const container = document.getElementById('profile-posts');
-
   const { data: posts } = await window.db
     .from('posts').select('*').eq('user_id', userId).eq('is_removed', false)
     .order('created_at', { ascending: false }).limit(20);
@@ -349,24 +357,22 @@ async function loadProfilePosts(userId) {
 
   const postIds = posts.map(p => p.id);
 
-  const { data: reactions } = await window.db
-    .from('reactions').select('target_id, reaction_type')
-    .in('target_id', postIds).eq('target_type', 'post');
+  const [reactionsRes, commentsRes] = await Promise.all([
+    window.db.from('reactions').select('target_id, reaction_type').in('target_id', postIds).eq('target_type', 'post'),
+    window.db.from('comments').select('post_id').in('post_id', postIds).eq('is_removed', false)
+  ]);
 
   const reactionMap = {};
-  if (reactions) {
-    reactions.forEach(r => {
+  if (reactionsRes.data) {
+    reactionsRes.data.forEach(r => {
       if (!reactionMap[r.target_id]) reactionMap[r.target_id] = {};
       reactionMap[r.target_id][r.reaction_type] = (reactionMap[r.target_id][r.reaction_type] || 0) + 1;
     });
   }
 
-  const { data: comments } = await window.db
-    .from('comments').select('post_id').in('post_id', postIds).eq('is_removed', false);
-
   const commentCountMap = {};
-  if (comments) {
-    comments.forEach(c => { commentCountMap[c.post_id] = (commentCountMap[c.post_id] || 0) + 1; });
+  if (commentsRes.data) {
+    commentsRes.data.forEach(c => { commentCountMap[c.post_id] = (commentCountMap[c.post_id] || 0) + 1; });
   }
 
   const username = profile?.username || 'unknown';
@@ -379,14 +385,31 @@ async function loadProfilePosts(userId) {
   const repBadge = repBadgeHtml(profile?.reputation);
 
   container.innerHTML = posts.map(post => {
-    const timestamp = new Date(post.created_at).toLocaleDateString('en-US', {
-      month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-    });
+    const timestamp = new Date(post.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
     const postReactions = reactionMap[post.id] || {};
     const likes = postReactions.like || 0;
     const commentCount = commentCountMap[post.id] || 0;
     const adultBadge = post.is_adult
       ? `<span style="font-size:11px;padding:2px 8px;border-radius:100px;background:rgba(239,68,68,0.15);color:#ef4444;font-weight:600;margin-left:8px;">🔞</span>`
+      : '';
+
+    // Media display
+    const mediaUrls = post.media_urls || [];
+    let mediaHtml = '';
+    if (mediaUrls.length > 0) {
+      const grid = mediaUrls.length === 1 ? '1fr' : 'repeat(2,1fr)';
+      mediaHtml = `<div style="display:grid;grid-template-columns:${grid};gap:6px;margin-top:10px;border-radius:10px;overflow:hidden;">
+        ${mediaUrls.map(url => {
+          const isVideo = url.match(/\.(mp4|mov|webm)(\?|$)/i);
+          return isVideo
+            ? `<video src="${url}" controls style="width:100%;max-height:300px;object-fit:cover;" playsinline></video>`
+            : `<img src="${url}" style="width:100%;${mediaUrls.length===1?'max-height:300px;':'aspect-ratio:1;'}object-fit:cover;cursor:pointer;" onclick="window.open('${url}','_blank')" />`;
+        }).join('')}
+      </div>`;
+    }
+
+    const checkinHtml = post.checkin_location
+      ? `<div style="font-size:13px;color:var(--text-muted);margin-top:6px;">📍 ${escapeHtml(post.checkin_location)}</div>`
       : '';
 
     return `
@@ -405,6 +428,8 @@ async function loadProfilePosts(userId) {
           </div>
         </div>
         <div class="post-content">${escapeHtml(post.content || '')}</div>
+        ${checkinHtml}
+        ${mediaHtml}
         <div class="post-actions">
           <button class="post-action-btn">❤️ ${likes > 0 ? likes : ''}</button>
           <button class="post-action-btn comment-link-btn" data-post-id="${post.id}">
@@ -420,11 +445,8 @@ async function loadProfilePosts(userId) {
   }).join('');
 
   container.querySelectorAll('.comment-link-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      window.location.href = `/comments.html?post=${btn.dataset.postId}`;
-    });
+    btn.addEventListener('click', () => { window.location.href = `/comments.html?post=${btn.dataset.postId}`; });
   });
-
   container.querySelectorAll('.share-link-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const url = `${window.location.origin}/comments.html?post=${btn.dataset.postId}`;
@@ -434,7 +456,6 @@ async function loadProfilePosts(userId) {
       });
     });
   });
-
   container.querySelectorAll('.delete-btn').forEach(btn => {
     btn.addEventListener('click', () => deletePost(btn.dataset.postId));
   });
@@ -449,18 +470,15 @@ async function deletePost(postId) {
 async function loadProfileCommunities() {
   const container = document.getElementById('profile-communities');
   if (!container) return;
-
   const { data: communities } = await window.db
     .from('communities').select('name, slug, logo_url').eq('is_official', true).order('name').limit(8);
-
   if (!communities) return;
-
   container.innerHTML = communities.map(c => {
     const logoHtml = c.logo_url
       ? `<img src="${c.logo_url}" alt="${escapeHtml(c.name)}" style="width:24px;height:24px;border-radius:4px;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'" />`
-      : `<div style="width:24px;height:24px;border-radius:4px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;">${c.name.charAt(0)}</div>`;
+      : `<div style="width:24px;height:24px;border-radius:4px;background:var(--primary-dim);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;">${c.name.charAt(0)}</div>`;
     return `
-      <a href="/community.html?slug=${c.slug}" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:8px;margin-bottom:6px;background:var(--bg-card);border:1px solid var(--border);color:var(--text);font-size:14px;text-decoration:none;transition:all 0.15s ease;">
+      <a href="/community.html?slug=${c.slug}" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:8px;margin-bottom:6px;background:var(--bg-card);border:1px solid var(--border);color:var(--text);font-size:14px;text-decoration:none;">
         ${logoHtml}
         <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(c.name)}</span>
       </a>
