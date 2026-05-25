@@ -1,4 +1,3 @@
-// Wait for Supabase to initialize then load page
 async function waitForDb(timeout = 5000) {
   const start = Date.now();
   while (!window.db) {
@@ -24,6 +23,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
+function communityLogoHtml(community) {
+  if (community.logo_url) {
+    return `
+      <img src="${community.logo_url}" alt="${community.name}"
+        style="width:48px;height:48px;border-radius:10px;object-fit:cover;flex-shrink:0;"
+        onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
+      <div style="display:none;width:48px;height:48px;border-radius:10px;background:var(--primary-dim);color:var(--primary);align-items:center;justify-content:center;font-size:20px;font-weight:800;flex-shrink:0;">
+        ${community.name.charAt(0)}
+      </div>`;
+  }
+  return `<div style="width:48px;height:48px;border-radius:10px;background:var(--primary-dim);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;flex-shrink:0;">${community.name.charAt(0)}</div>`;
+}
+
 async function loadCommunities() {
   const grid = document.getElementById('communities-grid');
   if (!grid) return;
@@ -34,7 +46,7 @@ async function loadCommunities() {
     const { data: communities, error } = await window.db
       .from('communities')
       .select('*')
-      .eq('community_type', 'portfolio')
+      .eq('is_official', true)
       .order('name');
 
     if (error) throw error;
@@ -47,12 +59,10 @@ async function loadCommunities() {
     grid.innerHTML = communities.map(community => `
       <a href="/community.html?slug=${community.slug}" class="community-card">
         <div class="community-card-header">
-          <div class="community-avatar">
-            ${community.name.charAt(0)}
-          </div>
+          ${communityLogoHtml(community)}
           <div>
             <div class="community-name">${community.name}</div>
-            <div class="community-type">Community</div>
+            <div class="community-type">v/${community.slug}</div>
           </div>
         </div>
         <div class="community-description">
