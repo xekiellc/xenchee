@@ -1,38 +1,12 @@
-// Shared @mention autocomplete for post and comment composers
+// ─── MENTION AUTOCOMPLETE ────────────────────────────────────────────────────
 
-async function initMentionAutocomplete(textareaId, dropdownId) {
+function initMentionAutocomplete(textareaId, dropdownId) {
   const textarea = document.getElementById(textareaId);
   const dropdown = document.getElementById(dropdownId);
   if (!textarea || !dropdown) return;
 
   let mentionStart = -1;
-  let mentionActive = false;
-
-  textarea.addEventListener('keydown', (e) => {
-    if (mentionActive) {
-      if (e.key === 'Escape') {
-        closeMentionDropdown(dropdown);
-        mentionActive = false;
-      }
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        moveMentionSelection(dropdown, 1);
-      }
-      if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        moveMentionSelection(dropdown, -1);
-      }
-      if (e.key === 'Enter' || e.key === 'Tab') {
-        const selected = dropdown.querySelector('.mention-option.selected');
-        if (selected) {
-          e.preventDefault();
-          insertMention(textarea, selected.dataset.username, mentionStart);
-          closeMentionDropdown(dropdown);
-          mentionActive = false;
-        }
-      }
-    }
-  });
+  let mentionQuery = '';
 
   textarea.addEventListener('input', async () => {
     const val = textarea.value;
@@ -47,102 +21,168 @@ async function initMentionAutocomplete(textareaId, dropdownId) {
 
     if (atPos === -1) {
       closeMentionDropdown(dropdown);
-      mentionActive = false;
-      return;
-    }
-
-    const query = val.slice(atPos + 1, cursor);
-    if (query.length === 0) {
-      closeMentionDropdown(dropdown);
-      mentionActive = false;
       return;
     }
 
     mentionStart = atPos;
-    mentionActive = true;
+    mentionQuery = val.slice(atPos + 1, cursor);
 
-    // Search users
-    const { data: users } = await window.db
-      .from('profiles')
-      .select('username, display_name')
-      .ilike('username', `${query}%`)
-      .limit(6);
-
-    if (!users || users.length === 0) {
+    if (mentionQuery.length < 1) {
       closeMentionDropdown(dropdown);
       return;
     }
 
-    dropdown.innerHTML = users.map((u, i) => `
-      <div class="mention-option${i === 0 ? ' selected' : ''}" data-username="${u.username}"
-        style="padding:8px 12px;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:14px;border-radius:6px;transition:background 0.1s ease;">
-        <div style="width:28px;height:28px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">
-          ${u.username.charAt(0).toUpperCase()}
-        </div>
-        <div>
-          <div style="font-weight:600;color:var(--text);">${escapeHtml(u.display_name || u.username)}</div>
-          <div style="font-size:12px;color:var(--text-muted);">@${escapeHtml(u.username)}</div>
-        </div>
-      </div>
-    `).join('');
-
-    dropdown.style.display = 'block';
-
-    // Click to select
-    dropdown.querySelectorAll('.mention-option').forEach(opt => {
-      opt.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        insertMention(textarea, opt.dataset.username, mentionStart);
-        closeMentionDropdown(dropdown);
-        mentionActive = false;
-      });
-      opt.addEventListener('mouseover', () => {
-        dropdown.querySelectorAll('.mention-option').forEach(o => o.classList.remove('selected'));
-        opt.classList.add('selected');
-      });
-    });
+    await searchMentions(mentionQuery, dropdown, textarea, mentionStart);
   });
 
-  // Close on outside click
+  textarea.addEventListener('keydown', (e) => {
+    if (dropdown.style.display === 'none') return;
+    const items = dropdown.querySelectorAll('.mention-item');
+    const active = dropdown.querySelector('.mention-item.active');
+    let idx = Array.from(items).indexOf(active);
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (idx < items.length - 1) {
+        if (active) active.classList.remove('active');
+        items[idx + 1].classList.add('active');
+      }
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (idx > 0) {
+        if (active) active.classList.remove('active');
+        items[idx - 1].classList.add('active');
+      }
+    } else if (e.key === 'Enter' || e.key === 'Tab') {
+      if (active) {
+        e.preventDefault();
+        insertMention(textarea, active.dataset.username, mentionStart, dropdown);
+      }
+    } else if (e.key === 'Escape') {
+      closeMentionDropdown(dropdown);
+    }
+  });
+
   document.addEventListener('click', (e) => {
     if (!dropdown.contains(e.target) && e.target !== textarea) {
       closeMentionDropdown(dropdown);
-      mentionActive = false;
     }
   });
 }
 
-function insertMention(textarea, username, atPos) {
+async function searchMentions(query, dropdown, textarea, mentionStart) {
+  if (!window.db) return;
+  try {
+    const { data: profiles } = await window.db
+      .from('profiles')
+      .select('user_id, username, display_name')
+      .ilike('username', `${query}%`)
+      .limit(6);
+
+    if (!profiles || profiles.length === 0) {
+      closeMentionDropdown(dropdown);
+      return;
+    }
+
+    dropdown.style.display = 'block';
+    dropdown.innerHTML = profiles.map((p, idx) => `
+      <div class="mention-item${idx === 0 ? ' active' : ''}"
+        data-username="${p.username}"
+        data-user-id="${p.user_id}"
+        style="display:flex;align-items:center;gap:10px;padding:8px 12px;cursor:pointer;border-radius:8px;transition:background 0.1s;">
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--primary-dim);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">
+          ${p.username.charAt(0).toUpperCase()}
+        </div>
+        <div>
+          <div style="font-size:14px;font-weight:600;color:var(--text);">${escapeHtmlMention(p.display_name || p.username)}</div>
+          <div style="font-size:12px;color:var(--text-muted);">@${escapeHtmlMention(p.username)}</div>
+        </div>
+      </div>
+    `).join('');
+
+    dropdown.querySelectorAll('.mention-item').forEach(item => {
+      item.addEventListener('mouseenter', () => {
+        dropdown.querySelectorAll('.mention-item').forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+      });
+      item.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        insertMention(textarea, item.dataset.username, mentionStart, dropdown);
+      });
+    });
+
+  } catch (err) {
+    closeMentionDropdown(dropdown);
+  }
+}
+
+function insertMention(textarea, username, mentionStart, dropdown) {
   const val = textarea.value;
   const cursor = textarea.selectionStart;
-  const before = val.slice(0, atPos);
+  const before = val.slice(0, mentionStart);
   const after = val.slice(cursor);
-  const mention = `@${username} `;
-  textarea.value = before + mention + after;
-  const newCursor = atPos + mention.length;
+  textarea.value = `${before}@${username} ${after}`;
+  const newCursor = mentionStart + username.length + 2;
   textarea.setSelectionRange(newCursor, newCursor);
   textarea.focus();
+  closeMentionDropdown(dropdown);
 }
 
 function closeMentionDropdown(dropdown) {
-  dropdown.style.display = 'none';
-  dropdown.innerHTML = '';
+  if (dropdown) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; }
 }
 
-function moveMentionSelection(dropdown, direction) {
-  const options = [...dropdown.querySelectorAll('.mention-option')];
-  const currentIndex = options.findIndex(o => o.classList.contains('selected'));
-  options.forEach(o => o.classList.remove('selected'));
-  let newIndex = currentIndex + direction;
-  if (newIndex < 0) newIndex = options.length - 1;
-  if (newIndex >= options.length) newIndex = 0;
-  options[newIndex].classList.add('selected');
-  options[newIndex].scrollIntoView({ block: 'nearest' });
-}
+// ─── MENTION RENDERING ───────────────────────────────────────────────────────
 
 function renderMentions(text) {
-  // Convert @username to clickable links
-  return escapeHtml(text).replace(/@([a-zA-Z0-9_]+)/g, (match, username) => {
-    return `<a href="/profile.html?user=${encodeURIComponent(username)}" style="color:var(--primary);font-weight:600;text-decoration:none;">@${username}</a>`;
+  if (!text) return '';
+  const escaped = escapeHtmlMention(text);
+  return escaped.replace(/@([a-zA-Z0-9_]+)/g, (match, username) => {
+    return `<a href="/profile.html?user=${username}" style="color:var(--primary);font-weight:600;text-decoration:none;">@${username}</a>`;
   });
+}
+
+// ─── MENTION NOTIFICATIONS ───────────────────────────────────────────────────
+
+async function fireMentionNotifications(content, postId, authorUserId) {
+  if (!window.db || !content) return;
+
+  const mentions = [...new Set(content.match(/@([a-zA-Z0-9_]+)/g) || [])];
+  if (mentions.length === 0) return;
+
+  const usernames = mentions.map(m => m.slice(1).toLowerCase());
+
+  try {
+    const { data: profiles } = await window.db
+      .from('profiles')
+      .select('user_id, username')
+      .in('username', usernames);
+
+    if (!profiles || profiles.length === 0) return;
+
+    const notifications = profiles
+      .filter(p => p.user_id !== authorUserId)
+      .map(p => ({
+        user_id: p.user_id,
+        type: 'mention',
+        reference_id: postId,
+        reference_type: 'post',
+        content: 'mentioned you in a post',
+        is_read: false
+      }));
+
+    if (notifications.length > 0) {
+      await window.db.from('notifications').insert(notifications);
+    }
+  } catch (err) {
+    console.error('Mention notification error:', err);
+  }
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+
+function escapeHtmlMention(text) {
+  const div = document.createElement('div');
+  div.appendChild(document.createTextNode(text || ''));
+  return div.innerHTML;
 }
