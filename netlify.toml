@@ -2,10 +2,5 @@
   publish = "."
   functions = "netlify/functions"
 
-[[plugins]]
-  package = "@netlify/plugin-cron"
-
-  [plugins.inputs]
-    crons = [
-      { schedule = "0 */6 * * *", function = "voxxee-seed" }
-    ]
+[functions."voxxee-seed"]
+  schedule = "0 */6 * * *"
