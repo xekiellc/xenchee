@@ -4,5 +4,8 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.0.0",
     "stripe": "^14.0.0"
+  },
+  "devDependencies": {
+    "@netlify/plugin-cron": "^1.0.0"
   }
 }
