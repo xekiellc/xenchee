@@ -11,6 +11,10 @@ let currentProfile = null;
 let feedMode = 'latest';
 let pollVisible = false;
 let activeGifPicker = null;
+let selectedMediaFiles = [];
+let selectedCheckin = null;
+let linkPreviewData = null;
+let linkPreviewTimeout = null;
 
 const REACTIONS = [
   { type: 'like', emoji: '❤️', label: 'Like' },
@@ -51,6 +55,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   initMentionAutocomplete('post-content', 'post-mention-dropdown');
+  setupMediaUpload();
+  setupCheckin();
+  setupLinkPreview();
 
   await Promise.all([
     loadFeed(),
@@ -80,6 +87,206 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 });
 
+// ─── MEDIA UPLOAD ────────────────────────────────────────────────────────────
+
+function setupMediaUpload() {
+  const mediaBtn = document.getElementById('media-upload-btn');
+  const mediaInput = document.getElementById('media-file-input');
+  const mediaPreview = document.getElementById('media-preview');
+  if (!mediaBtn || !mediaInput) return;
+
+  mediaBtn.addEventListener('click', () => mediaInput.click());
+
+  mediaInput.addEventListener('change', async () => {
+    const files = Array.from(mediaInput.files);
+    if (!files.length) return;
+
+    const allowed = ['image/jpeg','image/png','image/gif','image/webp','video/mp4','video/quicktime','video/webm'];
+    const valid = files.filter(f => allowed.includes(f.type) && f.size <= 50 * 1024 * 1024);
+
+    if (valid.length !== files.length) {
+      alert('Some files were skipped. Only images/videos under 50MB are allowed.');
+    }
+
+    selectedMediaFiles = [...selectedMediaFiles, ...valid].slice(0, 4);
+    renderMediaPreview();
+    mediaInput.value = '';
+  });
+}
+
+function renderMediaPreview() {
+  const preview = document.getElementById('media-preview');
+  if (!preview) return;
+
+  if (selectedMediaFiles.length === 0) {
+    preview.innerHTML = '';
+    preview.style.display = 'none';
+    return;
+  }
+
+  preview.style.display = 'grid';
+  preview.style.gridTemplateColumns = selectedMediaFiles.length === 1 ? '1fr' : 'repeat(2, 1fr)';
+  preview.style.gap = '8px';
+  preview.style.marginTop = '10px';
+
+  preview.innerHTML = selectedMediaFiles.map((file, idx) => {
+    const url = URL.createObjectURL(file);
+    const isVideo = file.type.startsWith('video/');
+    return `
+      <div style="position:relative;border-radius:8px;overflow:hidden;aspect-ratio:${selectedMediaFiles.length === 1 ? '16/9' : '1'};">
+        ${isVideo
+          ? `<video src="${url}" style="width:100%;height:100%;object-fit:cover;" muted playsinline></video>`
+          : `<img src="${url}" style="width:100%;height:100%;object-fit:cover;" />`
+        }
+        <button onclick="removeMediaFile(${idx})"
+          style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.7);color:#fff;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:14px;line-height:24px;text-align:center;">×</button>
+      </div>
+    `;
+  }).join('');
+}
+
+function removeMediaFile(idx) {
+  selectedMediaFiles.splice(idx, 1);
+  renderMediaPreview();
+}
+
+async function uploadMediaFiles(postId) {
+  if (!selectedMediaFiles.length) return [];
+  const urls = [];
+  for (const file of selectedMediaFiles) {
+    const ext = file.name.split('.').pop();
+    const path = `${currentUser.id}/${postId}/${Date.now()}.${ext}`;
+    const { data, error } = await window.db.storage
+      .from('voxxee-media')
+      .upload(path, file, { contentType: file.type, upsert: false });
+    if (!error && data) {
+      const { data: urlData } = window.db.storage
+        .from('voxxee-media')
+        .getPublicUrl(path);
+      if (urlData?.publicUrl) urls.push(urlData.publicUrl);
+    }
+  }
+  return urls;
+}
+
+// ─── CHECK-IN ────────────────────────────────────────────────────────────────
+
+function setupCheckin() {
+  const checkinBtn = document.getElementById('checkin-btn');
+  const checkinPanel = document.getElementById('checkin-panel');
+  if (!checkinBtn || !checkinPanel) return;
+
+  checkinBtn.addEventListener('click', () => {
+    const visible = checkinPanel.style.display === 'block';
+    if (visible) {
+      checkinPanel.style.display = 'none';
+      return;
+    }
+    checkinPanel.style.display = 'block';
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
+          const data = await res.json();
+          const city = data.address?.city || data.address?.town || data.address?.village || '';
+          const state = data.address?.state || '';
+          const country = data.address?.country_code?.toUpperCase() || '';
+          const location = [city, state, country].filter(Boolean).join(', ');
+          selectedCheckin = { location, latitude, longitude };
+          renderCheckinPreview();
+        } catch {
+          checkinPanel.innerHTML = '<div style="font-size:13px;color:var(--text-muted);padding:8px;">Could not detect location.</div>';
+        }
+      }, () => {
+        checkinPanel.innerHTML = '<div style="font-size:13px;color:var(--text-muted);padding:8px;">Location access denied.</div>';
+      });
+    }
+  });
+}
+
+function renderCheckinPreview() {
+  const panel = document.getElementById('checkin-panel');
+  if (!panel || !selectedCheckin) return;
+  panel.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;">
+      <span style="font-size:16px;">📍</span>
+      <span style="font-size:14px;color:var(--text);flex:1;">${escapeHtml(selectedCheckin.location)}</span>
+      <button onclick="clearCheckin()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:16px;">×</button>
+    </div>
+  `;
+}
+
+function clearCheckin() {
+  selectedCheckin = null;
+  const panel = document.getElementById('checkin-panel');
+  if (panel) panel.style.display = 'none';
+}
+
+// ─── LINK PREVIEW ────────────────────────────────────────────────────────────
+
+function setupLinkPreview() {
+  const textarea = document.getElementById('post-content');
+  if (!textarea) return;
+
+  textarea.addEventListener('input', () => {
+    clearTimeout(linkPreviewTimeout);
+    linkPreviewTimeout = setTimeout(() => detectAndFetchLinkPreview(textarea.value), 800);
+  });
+}
+
+async function detectAndFetchLinkPreview(text) {
+  const urlMatch = text.match(/https?:\/\/[^\s]+/);
+  if (!urlMatch) {
+    linkPreviewData = null;
+    renderLinkPreview(null);
+    return;
+  }
+  const url = urlMatch[0];
+  try {
+    const res = await fetch(`https://api.microlink.io?url=${encodeURIComponent(url)}`);
+    const data = await res.json();
+    if (data.status === 'success') {
+      linkPreviewData = {
+        url,
+        title: data.data.title || '',
+        description: data.data.description || '',
+        image: data.data.image?.url || '',
+        siteName: data.data.publisher || new URL(url).hostname
+      };
+      renderLinkPreview(linkPreviewData);
+    }
+  } catch {
+    linkPreviewData = null;
+  }
+}
+
+function renderLinkPreview(data) {
+  const container = document.getElementById('link-preview-container');
+  if (!container) return;
+  if (!data) { container.innerHTML = ''; container.style.display = 'none'; return; }
+  container.style.display = 'block';
+  container.innerHTML = `
+    <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:10px;position:relative;">
+      <button onclick="clearLinkPreview()"
+        style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:14px;line-height:24px;text-align:center;z-index:1;">×</button>
+      ${data.image ? `<img src="${data.image}" style="width:100%;height:160px;object-fit:cover;" onerror="this.style.display='none'" />` : ''}
+      <div style="padding:12px;">
+        <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">${escapeHtml(data.siteName)}</div>
+        <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px;">${escapeHtml(data.title)}</div>
+        ${data.description ? `<div style="font-size:13px;color:var(--text-muted);line-height:1.4;">${escapeHtml(data.description.slice(0, 120))}${data.description.length > 120 ? '...' : ''}</div>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+function clearLinkPreview() {
+  linkPreviewData = null;
+  renderLinkPreview(null);
+}
+
+// ─── BIRTHDAYS ───────────────────────────────────────────────────────────────
+
 async function loadBirthdays() {
   const sidebar = document.getElementById('birthdays-sidebar');
   const list = document.getElementById('birthdays-list');
@@ -107,8 +314,8 @@ async function loadBirthdays() {
       const displayName = p.display_name || p.username;
       const initial = p.username.charAt(0).toUpperCase();
       return `
-        <a href="/profile.html?user=${encodeURIComponent(p.username)}" style="display:flex;align-items:center;gap:10px;padding:8px 0;text-decoration:none;transition:opacity 0.15s ease;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
-          <div style="width:36px;height:36px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0;">${initial}</div>
+        <a href="/profile.html?user=${encodeURIComponent(p.username)}" style="display:flex;align-items:center;gap:10px;padding:8px 0;text-decoration:none;">
+          <div style="width:36px;height:36px;border-radius:50%;background:var(--primary-dim);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0;">${initial}</div>
           <div>
             <div style="font-size:14px;font-weight:600;color:var(--text);">${escapeHtml(displayName)}</div>
             <div style="font-size:12px;color:var(--text-muted);">@${escapeHtml(p.username)}</div>
@@ -430,8 +637,7 @@ async function loadFeed() {
                 ['violence', '💢 Violence or threats'],
                 ['other', '❓ Other']
               ].map(([value, label]) => `
-                <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:border-color 0.15s ease;"
-                  onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border)'">
+                <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;cursor:pointer;">
                   <input type="radio" name="report-reason" value="${value}" style="accent-color:var(--primary);" />
                   <span style="font-size:14px;color:var(--text);">${label}</span>
                 </label>
@@ -470,7 +676,6 @@ async function handleViewDiagnostics(postId, viewCount, reactionMap, commentCoun
     return;
   }
 
-  // Fetch fresh data
   const { data: reactions } = await window.db
     .from('reactions').select('reaction_type')
     .eq('target_id', postId).eq('target_type', 'post');
@@ -497,14 +702,7 @@ async function handleViewDiagnostics(postId, viewCount, reactionMap, commentCoun
 
   const panel = document.createElement('div');
   panel.className = 'diagnostics-panel';
-  panel.style.cssText = `
-    margin-top:12px;
-    background:var(--bg-input);
-    border:1px solid var(--border);
-    border-radius:12px;
-    padding:16px;
-    font-size:13px;
-  `;
+  panel.style.cssText = 'margin-top:12px;background:var(--bg-input);border:1px solid var(--border);border-radius:12px;padding:16px;font-size:13px;';
   panel.innerHTML = `
     <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px;">📊 Post Analytics</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
@@ -541,36 +739,27 @@ async function handleViewDiagnostics(postId, viewCount, reactionMap, commentCoun
   `;
 
   const postActions = card.querySelector('.post-actions');
-  if (postActions) {
-    postActions.before(panel);
-  }
+  if (postActions) postActions.before(panel);
 }
 
 function renderSharedPost(sharedPost, sharedProfileMap) {
   if (!sharedPost) {
-    return `
-      <div style="margin-top:12px;padding:14px;background:var(--bg-input);border:1px solid var(--border);border-radius:12px;">
-        <div style="font-size:13px;color:var(--text-muted);font-style:italic;">Original post unavailable.</div>
-      </div>
-    `;
+    return `<div style="margin-top:12px;padding:14px;background:var(--bg-input);border:1px solid var(--border);border-radius:12px;"><div style="font-size:13px;color:var(--text-muted);font-style:italic;">Original post unavailable.</div></div>`;
   }
   const profile = sharedProfileMap[sharedPost.user_id];
   const username = profile?.username || 'unknown';
   const displayName = profile?.display_name || username;
   const initial = username.charAt(0).toUpperCase();
   const verifiedBadge = getVerifiedBadge(profile);
-  const timestamp = new Date(sharedPost.created_at).toLocaleDateString('en-US', {
-    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-  });
+  const timestamp = new Date(sharedPost.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   const content = sharedPost.is_removed
     ? '<em style="color:var(--text-muted);">This post has been deleted.</em>'
     : escapeHtml(sharedPost.content || '');
-
   return `
     <div style="margin-top:12px;padding:14px;background:var(--bg-input);border:1px solid var(--border);border-radius:12px;cursor:pointer;"
       onclick="window.location.href='/comments.html?post=${sharedPost.id}'">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-        <div style="width:28px;height:28px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">${initial}</div>
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--primary-dim);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">${initial}</div>
         <div>
           <span style="font-size:13px;font-weight:700;color:var(--text);">${escapeHtml(displayName)}</span>
           ${verifiedBadge}
@@ -601,11 +790,7 @@ function closeReportModal() {
 async function handleReport(postId) {
   const reason = document.querySelector('input[name="report-reason"]:checked')?.value;
   const errorEl = document.getElementById('report-error');
-  if (!reason) {
-    errorEl.textContent = 'Please select a reason.';
-    errorEl.style.display = 'block';
-    return;
-  }
+  if (!reason) { errorEl.textContent = 'Please select a reason.'; errorEl.style.display = 'block'; return; }
   const submitBtn = document.getElementById('report-modal-submit');
   submitBtn.textContent = 'Submitting...';
   submitBtn.disabled = true;
@@ -621,16 +806,10 @@ async function handleReport(postId) {
       return;
     }
     const { error } = await window.db.from('reports').insert({
-      reporter_id: currentUser.id, target_id: postId,
-      target_type: 'post', reason, status: 'pending'
+      reporter_id: currentUser.id, target_id: postId, target_type: 'post', reason, status: 'pending'
     });
     if (error) throw error;
     closeReportModal();
-    const menuBtn = document.querySelector(`.post-menu-btn[data-post-id="${postId}"]`);
-    if (menuBtn) {
-      menuBtn.textContent = '✅';
-      setTimeout(() => { menuBtn.textContent = '•••'; }, 2000);
-    }
   } catch (err) {
     console.error('Report error:', err);
     errorEl.textContent = 'Something went wrong. Please try again.';
@@ -666,24 +845,10 @@ async function handleShare(postId) {
   submitBtn.textContent = 'Reposting...';
   submitBtn.disabled = true;
   try {
-    const { error: shareError } = await window.db
-      .from('shares').insert({ post_id: postId, user_id: currentUser.id, comment });
-    if (shareError) throw shareError;
+    await window.db.from('shares').insert({ post_id: postId, user_id: currentUser.id, comment });
     const shareContent = comment ? `${comment}\n\n🔁 [Reposted]` : '🔁 [Reposted]';
-    await window.db.from('posts').insert({
-      user_id: currentUser.id, content: shareContent, shared_post_id: postId
-    });
+    await window.db.from('posts').insert({ user_id: currentUser.id, content: shareContent, shared_post_id: postId });
     closeShareModal();
-    const shareBtn = document.querySelector(`.share-btn[data-post-id="${postId}"]`);
-    if (shareBtn) {
-      const current = parseInt(shareBtn.dataset.shareCount || '0');
-      const newCount = current + 1;
-      shareBtn.dataset.shareCount = newCount;
-      shareBtn.textContent = `🔁 ${newCount}`;
-      shareBtn.style.color = 'var(--primary)';
-      shareBtn.style.fontWeight = '700';
-      setTimeout(() => { shareBtn.style.color = ''; shareBtn.style.fontWeight = ''; }, 2000);
-    }
   } catch (err) {
     console.error('Share error:', err);
     closeShareModal();
@@ -700,9 +865,7 @@ async function recordFeedViews(postIds) {
     const viewed = JSON.parse(sessionStorage.getItem(viewedKey) || '[]');
     const newPostIds = postIds.filter(id => !viewed.includes(id));
     if (newPostIds.length === 0) return;
-    await window.db.from('post_views').insert(
-      newPostIds.map(post_id => ({ post_id, user_id: currentUser.id }))
-    );
+    await window.db.from('post_views').insert(newPostIds.map(post_id => ({ post_id, user_id: currentUser.id })));
     sessionStorage.setItem(viewedKey, JSON.stringify([...viewed, ...newPostIds]));
   } catch (err) {}
 }
@@ -716,13 +879,9 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
   const repBadge = repBadgeHtml(profile?.reputation);
   const community = post.community_id && communityMap[post.community_id]
     ? `<span class="post-community">in ${communityMap[post.community_id].name}</span>` : '';
-  const timestamp = new Date(post.created_at).toLocaleDateString('en-US', {
-    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-  });
-  const editedLabel = post.is_edited
-    ? `<span style="font-size:11px;color:var(--text-muted);"> · edited</span>` : '';
-  const adultBadge = post.is_adult
-    ? `<span style="font-size:11px;padding:2px 6px;border-radius:100px;background:rgba(239,68,68,0.15);color:#ef4444;font-weight:600;">🔞</span>` : '';
+  const timestamp = new Date(post.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const editedLabel = post.is_edited ? `<span style="font-size:11px;color:var(--text-muted);"> · edited</span>` : '';
+  const adultBadge = post.is_adult ? `<span style="font-size:11px;padding:2px 6px;border-radius:100px;background:rgba(239,68,68,0.15);color:#ef4444;font-weight:600;">🔞</span>` : '';
 
   const commentCount = commentCountMap[post.id] || 0;
   const myReaction = myReactionMap[post.id];
@@ -741,15 +900,9 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
   const reactBtnLabel = myReactionObj ? `${myReactionObj.emoji} ${myReactionObj.label}` : '❤️ React';
   const reactBtnStyle = myReaction ? 'font-weight:700;color:var(--primary);' : '';
 
-  // View label — clickable for own posts to show diagnostics
   const viewLabel = viewCount > 0 ? (
     isOwnPost
-      ? `<button class="view-label-btn post-action-btn" data-post-id="${post.id}"
-           data-view-count="${viewCount}" data-comment-count="${commentCount}" data-share-count="${shareCount}"
-           style="font-size:12px;color:var(--text-muted);background:none;border:none;cursor:pointer;padding:0;"
-           title="Click to see post analytics">
-           👁 ${viewCount.toLocaleString()} view${viewCount !== 1 ? 's' : ''} 📊
-         </button>`
+      ? `<button class="view-label-btn post-action-btn" data-post-id="${post.id}" data-view-count="${viewCount}" data-comment-count="${commentCount}" data-share-count="${shareCount}" style="font-size:12px;color:var(--text-muted);background:none;border:none;cursor:pointer;padding:0;" title="Click to see post analytics">👁 ${viewCount.toLocaleString()} view${viewCount !== 1 ? 's' : ''} 📊</button>`
       : `<span style="font-size:12px;color:var(--text-muted);">👁 ${viewCount.toLocaleString()} view${viewCount !== 1 ? 's' : ''}</span>`
   ) : '';
 
@@ -760,6 +913,42 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
   const postContent = post.shared_post_id
     ? (post.content || '').replace(/\n\n🔁 \[Reposted\]$/, '').trim()
     : (post.content || '');
+
+  // Media display
+  const mediaUrls = post.media_urls || [];
+  let mediaHtml = '';
+  if (mediaUrls.length > 0) {
+    const grid = mediaUrls.length === 1 ? '1fr' : 'repeat(2,1fr)';
+    mediaHtml = `<div style="display:grid;grid-template-columns:${grid};gap:6px;margin-top:10px;border-radius:10px;overflow:hidden;">
+      ${mediaUrls.map(url => {
+        const isVideo = url.match(/\.(mp4|mov|webm)(\?|$)/i);
+        return isVideo
+          ? `<video src="${url}" controls style="width:100%;max-height:400px;object-fit:cover;background:#000;" playsinline></video>`
+          : `<img src="${url}" style="width:100%;${mediaUrls.length===1?'max-height:400px;':'aspect-ratio:1;'}object-fit:cover;cursor:pointer;" onclick="window.open('${url}','_blank')" />`;
+      }).join('')}
+    </div>`;
+  }
+
+  // Check-in display
+  const checkinHtml = post.checkin_location
+    ? `<div style="font-size:13px;color:var(--text-muted);margin-top:6px;">📍 ${escapeHtml(post.checkin_location)}</div>`
+    : '';
+
+  // Link preview display
+  let linkPreviewHtml = '';
+  if (post.link_preview && typeof post.link_preview === 'object') {
+    const lp = post.link_preview;
+    linkPreviewHtml = `
+      <a href="${lp.url}" target="_blank" rel="noopener noreferrer" style="display:block;margin-top:10px;border:1px solid var(--border);border-radius:10px;overflow:hidden;text-decoration:none;">
+        ${lp.image ? `<img src="${lp.image}" style="width:100%;height:160px;object-fit:cover;" onerror="this.style.display='none'" />` : ''}
+        <div style="padding:12px;">
+          <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">${escapeHtml(lp.siteName || '')}</div>
+          <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px;">${escapeHtml(lp.title || '')}</div>
+          ${lp.description ? `<div style="font-size:13px;color:var(--text-muted);">${escapeHtml(lp.description.slice(0,120))}${lp.description.length>120?'...':''}</div>` : ''}
+        </div>
+      </a>
+    `;
+  }
 
   const poll = pollMap ? pollMap[post.id] : null;
   let pollHtml = '';
@@ -780,19 +969,17 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
               return `
                 <div style="margin-bottom:8px;">
                   <div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:4px;">
-                    <span style="color:var(--text);${isMyVote ? 'font-weight:700;' : ''}">${isMyVote ? '✓ ' : ''}${escapeHtml(opt)}</span>
+                    <span style="color:var(--text);${isMyVote?'font-weight:700;':''}">${isMyVote?'✓ ':''}${escapeHtml(opt)}</span>
                     <span style="color:var(--text-muted);">${pct}%</span>
                   </div>
                   <div style="height:6px;background:var(--border);border-radius:100px;overflow:hidden;">
-                    <div style="height:100%;width:${pct}%;background:${isMyVote ? 'var(--primary)' : 'var(--text-muted)'};border-radius:100px;transition:width 0.3s ease;"></div>
+                    <div style="height:100%;width:${pct}%;background:${isMyVote?'var(--primary)':'var(--text-muted)'};border-radius:100px;transition:width 0.3s ease;"></div>
                   </div>
                 </div>`;
             } else {
               return `
                 <button class="poll-vote-btn" data-poll-id="${poll.id}" data-option-index="${idx}"
-                  style="display:block;width:100%;text-align:left;padding:10px 14px;margin-bottom:6px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:14px;color:var(--text);transition:all 0.15s ease;"
-                  onmouseover="this.style.borderColor='var(--primary)';this.style.background='var(--bg-hover)'"
-                  onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--bg-card)'">
+                  style="display:block;width:100%;text-align:left;padding:10px 14px;margin-bottom:6px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:14px;color:var(--text);">
                   ${escapeHtml(opt)}
                 </button>`;
             }
@@ -800,7 +987,7 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
         </div>
         <div style="font-size:12px;color:var(--text-muted);margin-top:8px;">
           ${totalVotes} vote${totalVotes !== 1 ? 's' : ''}
-          ${isExpired ? ' · Closed' : poll.expires_at ? ` · Ends ${new Date(poll.expires_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : ''}
+          ${isExpired ? ' · Closed' : poll.expires_at ? ` · Ends ${new Date(poll.expires_at).toLocaleDateString('en-US',{month:'short',day:'numeric'})}` : ''}
         </div>
       </div>`;
   }
@@ -824,31 +1011,20 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
             ${adultBadge}
             ${modeLabel}
           </div>
-          <div style="display:flex;gap:8px;align-items:center;">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
             <span class="post-timestamp">${timestamp}</span>
             ${editedLabel}
             ${community}
           </div>
         </div>
         <div class="post-menu-wrapper" style="position:relative;margin-left:auto;">
-          <button class="post-menu-btn" data-post-id="${post.id}"
-            style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:18px;padding:4px 8px;border-radius:6px;line-height:1;">•••</button>
-          <div class="post-menu-dropdown" data-post-id="${post.id}"
-            style="display:none;position:absolute;top:28px;right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.3);z-index:200;min-width:150px;overflow:hidden;">
+          <button class="post-menu-btn" data-post-id="${post.id}" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:18px;padding:4px 8px;border-radius:6px;line-height:1;">•••</button>
+          <div class="post-menu-dropdown" data-post-id="${post.id}" style="display:none;position:absolute;top:28px;right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.3);z-index:200;min-width:150px;overflow:hidden;">
             ${isOwnPost ? `
-              <button class="edit-btn" data-post-id="${post.id}" data-content="${escapeHtml(post.content || '')}"
-                style="display:block;width:100%;text-align:left;padding:10px 16px;background:none;border:none;cursor:pointer;font-size:14px;color:var(--text);">
-                ✏️ Edit
-              </button>
-              <button class="delete-btn" data-post-id="${post.id}"
-                style="display:block;width:100%;text-align:left;padding:10px 16px;background:none;border:none;cursor:pointer;font-size:14px;color:var(--danger);">
-                🗑️ Delete
-              </button>
+              <button class="edit-btn" data-post-id="${post.id}" data-content="${escapeHtml(post.content || '')}" style="display:block;width:100%;text-align:left;padding:10px 16px;background:none;border:none;cursor:pointer;font-size:14px;color:var(--text);">✏️ Edit</button>
+              <button class="delete-btn" data-post-id="${post.id}" style="display:block;width:100%;text-align:left;padding:10px 16px;background:none;border:none;cursor:pointer;font-size:14px;color:var(--danger);">🗑️ Delete</button>
             ` : `
-              <button class="report-btn" data-post-id="${post.id}"
-                style="display:block;width:100%;text-align:left;padding:10px 16px;background:none;border:none;cursor:pointer;font-size:14px;color:var(--danger);">
-                🚩 Report Post
-              </button>
+              <button class="report-btn" data-post-id="${post.id}" style="display:block;width:100%;text-align:left;padding:10px 16px;background:none;border:none;cursor:pointer;font-size:14px;color:var(--danger);">🚩 Report Post</button>
             `}
           </div>
         </div>
@@ -856,6 +1032,9 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
 
       <div class="post-content-wrapper">
         ${postContent ? `<div class="post-content">${renderMentions(postContent)}</div>` : ''}
+        ${checkinHtml}
+        ${mediaHtml}
+        ${linkPreviewHtml}
         ${sharedPostHtml}
       </div>
 
@@ -870,46 +1049,33 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
 
       <div class="post-actions">
         <div class="reaction-btn-wrapper" style="position:relative;">
-          <button class="post-action-btn react-btn" data-post-id="${post.id}" style="${reactBtnStyle}">
-            ${reactBtnLabel}
-          </button>
+          <button class="post-action-btn react-btn" data-post-id="${post.id}" style="${reactBtnStyle}">${reactBtnLabel}</button>
           <div class="reaction-picker" data-post-id="${post.id}" style="display:none;position:absolute;bottom:36px;left:0;background:var(--bg-card);border:1px solid var(--border);border-radius:100px;padding:6px 10px;gap:4px;z-index:100;box-shadow:0 4px 20px rgba(0,0,0,0.3);">
             ${REACTIONS.map(r => `
               <button class="reaction-option" data-post-id="${post.id}" data-type="${r.type}" title="${r.label}"
                 style="background:none;border:none;cursor:pointer;font-size:22px;padding:2px 4px;border-radius:50%;transition:transform 0.1s ease;${myReaction === r.type ? 'transform:scale(1.3);' : ''}"
-                onmouseover="this.style.transform='scale(1.3)'"
-                onmouseout="this.style.transform='${myReaction === r.type ? 'scale(1.3)' : 'scale(1)'}'">
+                onmouseover="this.style.transform='scale(1.3)'" onmouseout="this.style.transform='${myReaction === r.type ? 'scale(1.3)' : 'scale(1)'}'">
                 ${r.emoji}
               </button>
             `).join('')}
           </div>
         </div>
-        <button class="post-action-btn comment-btn" data-post-id="${post.id}">
-          💬 <span>${commentCount > 0 ? commentCount : ''} Comment${commentCount !== 1 ? 's' : ''}</span>
-        </button>
+        <button class="post-action-btn comment-btn" data-post-id="${post.id}">💬 <span>${commentCount > 0 ? commentCount : ''} Comment${commentCount !== 1 ? 's' : ''}</span></button>
         <div class="gif-picker-wrapper" style="position:relative;">
           <button class="post-action-btn gif-react-btn" data-post-id="${post.id}">🎞️ GIF</button>
-          <div class="gif-picker-panel" data-post-id="${post.id}"
-            style="display:none;position:absolute;bottom:40px;left:0;width:300px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,0.4);z-index:300;overflow:hidden;">
+          <div class="gif-picker-panel" data-post-id="${post.id}" style="display:none;position:absolute;bottom:40px;left:0;width:300px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,0.4);z-index:300;overflow:hidden;">
             <div style="padding:10px;">
               <div style="display:flex;gap:6px;margin-bottom:8px;">
                 <input type="text" class="gif-search-input form-input" placeholder="Search GIFs..." style="flex:1;font-size:13px;padding:6px 10px;" />
                 <button class="gif-search-btn" data-post-id="${post.id}" style="background:var(--primary);color:#fff;border:none;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:13px;">Go</button>
               </div>
-              <div class="gif-results" data-post-id="${post.id}"
-                style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;max-height:200px;overflow-y:auto;">
+              <div class="gif-results" data-post-id="${post.id}" style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;max-height:200px;overflow-y:auto;">
                 <div style="grid-column:1/-1;font-size:12px;color:var(--text-muted);padding:8px;text-align:center;">Loading GIFs...</div>
               </div>
             </div>
           </div>
         </div>
-        <button class="post-action-btn share-btn"
-          data-post-id="${post.id}"
-          data-post-content="${escapeHtml(post.content || '')}"
-          data-post-username="${escapeHtml(username)}"
-          data-share-count="${shareCount}">
-          🔁 ${shareCount > 0 ? shareCount : 'Repost'}
-        </button>
+        <button class="post-action-btn share-btn" data-post-id="${post.id}" data-post-content="${escapeHtml(post.content || '')}" data-post-username="${escapeHtml(username)}" data-share-count="${shareCount}">🔁 ${shareCount > 0 ? shareCount : 'Repost'}</button>
         <button class="post-action-btn copy-link-btn" data-post-id="${post.id}">🔗</button>
       </div>
     </div>
@@ -933,8 +1099,7 @@ function attachPostListeners() {
       e.stopPropagation();
       const postId = btn.dataset.postId;
       const type = btn.dataset.type;
-      const picker = document.querySelector(`.reaction-picker[data-post-id="${postId}"]`);
-      picker.style.display = 'none';
+      document.querySelector(`.reaction-picker[data-post-id="${postId}"]`).style.display = 'none';
       handleReaction(postId, type);
     });
   });
@@ -955,8 +1120,7 @@ function attachPostListeners() {
       e.stopPropagation();
       const postId = btn.dataset.postId;
       const content = btn.dataset.content;
-      const menu = document.querySelector(`.post-menu-dropdown[data-post-id="${postId}"]`);
-      menu.style.display = 'none';
+      document.querySelector(`.post-menu-dropdown[data-post-id="${postId}"]`).style.display = 'none';
       showEditForm(postId, content);
     });
   });
@@ -980,9 +1144,7 @@ function attachPostListeners() {
   });
 
   document.querySelectorAll('.comment-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      window.location.href = `/comments.html?post=${btn.dataset.postId}`;
-    });
+    btn.addEventListener('click', () => { window.location.href = `/comments.html?post=${btn.dataset.postId}`; });
   });
 
   document.querySelectorAll('.poll-vote-btn').forEach(btn => {
@@ -990,9 +1152,7 @@ function attachPostListeners() {
   });
 
   document.querySelectorAll('.share-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      openShareModal(btn.dataset.postId, btn.dataset.postContent, btn.dataset.postUsername);
-    });
+    btn.addEventListener('click', () => openShareModal(btn.dataset.postId, btn.dataset.postContent, btn.dataset.postUsername));
   });
 
   document.querySelectorAll('.copy-link-btn').forEach(btn => {
@@ -1008,11 +1168,7 @@ function attachPostListeners() {
   document.querySelectorAll('.view-label-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
-      const postId = btn.dataset.postId;
-      const viewCount = parseInt(btn.dataset.viewCount || '0');
-      const commentCount = parseInt(btn.dataset.commentCount || '0');
-      const shareCount = parseInt(btn.dataset.shareCount || '0');
-      handleViewDiagnostics(postId, viewCount, {}, commentCount, shareCount);
+      handleViewDiagnostics(btn.dataset.postId, parseInt(btn.dataset.viewCount||'0'), {}, parseInt(btn.dataset.commentCount||'0'), parseInt(btn.dataset.shareCount||'0'));
     });
   });
 
@@ -1049,9 +1205,8 @@ function attachPostListeners() {
       e.stopPropagation();
       if (e.key === 'Enter') {
         const panel = input.closest('.gif-picker-panel');
-        const postId = panel.dataset.postId;
         const query = input.value.trim();
-        if (query) searchGifsForPost(postId, query);
+        if (query) searchGifsForPost(panel.dataset.postId, query);
       }
     });
     input.addEventListener('click', (e) => e.stopPropagation());
@@ -1068,7 +1223,7 @@ async function loadGifPickerTrending(postId) {
     const res = await fetch(`https://api.giphy.com/v1/gifs/trending?api_key=${key}&limit=12&rating=g`);
     const data = await res.json();
     renderGifPickerResults(postId, data.data);
-  } catch (err) {
+  } catch {
     resultsEl.innerHTML = '<div style="grid-column:1/-1;font-size:12px;color:var(--text-muted);padding:8px;">Could not load GIFs.</div>';
   }
 }
@@ -1083,7 +1238,7 @@ async function searchGifsForPost(postId, query) {
     const res = await fetch(`https://api.giphy.com/v1/gifs/search?api_key=${key}&q=${encodeURIComponent(query)}&limit=12&rating=g`);
     const data = await res.json();
     renderGifPickerResults(postId, data.data);
-  } catch (err) {
+  } catch {
     resultsEl.innerHTML = '<div style="grid-column:1/-1;font-size:12px;color:var(--text-muted);padding:8px;">Search failed.</div>';
   }
 }
@@ -1095,16 +1250,11 @@ function renderGifPickerResults(postId, gifs) {
     resultsEl.innerHTML = '<div style="grid-column:1/-1;font-size:12px;color:var(--text-muted);padding:8px;">No GIFs found.</div>';
     return;
   }
-  resultsEl.innerHTML = gifs.map(gif => {
-    const preview = gif.images.fixed_height_small.url;
-    const full = gif.images.fixed_height.url;
-    return `
-      <img src="${preview}" data-full="${full}"
-        style="width:100%;height:70px;object-fit:cover;border-radius:6px;cursor:pointer;transition:opacity 0.15s ease;"
-        class="gif-pick-item" data-post-id="${postId}"
-        onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'" />
-    `;
-  }).join('');
+  resultsEl.innerHTML = gifs.map(gif => `
+    <img src="${gif.images.fixed_height_small.url}" data-full="${gif.images.fixed_height.url}"
+      style="width:100%;height:70px;object-fit:cover;border-radius:6px;cursor:pointer;"
+      class="gif-pick-item" data-post-id="${postId}" />
+  `).join('');
   resultsEl.querySelectorAll('.gif-pick-item').forEach(img => {
     img.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -1118,15 +1268,7 @@ async function postGifReaction(postId, gifUrl) {
   document.querySelectorAll('.gif-picker-panel').forEach(p => p.style.display = 'none');
   activeGifPicker = null;
   try {
-    const { error } = await window.db
-      .from('comments').insert({ post_id: postId, user_id: currentUser.id, content: gifUrl });
-    if (error) throw error;
-    const commentBtn = document.querySelector(`.comment-btn[data-post-id="${postId}"] span`);
-    if (commentBtn) {
-      const current = parseInt(commentBtn.textContent) || 0;
-      const newCount = current + 1;
-      commentBtn.textContent = `${newCount} Comment${newCount !== 1 ? 's' : ''}`;
-    }
+    await window.db.from('comments').insert({ post_id: postId, user_id: currentUser.id, content: gifUrl });
     const gifBtn = document.querySelector(`.gif-react-btn[data-post-id="${postId}"]`);
     if (gifBtn) {
       gifBtn.textContent = '✅ Sent!';
@@ -1144,9 +1286,7 @@ async function handlePollVote(pollId, optionIndex) {
     const { data: existing } = await window.db
       .from('poll_votes').select('id').eq('poll_id', pollId).eq('user_id', currentUser.id).single();
     if (existing) return;
-    const { error } = await window.db
-      .from('poll_votes').insert({ poll_id: pollId, user_id: currentUser.id, option_index: optionIndex });
-    if (error) throw error;
+    await window.db.from('poll_votes').insert({ poll_id: pollId, user_id: currentUser.id, option_index: optionIndex });
     await refreshPollResults(pollId);
   } catch (err) {
     console.error('Poll vote error:', err);
@@ -1162,8 +1302,7 @@ async function refreshPollResults(pollId) {
   const voteCounts = {};
   if (allVotes) allVotes.forEach(v => { voteCounts[v.option_index] = (voteCounts[v.option_index] || 0) + 1; });
   const totalVotes = allVotes ? allVotes.length : 0;
-  const { data: myVoteRow } = await window.db.from('poll_votes').select('option_index')
-    .eq('poll_id', pollId).eq('user_id', currentUser.id).single();
+  const { data: myVoteRow } = await window.db.from('poll_votes').select('option_index').eq('poll_id', pollId).eq('user_id', currentUser.id).single();
   const myVote = myVoteRow ? myVoteRow.option_index : null;
   const options = poll.options || [];
   const isExpired = poll.expires_at && new Date(poll.expires_at) < new Date();
@@ -1176,18 +1315,16 @@ async function refreshPollResults(pollId) {
       return `
         <div style="margin-bottom:8px;">
           <div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:4px;">
-            <span style="color:var(--text);${isMyVote ? 'font-weight:700;' : ''}">${isMyVote ? '✓ ' : ''}${escapeHtml(opt)}</span>
+            <span style="color:var(--text);${isMyVote?'font-weight:700;':''}">${isMyVote?'✓ ':''}${escapeHtml(opt)}</span>
             <span style="color:var(--text-muted);">${pct}%</span>
           </div>
           <div style="height:6px;background:var(--border);border-radius:100px;overflow:hidden;">
-            <div style="height:100%;width:${pct}%;background:${isMyVote ? 'var(--primary)' : 'var(--text-muted)'};border-radius:100px;transition:width 0.3s ease;"></div>
+            <div style="height:100%;width:${pct}%;background:${isMyVote?'var(--primary)':'var(--text-muted)'};border-radius:100px;transition:width 0.3s ease;"></div>
           </div>
         </div>
       `;
     }).join('');
   }
-  const voteCountEl = pollCard.querySelector('.poll-vote-count');
-  if (voteCountEl) voteCountEl.textContent = `${totalVotes} vote${totalVotes !== 1 ? 's' : ''}${isExpired ? ' · Closed' : ''}`;
 }
 
 function showEditForm(postId, currentContent) {
@@ -1196,9 +1333,7 @@ function showEditForm(postId, currentContent) {
   const wrapper = card.querySelector('.post-content-wrapper');
   wrapper.innerHTML = `
     <div style="margin-top:8px;">
-      <textarea class="form-input edit-post-textarea" data-post-id="${postId}"
-        style="width:100%;resize:vertical;min-height:80px;font-size:15px;"
-        maxlength="2000">${currentContent}</textarea>
+      <textarea class="form-input edit-post-textarea" data-post-id="${postId}" style="width:100%;resize:vertical;min-height:80px;font-size:15px;" maxlength="2000">${currentContent}</textarea>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;">
         <button class="btn btn-ghost cancel-edit-btn" data-post-id="${postId}" style="font-size:13px;">Cancel</button>
         <button class="btn btn-primary save-edit-btn" data-post-id="${postId}" style="font-size:13px;">Save</button>
@@ -1226,20 +1361,9 @@ async function handleEditPost(postId, newContent, wrapper, originalContent) {
   saveBtn.textContent = 'Saving...';
   saveBtn.disabled = true;
   try {
-    const { error } = await window.db
-      .from('posts').update({ content: newContent, is_edited: true })
-      .eq('id', postId).eq('user_id', currentUser.id);
+    const { error } = await window.db.from('posts').update({ content: newContent, is_edited: true }).eq('id', postId).eq('user_id', currentUser.id);
     if (error) throw error;
     wrapper.innerHTML = `<div class="post-content">${renderMentions(newContent)}</div>`;
-    const card = document.querySelector(`.post-card[data-post-id="${postId}"]`);
-    const timestampDiv = card?.querySelector('.post-timestamp')?.parentElement;
-    if (timestampDiv && !timestampDiv.querySelector('.edited-label')) {
-      const editedSpan = document.createElement('span');
-      editedSpan.className = 'edited-label';
-      editedSpan.style.cssText = 'font-size:11px;color:var(--text-muted);';
-      editedSpan.textContent = ' · edited';
-      timestampDiv.appendChild(editedSpan);
-    }
   } catch (err) {
     console.error('Edit error:', err);
     saveBtn.textContent = 'Save';
@@ -1251,36 +1375,18 @@ async function handleReaction(postId, type) {
   if (!currentUser) return;
   try {
     const { data: existing } = await window.db
-      .from('reactions').select('*')
-      .eq('user_id', currentUser.id).eq('target_id', postId).eq('target_type', 'post').single();
-
+      .from('reactions').select('*').eq('user_id', currentUser.id).eq('target_id', postId).eq('target_type', 'post').single();
     if (existing) {
       if (existing.reaction_type === type) {
         await window.db.from('reactions').delete().eq('id', existing.id);
-        const { data: post } = await window.db.from('posts').select('user_id').eq('id', postId).single();
-        if (post && post.user_id !== currentUser.id) {
-          const reversePoints = existing.reaction_type === 'downvote' ? 1 : -1;
-          await window.db.from('reputation_events').insert({
-            user_id: post.user_id, source_user_id: currentUser.id,
-            event_type: 'reaction_removed', points: reversePoints,
-            target_id: postId, target_type: 'post'
-          });
-          const { data: ownerProfile } = await window.db
-            .from('profiles').select('reputation').eq('user_id', post.user_id).single();
-          const newRep = Math.max(0, (ownerProfile?.reputation || 0) + reversePoints);
-          await window.db.from('profiles').update({ reputation: newRep }).eq('user_id', post.user_id);
-        }
       } else {
         await window.db.from('reactions').update({ reaction_type: type }).eq('id', existing.id);
       }
     } else {
-      await window.db.from('reactions').insert({
-        user_id: currentUser.id, target_id: postId, target_type: 'post', reaction_type: type
-      });
+      await window.db.from('reactions').insert({ user_id: currentUser.id, target_id: postId, target_type: 'post', reaction_type: type });
       const { data: post } = await window.db.from('posts').select('user_id').eq('id', postId).single();
       if (post && post.user_id !== currentUser.id) {
-        const eventType = type === 'downvote' ? 'downvote_received' : 'reaction_received';
-        await awardReputation(post.user_id, eventType, postId, 'post', currentUser.id);
+        await awardReputation(post.user_id, type === 'downvote' ? 'downvote_received' : 'reaction_received', postId, 'post', currentUser.id);
       }
     }
     await refreshPostReactions(postId);
@@ -1290,34 +1396,27 @@ async function handleReaction(postId, type) {
 }
 
 async function refreshPostReactions(postId) {
-  const { data: reactions } = await window.db
-    .from('reactions').select('reaction_type')
-    .eq('target_id', postId).eq('target_type', 'post');
+  const { data: reactions } = await window.db.from('reactions').select('reaction_type').eq('target_id', postId).eq('target_type', 'post');
   const card = document.querySelector(`.post-card[data-post-id="${postId}"]`);
   if (!card) return;
   const counts = {};
   if (reactions) reactions.forEach(r => { counts[r.reaction_type] = (counts[r.reaction_type] || 0) + 1; });
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
-  const topEmojis = REACTIONS
-    .filter(r => counts[r.type] > 0)
-    .sort((a, b) => (counts[b.type] || 0) - (counts[a.type] || 0))
-    .slice(0, 3).map(r => r.emoji).join('');
+  const topEmojis = REACTIONS.filter(r => counts[r.type] > 0).sort((a, b) => (counts[b.type]||0) - (counts[a.type]||0)).slice(0,3).map(r => r.emoji).join('');
   let summary = card.querySelector('.reaction-summary');
   if (total > 0) {
     if (!summary) {
-      const summaryDiv = document.createElement('div');
-      summaryDiv.style.cssText = 'padding:4px 0 8px 0;display:flex;justify-content:space-between;align-items:center;';
-      summaryDiv.innerHTML = `<span class="reaction-summary" style="font-size:13px;color:var(--text-muted);cursor:pointer;"></span>`;
-      card.querySelector('.post-content-wrapper').after(summaryDiv);
+      const div = document.createElement('div');
+      div.style.cssText = 'padding:4px 0 8px 0;display:flex;justify-content:space-between;align-items:center;';
+      div.innerHTML = `<span class="reaction-summary" style="font-size:13px;color:var(--text-muted);cursor:pointer;"></span>`;
+      card.querySelector('.post-content-wrapper').after(div);
       summary = card.querySelector('.reaction-summary');
     }
     summary.textContent = `${topEmojis} ${total}`;
   } else if (summary) {
     summary.parentElement.remove();
   }
-  const { data: myReaction } = await window.db
-    .from('reactions').select('reaction_type')
-    .eq('target_id', postId).eq('target_type', 'post').eq('user_id', currentUser.id).single();
+  const { data: myReaction } = await window.db.from('reactions').select('reaction_type').eq('target_id', postId).eq('target_type', 'post').eq('user_id', currentUser.id).single();
   const reactBtn = card.querySelector('.react-btn');
   if (reactBtn) {
     const myReactionObj = REACTIONS.find(r => r.type === myReaction?.reaction_type);
@@ -1331,17 +1430,40 @@ async function handleCreatePost() {
   if (!currentUser) return;
   const content = document.getElementById('post-content').value.trim();
   const hasPoll = pollVisible;
-  if (!content && !hasPoll) return;
+  if (!content && !hasPoll && selectedMediaFiles.length === 0) return;
+
   const btn = document.getElementById('post-btn');
   btn.textContent = 'Posting...';
   btn.disabled = true;
+
   try {
+    const postData = {
+      user_id: currentUser.id,
+      content,
+      is_adult: currentProfile?.is_adult_creator || false
+    };
+
+    if (selectedCheckin) {
+      postData.checkin_location = selectedCheckin.location;
+      postData.checkin_lat = selectedCheckin.latitude;
+      postData.checkin_lng = selectedCheckin.longitude;
+    }
+
+    if (linkPreviewData) {
+      postData.link_preview = linkPreviewData;
+    }
+
     const { data: post, error: postError } = await window.db
-      .from('posts').insert({
-        user_id: currentUser.id, content,
-        is_adult: currentProfile?.is_adult_creator || false
-      }).select().single();
+      .from('posts').insert(postData).select().single();
     if (postError) throw postError;
+
+    // Upload media
+    if (selectedMediaFiles.length > 0 && post) {
+      const mediaUrls = await uploadMediaFiles(post.id);
+      if (mediaUrls.length > 0) {
+        await window.db.from('posts').update({ media_urls: mediaUrls }).eq('id', post.id);
+      }
+    }
 
     await awardReputation(currentUser.id, 'post_created', post.id, 'post', null);
 
@@ -1353,22 +1475,28 @@ async function handleCreatePost() {
       if (question && options.length >= 2) {
         const expiresAt = new Date();
         expiresAt.setHours(expiresAt.getHours() + duration);
-        await window.db.from('polls').insert({
-          post_id: post.id, user_id: currentUser.id, question, options,
-          duration_hours: duration, expires_at: expiresAt.toISOString()
-        });
+        await window.db.from('polls').insert({ post_id: post.id, user_id: currentUser.id, question, options, duration_hours: duration, expires_at: expiresAt.toISOString() });
       }
     }
-    await window.db.from('profiles')
-      .update({ post_count: (currentProfile?.post_count || 0) + 1 })
-      .eq('user_id', currentUser.id);
+
+    await window.db.from('profiles').update({ post_count: (currentProfile?.post_count || 0) + 1 }).eq('user_id', currentUser.id);
+
+    // Reset composer
     document.getElementById('post-content').value = '';
+    selectedMediaFiles = [];
+    selectedCheckin = null;
+    linkPreviewData = null;
+    renderMediaPreview();
+    renderLinkPreview(null);
+    clearCheckin();
+
     if (hasPoll) {
       document.getElementById('poll-creator').style.display = 'none';
       document.getElementById('poll-question').value = '';
       document.querySelectorAll('.poll-option').forEach((el, i) => { if (i < 2) el.value = ''; else el.remove(); });
       pollVisible = false;
     }
+
     btn.textContent = 'Post';
     btn.disabled = false;
     await loadFeed();
@@ -1383,36 +1511,26 @@ async function handleDeletePost(postId) {
   if (!currentUser) return;
   if (!confirm('Delete this post?')) return;
   await window.db.from('posts').update({ is_removed: true }).eq('id', postId).eq('user_id', currentUser.id);
-  await awardReputation(currentUser.id, 'post_removed', postId, 'post', null);
   await loadFeed();
 }
 
 async function loadSidebarCommunities() {
   const container = document.getElementById('sidebar-communities');
   if (!container) return;
-  const { data: communities } = await window.db
-    .from('communities').select('name, slug').eq('is_official', true).order('name').limit(8);
+  const { data: communities } = await window.db.from('communities').select('name, slug').eq('is_official', true).order('name').limit(8);
   if (!communities) return;
   container.innerHTML = communities.map(c => `
-    <a href="/community.html?slug=${c.slug}" style="display:block;padding:8px 16px;border-radius:8px;color:var(--text-secondary);font-size:14px;text-decoration:none;transition:all 0.15s ease;">
-      ${c.name}
-    </a>
+    <a href="/community.html?slug=${c.slug}" style="display:block;padding:8px 16px;border-radius:8px;color:var(--text-muted);font-size:14px;text-decoration:none;transition:all 0.15s ease;" onmouseover="this.style.background='var(--bg-hover)';this.style.color='var(--text)'" onmouseout="this.style.background='';this.style.color='var(--text-muted)'">${c.name}</a>
   `).join('');
-  container.querySelectorAll('a').forEach(a => {
-    a.addEventListener('mouseover', () => { a.style.background = 'var(--bg-hover)'; a.style.color = 'var(--text)'; });
-    a.addEventListener('mouseout', () => { a.style.background = ''; a.style.color = 'var(--text-secondary)'; });
-  });
 }
 
 async function loadTrendingCommunities() {
   const container = document.getElementById('trending-communities');
   if (!container) return;
-  const { data: communities } = await window.db
-    .from('communities').select('name, slug, member_count').eq('is_official', true)
-    .order('member_count', { ascending: false }).limit(5);
+  const { data: communities } = await window.db.from('communities').select('name, slug, member_count').eq('is_official', true).order('member_count', { ascending: false }).limit(5);
   if (!communities) return;
   container.innerHTML = communities.map(c => `
-    <a href="/community.html?slug=${c.slug}" style="display:block;padding:12px;border-radius:8px;margin-bottom:8px;background:var(--bg-card);border:1px solid var(--border);text-decoration:none;transition:all 0.15s ease;">
+    <a href="/community.html?slug=${c.slug}" style="display:block;padding:12px;border-radius:8px;margin-bottom:8px;background:var(--bg-card);border:1px solid var(--border);text-decoration:none;">
       <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px;">${c.name}</div>
       <div style="font-size:12px;color:var(--text-muted);">${c.member_count > 0 ? c.member_count.toLocaleString() + ' members' : 'New community'}</div>
     </a>
@@ -1422,16 +1540,13 @@ async function loadTrendingCommunities() {
 async function loadEcosystemSidebar() {
   const container = document.getElementById('ecosystem-sidebar');
   if (!container) return;
-  const { data: cards } = await window.db
-    .from('ecosystem_cards').select('name, tagline, status').order('display_order');
+  const { data: cards } = await window.db.from('ecosystem_cards').select('name, tagline, status').order('display_order');
   if (!cards) return;
   container.innerHTML = cards.map(card => `
     <div style="padding:12px;border-radius:8px;margin-bottom:8px;background:var(--bg-card);border:1px solid var(--border);">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
         <div style="font-size:14px;font-weight:700;color:var(--text);">${card.name}</div>
-        <span style="font-size:11px;padding:2px 8px;border-radius:100px;font-weight:600;${card.status === 'live' ? 'background:rgba(76,175,125,0.2);color:#4caf7d;' : 'background:rgba(245,166,35,0.2);color:#f5a623;'}">
-          ${card.status === 'live' ? 'Live' : 'Soon'}
-        </span>
+        <span style="font-size:11px;padding:2px 8px;border-radius:100px;font-weight:600;${card.status==='live'?'background:rgba(76,175,125,0.2);color:#4caf7d;':'background:rgba(245,166,35,0.2);color:#f5a623;'}">${card.status==='live'?'Live':'Soon'}</span>
       </div>
       <div style="font-size:12px;color:var(--text-muted);">${card.tagline || ''}</div>
     </div>
