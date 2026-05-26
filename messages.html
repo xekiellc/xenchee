@@ -13,6 +13,15 @@
   <meta name="twitter:title" content="Messages — Voxxee" />
   <meta name="twitter:description" content="Your private messages on Voxxee — the free speech maximalist social platform for verified adults." />
 
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192x192.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="/icon-512x512.png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <meta name="theme-color" content="#00e5ff" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Voxxee" />
+
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-FSCZJEWZ6F"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -96,8 +105,6 @@
       gap: 8px;
       align-items: flex-end;
     }
-
-    /* Mobile */
     .mobile-nav {
       display: none;
       position: fixed;
@@ -154,7 +161,6 @@
   <div class="messages-wrap">
     <div class="messages-layout" id="messages-layout">
 
-      <!-- Conversations List -->
       <div class="conversations-panel">
         <div class="conversations-header">
           <div class="conversations-title">Messages</div>
@@ -165,7 +171,6 @@
         </div>
       </div>
 
-      <!-- Message Thread -->
       <div class="thread-panel">
         <div class="thread-header" id="thread-header">
           <div style="color:var(--text-muted);font-size:14px;">Select a conversation</div>
@@ -182,7 +187,6 @@
     </div>
   </div>
 
-  <!-- New Message Modal -->
   <div id="new-message-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:2000;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(6px);">
     <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-xl);padding:28px;width:100%;max-width:400px;">
       <div style="font-family:var(--font-display);font-size:18px;font-weight:800;color:var(--text);margin-bottom:16px;">New Message</div>
@@ -202,7 +206,6 @@
     </div>
   </div>
 
-  <!-- Mobile Bottom Nav -->
   <nav class="mobile-nav">
     <div class="mobile-nav-inner">
       <a href="/feed.html" class="mobile-nav-item"><span>🏠</span>Home</a>
