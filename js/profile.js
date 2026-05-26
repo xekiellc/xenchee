@@ -11,6 +11,10 @@ let viewingProfile = null;
 let isOwnProfile = false;
 let isFollowing = false;
 let mutedKeywords = [];
+let callFrame = null;
+let currentLiveSession = null;
+let liveSessionSubscription = null;
+let viewerCountInterval = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
   await waitForDb();
@@ -26,6 +30,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.location.href = '/';
   });
 
+  setupLiveModalListeners();
+
   const params = new URLSearchParams(window.location.search);
   const username = params.get('user') || params.get('u');
 
@@ -35,6 +41,255 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadOwnProfile();
   }
 });
+
+// ─── LIVE SESSION ─────────────────────────────────────────────────────────────
+
+function setupLiveModalListeners() {
+  document.getElementById('go-live-btn').addEventListener('click', () => {
+    document.getElementById('golive-modal').classList.add('visible');
+    document.getElementById('golive-title-input').value = '';
+    document.getElementById('golive-title-input').focus();
+  });
+
+  document.getElementById('golive-cancel-btn').addEventListener('click', () => {
+    document.getElementById('golive-modal').classList.remove('visible');
+  });
+
+  document.getElementById('golive-start-btn').addEventListener('click', startLiveSession);
+
+  document.getElementById('join-live-btn').addEventListener('click', () => {
+    if (currentLiveSession) joinLiveSession(currentLiveSession, false);
+  });
+
+  document.getElementById('leave-live-btn').addEventListener('click', leaveLiveSession);
+  document.getElementById('end-live-btn').addEventListener('click', endLiveSession);
+
+  document.getElementById('golive-modal').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('golive-modal')) {
+      document.getElementById('golive-modal').classList.remove('visible');
+    }
+  });
+}
+
+async function startLiveSession() {
+  if (!viewingProfile?.is_verified) {
+    alert('You must be a verified user to go live.');
+    return;
+  }
+
+  const title = document.getElementById('golive-title-input').value.trim();
+  const btn = document.getElementById('golive-start-btn');
+  btn.textContent = 'Starting...';
+  btn.disabled = true;
+
+  try {
+    const { data: existing } = await window.db
+      .from('live_sessions')
+      .select('id')
+      .eq('host_user_id', currentUser.id)
+      .eq('is_active', true)
+      .single();
+
+    if (existing) {
+      alert('You already have an active live session.');
+      btn.textContent = 'Start Stream';
+      btn.disabled = false;
+      return;
+    }
+
+    const roomName = `voxxee-profile-${currentUser.id}-${Date.now()}`;
+    const { data: { session } } = await window.db.auth.getSession();
+
+    const response = await fetch('/.netlify/functions/create-room', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify({ room_name: roomName, title })
+    });
+
+    if (!response.ok) throw new Error('Failed to create room');
+    const { room_url } = await response.json();
+
+    const { data: liveSession, error } = await window.db
+      .from('live_sessions')
+      .insert({
+        host_user_id: currentUser.id,
+        community_id: null,
+        room_name: roomName,
+        room_url,
+        title: title || null,
+        is_active: true
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    currentLiveSession = liveSession;
+
+    // Notify followers
+    await notifyFollowersLive(liveSession, title);
+
+    document.getElementById('golive-modal').classList.remove('visible');
+    await joinLiveSession(liveSession, true);
+
+  } catch (err) {
+    console.error('Start live error:', err);
+    alert('Could not start live session. Please try again.');
+  }
+
+  btn.textContent = 'Start Stream';
+  btn.disabled = false;
+}
+
+async function joinLiveSession(session, isHost) {
+  const modal = document.getElementById('live-modal');
+  const container = document.getElementById('daily-frame-container');
+  const endBtn = document.getElementById('end-live-btn');
+  const titleEl = document.getElementById('live-modal-title-text');
+
+  titleEl.textContent = session.title ? `Live: ${session.title}` : 'Live Stream';
+  endBtn.style.display = isHost ? 'block' : 'none';
+
+  modal.classList.add('visible');
+  container.innerHTML = '';
+
+  callFrame = window.DailyIframe.createFrame(container, {
+    showLeaveButton: false,
+    showFullscreenButton: true,
+    iframeStyle: { width: '100%', height: '100%', border: 'none' }
+  });
+
+  await callFrame.join({ url: session.room_url });
+
+  callFrame.on('left-meeting', () => {
+    if (isHost) endLiveSession();
+    else leaveLiveSession();
+  });
+
+  updateViewerCount(session.id);
+  viewerCountInterval = setInterval(() => updateViewerCount(session.id), 10000);
+}
+
+async function updateViewerCount(sessionId) {
+  try {
+    if (!callFrame) return;
+    const participants = callFrame.participants();
+    const count = Object.keys(participants).length;
+    document.getElementById('live-viewer-count').textContent = `${count} viewer${count !== 1 ? 's' : ''}`;
+    await window.db.from('live_sessions').update({ viewer_count: count }).eq('id', sessionId);
+  } catch (err) {
+    console.error('Viewer count error:', err);
+  }
+}
+
+async function leaveLiveSession() {
+  if (callFrame) {
+    await callFrame.leave();
+    callFrame.destroy();
+    callFrame = null;
+  }
+  if (viewerCountInterval) {
+    clearInterval(viewerCountInterval);
+    viewerCountInterval = null;
+  }
+  document.getElementById('live-modal').classList.remove('visible');
+  document.getElementById('daily-frame-container').innerHTML = '';
+}
+
+async function endLiveSession() {
+  if (!confirm('End your live stream?')) return;
+  try {
+    if (currentLiveSession) {
+      await window.db.from('live_sessions')
+        .update({ is_active: false, ended_at: new Date().toISOString() })
+        .eq('id', currentLiveSession.id);
+    }
+  } catch (err) {
+    console.error('End session error:', err);
+  }
+  await leaveLiveSession();
+  currentLiveSession = null;
+  hideLiveBanner();
+}
+
+async function notifyFollowersLive(session, title) {
+  try {
+    const { data: followers } = await window.db
+      .from('follows')
+      .select('follower_id')
+      .eq('following_id', currentUser.id)
+      .limit(100);
+
+    if (!followers || followers.length === 0) return;
+
+    const notifications = followers.map(f => ({
+      user_id: f.follower_id,
+      type: 'live_started',
+      reference_id: session.id,
+      reference_type: 'live_session',
+      content: `${viewingProfile?.display_name || viewingProfile?.username || 'Someone'} is live${title ? ': ' + title : ''}`
+    }));
+
+    await window.db.from('notifications').insert(notifications);
+  } catch (err) {
+    console.error('Notify followers error:', err);
+  }
+}
+
+async function checkActiveLiveSession(userId) {
+  try {
+    const { data: session } = await window.db
+      .from('live_sessions')
+      .select('*')
+      .eq('host_user_id', userId)
+      .eq('is_active', true)
+      .order('started_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (session) {
+      currentLiveSession = session;
+      showLiveBanner(session);
+    } else {
+      hideLiveBanner();
+    }
+  } catch {
+    hideLiveBanner();
+  }
+}
+
+function showLiveBanner(session) {
+  const banner = document.getElementById('live-banner');
+  const hostName = viewingProfile?.display_name || viewingProfile?.username || 'Someone';
+  document.getElementById('live-host-name').textContent = hostName;
+  const titleEl = document.getElementById('live-session-title');
+  titleEl.textContent = session.title ? `— ${session.title}` : '';
+  banner.classList.add('visible');
+}
+
+function hideLiveBanner() {
+  document.getElementById('live-banner').classList.remove('visible');
+}
+
+function subscribeToLiveSessions(userId) {
+  if (liveSessionSubscription) liveSessionSubscription.unsubscribe();
+  liveSessionSubscription = window.db
+    .channel(`live-sessions-profile-${userId}`)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'live_sessions',
+      filter: `host_user_id=eq.${userId}`
+    }, async () => {
+      await checkActiveLiveSession(userId);
+    })
+    .subscribe();
+}
+
+// ─── PROFILE LOAD ─────────────────────────────────────────────────────────────
 
 async function loadOwnProfile() {
   const { data: profile } = await window.db
@@ -49,6 +304,15 @@ async function loadOwnProfile() {
   isOwnProfile = true;
   mutedKeywords = profile.muted_keywords || [];
   renderProfile(profile);
+
+  // Show Go Live only for verified users viewing their own profile
+  if (profile.is_verified) {
+    document.getElementById('go-live-btn').style.display = 'block';
+  }
+
+  await checkActiveLiveSession(currentUser.id);
+  subscribeToLiveSessions(currentUser.id);
+
   await Promise.all([
     loadProfilePosts(profile.user_id),
     loadProfileCommunities(),
@@ -77,6 +341,16 @@ async function loadProfileByUsername(username) {
   }
 
   renderProfile(profile);
+
+  // Show Go Live only on own verified profile
+  if (isOwnProfile && profile.is_verified) {
+    document.getElementById('go-live-btn').style.display = 'block';
+  }
+
+  // Always check if this profile user is currently live
+  await checkActiveLiveSession(profile.user_id);
+  subscribeToLiveSessions(profile.user_id);
+
   await Promise.all([
     loadProfilePosts(profile.user_id),
     loadProfileCommunities(),
@@ -393,7 +667,6 @@ async function loadProfilePosts(userId) {
       ? `<span style="font-size:11px;padding:2px 8px;border-radius:100px;background:rgba(239,68,68,0.15);color:#ef4444;font-weight:600;margin-left:8px;">🔞</span>`
       : '';
 
-    // Media display
     const mediaUrls = post.media_urls || [];
     let mediaHtml = '';
     if (mediaUrls.length > 0) {
@@ -484,6 +757,22 @@ async function loadProfileCommunities() {
       </a>
     `;
   }).join('');
+}
+
+function getRepLabel(rep) {
+  if (rep >= 1000) return '👑 Legend';
+  if (rep >= 500) return '🔥 Veteran';
+  if (rep >= 200) return '⭐ Contributor';
+  if (rep >= 50) return '💬 Regular';
+  return '🌱 Seedling';
+}
+
+function getRepColor(rep) {
+  if (rep >= 1000) return '#f59e0b';
+  if (rep >= 500) return '#ef4444';
+  if (rep >= 200) return '#8b5cf6';
+  if (rep >= 50) return 'var(--primary)';
+  return 'var(--text-muted)';
 }
 
 function escapeHtml(text) {
