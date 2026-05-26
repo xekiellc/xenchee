@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>2048 — Voxxee</title>
 
-  <!-- OG Meta Tags -->
   <meta property="og:title" content="2048 — Voxxee Games" />
   <meta property="og:description" content="Play 2048 on Voxxee. Slide and merge tiles. Reach 2048. Satisfyingly addictive." />
   <meta property="og:type" content="website" />
@@ -14,7 +13,15 @@
   <meta name="twitter:title" content="2048 — Voxxee Games" />
   <meta name="twitter:description" content="Play 2048 on Voxxee. Slide and merge tiles. Reach 2048. Satisfyingly addictive." />
 
-  <!-- GA4 -->
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192x192.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="/icon-512x512.png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <meta name="theme-color" content="#00e5ff" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Voxxee" />
+
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-FSCZJEWZ6F"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -61,7 +68,6 @@
           <div style="font-size:14px;color:var(--text-muted);">Slide tiles to merge them · Reach 2048!</div>
         </div>
 
-        <!-- Score Bar -->
         <div style="display:flex;gap:12px;margin-bottom:16px;">
           <div style="flex:1;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;">
             <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Score</div>
@@ -76,31 +82,23 @@
           </button>
         </div>
 
-        <!-- Board -->
         <div id="board-wrapper" style="position:relative;background:#1a1f2e;border-radius:12px;padding:10px;touch-action:none;">
           <div id="board" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;"></div>
           <div id="game-over-overlay" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.8);border-radius:12px;flex-direction:column;align-items:center;justify-content:center;">
             <div style="font-size:32px;margin-bottom:8px;">😢</div>
             <div style="font-size:20px;font-weight:800;color:#fff;margin-bottom:4px;">Game Over!</div>
             <div style="font-size:15px;color:rgba(255,255,255,0.6);margin-bottom:20px;">Score: <span id="final-score">0</span></div>
-            <button id="retry-btn" style="background:var(--primary);color:#fff;border:none;padding:12px 28px;border-radius:100px;font-size:15px;font-weight:700;cursor:pointer;">
-              Try Again
-            </button>
+            <button id="retry-btn" style="background:var(--primary);color:#fff;border:none;padding:12px 28px;border-radius:100px;font-size:15px;font-weight:700;cursor:pointer;">Try Again</button>
           </div>
           <div id="win-overlay" style="display:none;position:absolute;inset:0;background:rgba(99,102,241,0.9);border-radius:12px;flex-direction:column;align-items:center;justify-content:center;">
             <div style="font-size:48px;margin-bottom:8px;">🏆</div>
             <div style="font-size:24px;font-weight:800;color:#fff;margin-bottom:4px;">You reached 2048!</div>
             <div style="font-size:14px;color:rgba(255,255,255,0.8);margin-bottom:20px;">Score: <span id="win-score">0</span></div>
-            <button id="keep-going-btn" style="background:#fff;color:var(--primary);border:none;padding:12px 28px;border-radius:100px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;">
-              Keep Going
-            </button>
-            <button id="new-after-win-btn" style="background:transparent;color:rgba(255,255,255,0.7);border:1px solid rgba(255,255,255,0.3);padding:10px 24px;border-radius:100px;font-size:13px;cursor:pointer;">
-              New Game
-            </button>
+            <button id="keep-going-btn" style="background:#fff;color:var(--primary);border:none;padding:12px 28px;border-radius:100px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;">Keep Going</button>
+            <button id="new-after-win-btn" style="background:transparent;color:rgba(255,255,255,0.7);border:1px solid rgba(255,255,255,0.3);padding:10px 24px;border-radius:100px;font-size:13px;cursor:pointer;">New Game</button>
           </div>
         </div>
 
-        <!-- Mobile swipe hint -->
         <div style="text-align:center;margin-top:12px;font-size:12px;color:var(--text-muted);">
           Arrow keys · WASD · or swipe on mobile
         </div>
@@ -109,19 +107,14 @@
     </div>
 
     <div class="sidebar-right">
-      <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">
-        🎮 How to Play
-      </div>
+      <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">🎮 How to Play</div>
       <div style="font-size:13px;color:var(--text-muted);line-height:1.8;margin-bottom:32px;">
         <div>⬆️⬇️⬅️➡️ Slide all tiles</div>
         <div>🔢 Matching tiles merge</div>
         <div>🎯 Reach the 2048 tile</div>
         <div>📱 Swipe on mobile</div>
       </div>
-
-      <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">
-        🎨 Tile Colors
-      </div>
+      <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">🎨 Tile Colors</div>
       <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;">
         <div style="display:flex;align-items:center;gap:8px;"><div style="width:28px;height:28px;border-radius:6px;background:#4a5568;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:10px;">2</div><span style="color:var(--text-muted);">Just getting started</span></div>
         <div style="display:flex;align-items:center;gap:8px;"><div style="width:28px;height:28px;border-radius:6px;background:#6366f1;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:10px;">64</div><span style="color:var(--text-muted);">Getting warm</span></div>
@@ -174,15 +167,11 @@
 
       function newGame() {
         board = Array(SIZE).fill(null).map(() => Array(SIZE).fill(0));
-        score = 0;
-        won = false;
-        over = false;
+        score = 0; won = false; over = false;
         document.getElementById('score').textContent = 0;
         document.getElementById('game-over-overlay').style.display = 'none';
         document.getElementById('win-overlay').style.display = 'none';
-        addTile();
-        addTile();
-        render();
+        addTile(); addTile(); render();
       }
 
       function addTile() {
@@ -204,19 +193,7 @@
             const colors = COLORS[val] || { bg: '#1a1140', color: '#fff' };
             const fontSize = val >= 1024 ? '18px' : val >= 128 ? '22px' : '26px';
             const tile = document.createElement('div');
-            tile.style.cssText = `
-              background:${colors.bg};
-              color:${colors.color};
-              border-radius:8px;
-              height:100px;
-              display:flex;
-              align-items:center;
-              justify-content:center;
-              font-size:${fontSize};
-              font-weight:800;
-              font-family:Arial,sans-serif;
-              transition:background 0.1s ease;
-            `;
+            tile.style.cssText = `background:${colors.bg};color:${colors.color};border-radius:8px;height:100px;display:flex;align-items:center;justify-content:center;font-size:${fontSize};font-weight:800;font-family:Arial,sans-serif;transition:background 0.1s ease;`;
             tile.textContent = val || '';
             boardEl.appendChild(tile);
           }
@@ -225,13 +202,9 @@
 
       function slide(row) {
         let arr = row.filter(v => v !== 0);
-        let merged = false;
         for (let i = 0; i < arr.length - 1; i++) {
-          if (arr[i] === arr[i + 1] && !merged) {
-            arr[i] *= 2;
-            score += arr[i];
-            arr.splice(i + 1, 1);
-            merged = false;
+          if (arr[i] === arr[i + 1]) {
+            arr[i] *= 2; score += arr[i]; arr.splice(i + 1, 1);
           }
         }
         while (arr.length < SIZE) arr.push(0);
@@ -241,36 +214,15 @@
       function move(dir) {
         if (over) return;
         const prev = JSON.stringify(board);
-
-        if (dir === 'left') {
-          for (let r = 0; r < SIZE; r++) board[r] = slide(board[r]);
-        } else if (dir === 'right') {
-          for (let r = 0; r < SIZE; r++) board[r] = slide([...board[r]].reverse()).reverse();
-        } else if (dir === 'up') {
-          for (let c = 0; c < SIZE; c++) {
-            const col = board.map(r => r[c]);
-            const slid = slide(col);
-            for (let r = 0; r < SIZE; r++) board[r][c] = slid[r];
-          }
-        } else if (dir === 'down') {
-          for (let c = 0; c < SIZE; c++) {
-            const col = board.map(r => r[c]).reverse();
-            const slid = slide(col).reverse();
-            for (let r = 0; r < SIZE; r++) board[r][c] = slid[r];
-          }
-        }
-
+        if (dir === 'left') { for (let r = 0; r < SIZE; r++) board[r] = slide(board[r]); }
+        else if (dir === 'right') { for (let r = 0; r < SIZE; r++) board[r] = slide([...board[r]].reverse()).reverse(); }
+        else if (dir === 'up') { for (let c = 0; c < SIZE; c++) { const col = board.map(r => r[c]); const slid = slide(col); for (let r = 0; r < SIZE; r++) board[r][c] = slid[r]; } }
+        else if (dir === 'down') { for (let c = 0; c < SIZE; c++) { const col = board.map(r => r[c]).reverse(); const slid = slide(col).reverse(); for (let r = 0; r < SIZE; r++) board[r][c] = slid[r]; } }
         if (JSON.stringify(board) !== prev) {
           addTile();
           document.getElementById('score').textContent = score;
-          if (score > best) {
-            best = score;
-            localStorage.setItem('2048_best', best);
-            document.getElementById('best').textContent = best;
-          }
-          render();
-          checkWin();
-          checkOver();
+          if (score > best) { best = score; localStorage.setItem('2048_best', best); document.getElementById('best').textContent = best; }
+          render(); checkWin(); checkOver();
         }
       }
 
@@ -278,11 +230,7 @@
         if (won) return;
         for (let r = 0; r < SIZE; r++)
           for (let c = 0; c < SIZE; c++)
-            if (board[r][c] === 2048) {
-              won = true;
-              document.getElementById('win-score').textContent = score;
-              document.getElementById('win-overlay').style.display = 'flex';
-            }
+            if (board[r][c] === 2048) { won = true; document.getElementById('win-score').textContent = score; document.getElementById('win-overlay').style.display = 'flex'; }
       }
 
       function checkOver() {
@@ -297,39 +245,24 @@
         document.getElementById('game-over-overlay').style.display = 'flex';
       }
 
-      // Keyboard
       document.addEventListener('keydown', (e) => {
-        const map = {
-          ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down',
-          a: 'left', d: 'right', w: 'up', s: 'down',
-          A: 'left', D: 'right', W: 'up', S: 'down'
-        };
+        const map = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down', a: 'left', d: 'right', w: 'up', s: 'down', A: 'left', D: 'right', W: 'up', S: 'down' };
         if (map[e.key]) { e.preventDefault(); move(map[e.key]); }
       });
 
-      // Touch swipe
       let touchStartX, touchStartY;
       const wrapper = document.getElementById('board-wrapper');
-      wrapper.addEventListener('touchstart', (e) => {
-        touchStartX = e.touches[0].clientX;
-        touchStartY = e.touches[0].clientY;
-      }, { passive: true });
+      wrapper.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY; }, { passive: true });
       wrapper.addEventListener('touchend', (e) => {
         const dx = e.changedTouches[0].clientX - touchStartX;
         const dy = e.changedTouches[0].clientY - touchStartY;
-        if (Math.abs(dx) > Math.abs(dy)) {
-          move(dx > 0 ? 'right' : 'left');
-        } else {
-          move(dy > 0 ? 'down' : 'up');
-        }
+        if (Math.abs(dx) > Math.abs(dy)) { move(dx > 0 ? 'right' : 'left'); } else { move(dy > 0 ? 'down' : 'up'); }
       }, { passive: true });
 
       document.getElementById('new-game-btn').addEventListener('click', newGame);
       document.getElementById('retry-btn').addEventListener('click', newGame);
       document.getElementById('new-after-win-btn').addEventListener('click', newGame);
-      document.getElementById('keep-going-btn').addEventListener('click', () => {
-        document.getElementById('win-overlay').style.display = 'none';
-      });
+      document.getElementById('keep-going-btn').addEventListener('click', () => { document.getElementById('win-overlay').style.display = 'none'; });
 
       newGame();
     }
