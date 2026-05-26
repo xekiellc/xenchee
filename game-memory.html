@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Memory Match — Voxxee</title>
 
-  <!-- OG Meta Tags -->
   <meta property="og:title" content="Memory Match — Voxxee Games" />
   <meta property="og:description" content="Play Memory Match on Voxxee. Flip cards and find matching pairs. Test your memory." />
   <meta property="og:type" content="website" />
@@ -14,7 +13,15 @@
   <meta name="twitter:title" content="Memory Match — Voxxee Games" />
   <meta name="twitter:description" content="Play Memory Match on Voxxee. Flip cards and find matching pairs. Test your memory." />
 
-  <!-- GA4 -->
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192x192.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="/icon-512x512.png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <meta name="theme-color" content="#00e5ff" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Voxxee" />
+
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-FSCZJEWZ6F"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -61,7 +68,6 @@
           <div style="font-size:14px;color:var(--text-muted);">Flip cards · Find matching pairs · Clear the board</div>
         </div>
 
-        <!-- Stats Bar -->
         <div style="display:flex;gap:12px;margin-bottom:16px;">
           <div style="flex:1;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;">
             <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Moves</div>
@@ -75,21 +81,16 @@
             <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Time</div>
             <div id="timer" style="font-size:20px;font-weight:800;color:var(--primary);">0s</div>
           </div>
-          <button id="new-game-btn" style="background:var(--primary);color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;flex-shrink:0;">
-            New
-          </button>
+          <button id="new-game-btn" style="background:var(--primary);color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;flex-shrink:0;">New</button>
         </div>
 
-        <!-- Difficulty -->
         <div style="display:flex;gap:8px;margin-bottom:16px;">
           <button class="diff-btn btn btn-primary" data-size="4">4×4 Easy</button>
           <button class="diff-btn btn btn-ghost" data-size="6">6×4 Medium</button>
         </div>
 
-        <!-- Board -->
         <div id="memory-board" style="display:grid;gap:10px;"></div>
 
-        <!-- Win Message -->
         <div id="win-message" style="display:none;margin-top:20px;">
           <div class="post-card" style="text-align:center;padding:32px 24px;">
             <div style="font-size:48px;margin-bottom:12px;">🎉</div>
@@ -106,9 +107,7 @@
     </div>
 
     <div class="sidebar-right">
-      <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">
-        🃏 How to Play
-      </div>
+      <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">🃏 How to Play</div>
       <div style="font-size:13px;color:var(--text-muted);line-height:1.8;margin-bottom:32px;">
         <div>👆 Click any card to flip it</div>
         <div>🔍 Flip a second card</div>
@@ -116,10 +115,7 @@
         <div>❌ No match = both flip back</div>
         <div>🏆 Clear all pairs to win</div>
       </div>
-
-      <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">
-        ⭐ Best Scores
-      </div>
+      <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">⭐ Best Scores</div>
       <div id="best-scores" style="font-size:13px;color:var(--text-muted);line-height:1.8;">
         <div>4×4: <span id="best-4x4">—</span></div>
         <div>6×4: <span id="best-6x4">—</span></div>
@@ -148,22 +144,9 @@
     });
 
     function initMemory() {
-      const EMOJIS = [
-        '🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯',
-        '🦁','🐮','🐷','🐸','🐙','🦄','🐝','🦋','🐬','🦅',
-        '🌈','⭐','🔥','💎','🎯','🎸','🚀','🌺','🍕','🎮'
-      ];
-
-      let cards = [];
-      let flipped = [];
-      let matched = 0;
-      let moves = 0;
-      let totalPairs = 0;
-      let locked = false;
-      let timerInterval = null;
-      let seconds = 0;
-      let gridSize = 4;
-      let started = false;
+      const EMOJIS = ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐙','🦄','🐝','🦋','🐬','🦅','🌈','⭐','🔥','💎','🎯','🎸','🚀','🌺','🍕','🎮'];
+      let cards = [], flipped = [], matched = 0, moves = 0, totalPairs = 0;
+      let locked = false, timerInterval = null, seconds = 0, gridSize = 4, started = false;
 
       function loadBest() {
         const b4 = localStorage.getItem('memory_best_4');
@@ -174,47 +157,26 @@
       loadBest();
 
       function startTimer() {
-        clearInterval(timerInterval);
-        seconds = 0;
+        clearInterval(timerInterval); seconds = 0;
         document.getElementById('timer').textContent = '0s';
-        timerInterval = setInterval(() => {
-          seconds++;
-          document.getElementById('timer').textContent = `${seconds}s`;
-        }, 1000);
+        timerInterval = setInterval(() => { seconds++; document.getElementById('timer').textContent = `${seconds}s`; }, 1000);
       }
 
-      function stopTimer() {
-        clearInterval(timerInterval);
-      }
+      function stopTimer() { clearInterval(timerInterval); }
 
       function newGame() {
         const cols = gridSize === 4 ? 4 : 6;
-        const rows = 4;
-        totalPairs = (cols * rows) / 2;
-        matched = 0;
-        moves = 0;
-        flipped = [];
-        locked = false;
-        started = false;
-        seconds = 0;
-
+        totalPairs = (cols * 4) / 2;
+        matched = 0; moves = 0; flipped = []; locked = false; started = false; seconds = 0;
         document.getElementById('moves').textContent = 0;
         document.getElementById('pairs').textContent = `0 / ${totalPairs}`;
         document.getElementById('timer').textContent = '0s';
         document.getElementById('win-message').style.display = 'none';
         clearInterval(timerInterval);
-
         const pool = EMOJIS.slice(0, totalPairs);
         const doubled = [...pool, ...pool];
-        for (let i = doubled.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [doubled[i], doubled[j]] = [doubled[j], doubled[i]];
-        }
-
-        cards = doubled.map((emoji, idx) => ({
-          id: idx, emoji, flipped: false, matched: false
-        }));
-
+        for (let i = doubled.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [doubled[i], doubled[j]] = [doubled[j], doubled[i]]; }
+        cards = doubled.map((emoji, idx) => ({ id: idx, emoji, flipped: false, matched: false }));
         const board = document.getElementById('memory-board');
         board.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
         renderBoard();
@@ -226,21 +188,7 @@
         cards.forEach(card => {
           const el = document.createElement('div');
           el.dataset.id = card.id;
-          el.style.cssText = `
-            height:80px;
-            border-radius:10px;
-            cursor:pointer;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            font-size:32px;
-            border:2px solid var(--border);
-            transition:all 0.2s ease;
-            user-select:none;
-            ${card.matched ? 'background:rgba(76,175,125,0.2);border-color:#4caf7d;' :
-              card.flipped ? 'background:var(--bg-card);' :
-              'background:var(--bg-input);'}
-          `;
+          el.style.cssText = `height:80px;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:32px;border:2px solid var(--border);transition:all 0.2s ease;user-select:none;${card.matched ? 'background:rgba(76,175,125,0.2);border-color:#4caf7d;' : card.flipped ? 'background:var(--bg-card);' : 'background:var(--bg-input);'}`;
           el.textContent = (card.flipped || card.matched) ? card.emoji : '?';
           if (!card.matched) {
             el.addEventListener('click', () => handleFlip(card.id));
@@ -257,42 +205,19 @@
         if (locked) return;
         const card = cards[id];
         if (card.flipped || card.matched) return;
-
-        if (!started) {
-          started = true;
-          startTimer();
-        }
-
-        card.flipped = true;
-        flipped.push(id);
-        renderBoard();
-
+        if (!started) { started = true; startTimer(); }
+        card.flipped = true; flipped.push(id); renderBoard();
         if (flipped.length === 2) {
-          locked = true;
-          moves++;
+          locked = true; moves++;
           document.getElementById('moves').textContent = moves;
-
           const [a, b] = flipped;
           if (cards[a].emoji === cards[b].emoji) {
-            cards[a].matched = true;
-            cards[b].matched = true;
-            matched++;
+            cards[a].matched = true; cards[b].matched = true; matched++;
             document.getElementById('pairs').textContent = `${matched} / ${totalPairs}`;
-            flipped = [];
-            locked = false;
-            renderBoard();
-            if (matched === totalPairs) {
-              stopTimer();
-              showWin();
-            }
+            flipped = []; locked = false; renderBoard();
+            if (matched === totalPairs) { stopTimer(); showWin(); }
           } else {
-            setTimeout(() => {
-              cards[a].flipped = false;
-              cards[b].flipped = false;
-              flipped = [];
-              locked = false;
-              renderBoard();
-            }, 900);
+            setTimeout(() => { cards[a].flipped = false; cards[b].flipped = false; flipped = []; locked = false; renderBoard(); }, 900);
           }
         }
       }
@@ -303,13 +228,8 @@
         const isNew = moves < prev;
         if (isNew) localStorage.setItem(key, moves);
         loadBest();
-
         const stars = moves <= totalPairs + 2 ? '⭐⭐⭐' : moves <= totalPairs * 2 ? '⭐⭐' : '⭐';
-        document.getElementById('win-stats').innerHTML = `
-          ${stars}<br>
-          ${moves} moves · ${seconds}s
-          ${isNew ? '<br><span style="color:#4caf7d;font-weight:700;">🏆 New best!</span>' : ''}
-        `;
+        document.getElementById('win-stats').innerHTML = `${stars}<br>${moves} moves · ${seconds}s${isNew ? '<br><span style="color:#4caf7d;font-weight:700;">🏆 New best!</span>' : ''}`;
         document.getElementById('win-message').style.display = 'block';
         document.getElementById('win-message').scrollIntoView({ behavior: 'smooth' });
       }
@@ -325,7 +245,6 @@
 
       document.getElementById('new-game-btn').addEventListener('click', newGame);
       document.getElementById('play-again-btn').addEventListener('click', newGame);
-
       newGame();
     }
   </script>
