@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Reaction Time — Voxxee</title>
 
-  <!-- OG Meta Tags -->
   <meta property="og:title" content="Reaction Time — Voxxee Games" />
   <meta property="og:description" content="Play Reaction Time on Voxxee. Click when the screen turns green. How fast are your reflexes?" />
   <meta property="og:type" content="website" />
@@ -14,7 +13,15 @@
   <meta name="twitter:title" content="Reaction Time — Voxxee Games" />
   <meta name="twitter:description" content="Play Reaction Time on Voxxee. Click when the screen turns green. How fast are your reflexes?" />
 
-  <!-- GA4 -->
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192x192.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="/icon-512x512.png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <meta name="theme-color" content="#00e5ff" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Voxxee" />
+
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-FSCZJEWZ6F"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -61,7 +68,6 @@
           <div style="font-size:14px;color:var(--text-muted);">Click when the screen turns green · 5 rounds · Best average wins</div>
         </div>
 
-        <!-- Stats Bar -->
         <div style="display:flex;gap:12px;margin-bottom:16px;">
           <div style="flex:1;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;">
             <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Round</div>
@@ -77,18 +83,14 @@
           </div>
         </div>
 
-        <!-- Game Box -->
-        <div id="reaction-box"
-          style="height:320px;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:background 0.1s ease;background:#1a1f2e;border:2px solid var(--border);user-select:none;">
+        <div id="reaction-box" style="height:320px;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:background 0.1s ease;background:#1a1f2e;border:2px solid var(--border);user-select:none;">
           <div id="box-emoji" style="font-size:56px;margin-bottom:16px;">⚡</div>
           <div id="box-title" style="font-size:22px;font-weight:800;color:#fff;margin-bottom:8px;">Reaction Time</div>
           <div id="box-subtitle" style="font-size:14px;color:rgba(255,255,255,0.6);text-align:center;padding:0 24px;">Click anywhere to start</div>
         </div>
 
-        <!-- Round Results -->
         <div id="round-results" style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;justify-content:center;"></div>
 
-        <!-- Final Results -->
         <div id="final-results" style="display:none;margin-top:20px;">
           <div class="post-card" style="text-align:center;padding:32px 24px;">
             <div style="font-size:48px;margin-bottom:12px;" id="result-emoji">⚡</div>
@@ -109,9 +111,7 @@
     </div>
 
     <div class="sidebar-right">
-      <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">
-        ⚡ How to Play
-      </div>
+      <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">⚡ How to Play</div>
       <div style="font-size:13px;color:var(--text-muted);line-height:1.8;margin-bottom:32px;">
         <div>👆 Click to start each round</div>
         <div>⏳ Wait for green — don't click early!</div>
@@ -119,10 +119,7 @@
         <div>🔁 5 rounds total</div>
         <div>📊 Your average is your score</div>
       </div>
-
-      <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">
-        🏆 Rating Scale
-      </div>
+      <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">🏆 Rating Scale</div>
       <div style="font-size:13px;color:var(--text-muted);line-height:1.8;">
         <div>🥇 Under 200ms — Elite</div>
         <div>⚡ 200–250ms — Excellent</div>
@@ -130,7 +127,6 @@
         <div>😊 300–400ms — Average</div>
         <div>🐢 Over 400ms — Keep practicing</div>
       </div>
-
       <div style="margin-top:24px;padding:12px;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;">
         <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">Your Personal Best</div>
         <div id="personal-best" style="font-size:18px;font-weight:800;color:var(--primary);">—</div>
@@ -160,26 +156,14 @@
 
     function initReaction() {
       const ROUNDS = 5;
-      let state = 'idle';
-      let round = 0;
-      let times = [];
-      let startTime = null;
-      let waitTimeout = null;
+      let state = 'idle', round = 0, times = [], startTime = null, waitTimeout = null;
       const best = parseFloat(localStorage.getItem('reaction_best') || '0');
-
       const box = document.getElementById('reaction-box');
-      const bestDisplay = document.getElementById('best-display');
 
-      if (best) {
-        bestDisplay.textContent = `${best}ms`;
-        document.getElementById('personal-best').textContent = `${best}ms`;
-      }
+      if (best) { document.getElementById('best-display').textContent = `${best}ms`; document.getElementById('personal-best').textContent = `${best}ms`; }
 
       function reset() {
-        round = 0;
-        times = [];
-        state = 'idle';
-        clearTimeout(waitTimeout);
+        round = 0; times = []; state = 'idle'; clearTimeout(waitTimeout);
         document.getElementById('round-display').textContent = `0 / ${ROUNDS}`;
         document.getElementById('last-time').textContent = '—';
         document.getElementById('round-results').innerHTML = '';
@@ -188,62 +172,47 @@
       }
 
       function setIdle() {
-        state = 'idle';
-        box.style.background = '#1a1f2e';
-        box.style.borderColor = 'var(--border)';
+        state = 'idle'; box.style.background = '#1a1f2e'; box.style.borderColor = 'var(--border)';
         document.getElementById('box-emoji').textContent = '⚡';
         document.getElementById('box-title').textContent = 'Reaction Time';
         document.getElementById('box-subtitle').textContent = 'Click anywhere to start';
       }
 
       function setWaiting() {
-        state = 'waiting';
-        box.style.background = '#7f1d1d';
-        box.style.borderColor = '#ef4444';
+        state = 'waiting'; box.style.background = '#7f1d1d'; box.style.borderColor = '#ef4444';
         document.getElementById('box-emoji').textContent = '🔴';
         document.getElementById('box-title').textContent = 'Wait for green...';
         document.getElementById('box-subtitle').textContent = "Don't click yet!";
-        const delay = 1500 + Math.random() * 3000;
-        waitTimeout = setTimeout(setGreen, delay);
+        waitTimeout = setTimeout(setGreen, 1500 + Math.random() * 3000);
       }
 
       function setGreen() {
-        state = 'ready';
-        startTime = performance.now();
-        box.style.background = '#14532d';
-        box.style.borderColor = '#4caf7d';
+        state = 'ready'; startTime = performance.now();
+        box.style.background = '#14532d'; box.style.borderColor = '#4caf7d';
         document.getElementById('box-emoji').textContent = '🟢';
         document.getElementById('box-title').textContent = 'CLICK NOW!';
         document.getElementById('box-subtitle').textContent = '';
       }
 
       function setEarlyClick() {
-        state = 'idle';
-        clearTimeout(waitTimeout);
-        box.style.background = '#1e1b4b';
-        box.style.borderColor = '#6366f1';
+        state = 'idle'; clearTimeout(waitTimeout);
+        box.style.background = '#1e1b4b'; box.style.borderColor = '#6366f1';
         document.getElementById('box-emoji').textContent = '😬';
         document.getElementById('box-title').textContent = 'Too early!';
         document.getElementById('box-subtitle').textContent = 'Click to try this round again';
       }
 
       function recordTime(ms) {
-        times.push(ms);
-        round++;
+        times.push(ms); round++;
         document.getElementById('round-display').textContent = `${round} / ${ROUNDS}`;
         document.getElementById('last-time').textContent = `${ms}ms`;
-
         const pill = document.createElement('div');
         pill.style.cssText = `padding:6px 14px;border-radius:100px;background:${ms < 250 ? 'rgba(76,175,125,0.2)' : ms < 350 ? 'rgba(245,166,35,0.2)' : 'rgba(239,68,68,0.2)'};color:${ms < 250 ? '#4caf7d' : ms < 350 ? '#f5a623' : '#ef4444'};font-size:13px;font-weight:700;`;
         pill.textContent = `R${round}: ${ms}ms`;
         document.getElementById('round-results').appendChild(pill);
-
-        if (round >= ROUNDS) {
-          showFinal();
-        } else {
-          state = 'idle';
-          box.style.background = '#1a1f2e';
-          box.style.borderColor = 'var(--border)';
+        if (round >= ROUNDS) { showFinal(); }
+        else {
+          state = 'idle'; box.style.background = '#1a1f2e'; box.style.borderColor = 'var(--border)';
           document.getElementById('box-emoji').textContent = '⚡';
           document.getElementById('box-title').textContent = `Round ${round + 1} of ${ROUNDS}`;
           document.getElementById('box-subtitle').textContent = 'Click to continue';
@@ -253,66 +222,29 @@
       function showFinal() {
         state = 'done';
         const avg = Math.round(times.reduce((a, b) => a + b, 0) / times.length);
-        const min = Math.min(...times);
-        const max = Math.max(...times);
-
+        const min = Math.min(...times), max = Math.max(...times);
         const prevBest = parseFloat(localStorage.getItem('reaction_best') || '0');
         const isNewBest = !prevBest || avg < prevBest;
-        if (isNewBest) {
-          localStorage.setItem('reaction_best', avg);
-          document.getElementById('best-display').textContent = `${avg}ms`;
-          document.getElementById('personal-best').textContent = `${avg}ms`;
-        }
-
-        const rating = avg < 200 ? { text: '🥇 Elite reflexes!', color: '#4caf7d' }
-          : avg < 250 ? { text: '⚡ Excellent!', color: '#6366f1' }
-          : avg < 300 ? { text: '👍 Good reflexes', color: '#f5a623' }
-          : avg < 400 ? { text: '😊 Average', color: '#f5a623' }
-          : { text: '🐢 Keep practicing!', color: '#ef4444' };
-
+        if (isNewBest) { localStorage.setItem('reaction_best', avg); document.getElementById('best-display').textContent = `${avg}ms`; document.getElementById('personal-best').textContent = `${avg}ms`; }
+        const rating = avg < 200 ? { text: '🥇 Elite reflexes!', color: '#4caf7d' } : avg < 250 ? { text: '⚡ Excellent!', color: '#6366f1' } : avg < 300 ? { text: '👍 Good reflexes', color: '#f5a623' } : avg < 400 ? { text: '😊 Average', color: '#f5a623' } : { text: '🐢 Keep practicing!', color: '#ef4444' };
         const emoji = avg < 200 ? '🥇' : avg < 250 ? '⚡' : avg < 300 ? '👍' : avg < 400 ? '😊' : '🐢';
-
         document.getElementById('result-emoji').textContent = emoji;
         document.getElementById('avg-time').textContent = `${avg}ms`;
         document.getElementById('rating-text').innerHTML = `<span style="color:${rating.color}">${rating.text}</span>`;
-        document.getElementById('result-breakdown').innerHTML = `
-          <div style="text-align:center;">
-            <div style="font-size:18px;font-weight:800;color:var(--primary);">${min}ms</div>
-            <div style="font-size:11px;color:var(--text-muted);">Best Round</div>
-          </div>
-          <div style="text-align:center;">
-            <div style="font-size:18px;font-weight:800;color:var(--primary);">${max}ms</div>
-            <div style="font-size:11px;color:var(--text-muted);">Worst Round</div>
-          </div>
-          <div style="text-align:center;">
-            <div style="font-size:18px;font-weight:800;color:var(--primary);">${max - min}ms</div>
-            <div style="font-size:11px;color:var(--text-muted);">Variance</div>
-          </div>
-        `;
-
+        document.getElementById('result-breakdown').innerHTML = `<div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:var(--primary);">${min}ms</div><div style="font-size:11px;color:var(--text-muted);">Best Round</div></div><div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:var(--primary);">${max}ms</div><div style="font-size:11px;color:var(--text-muted);">Worst Round</div></div><div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:var(--primary);">${max - min}ms</div><div style="font-size:11px;color:var(--text-muted);">Variance</div></div>`;
         if (isNewBest) document.getElementById('new-best-msg').style.display = 'block';
-
         box.style.display = 'none';
         document.getElementById('final-results').style.display = 'block';
       }
 
       box.addEventListener('click', () => {
-        if (state === 'idle') {
-          setWaiting();
-        } else if (state === 'waiting') {
-          setEarlyClick();
-        } else if (state === 'ready') {
-          const ms = Math.round(performance.now() - startTime);
-          recordTime(ms);
-        } else if (state === 'done') {
-          reset();
-        }
+        if (state === 'idle') { setWaiting(); }
+        else if (state === 'waiting') { setEarlyClick(); }
+        else if (state === 'ready') { recordTime(Math.round(performance.now() - startTime)); }
+        else if (state === 'done') { reset(); }
       });
 
-      document.getElementById('play-again-btn').addEventListener('click', () => {
-        box.style.display = 'flex';
-        reset();
-      });
+      document.getElementById('play-again-btn').addEventListener('click', () => { box.style.display = 'flex'; reset(); });
     }
   </script>
 </body>
