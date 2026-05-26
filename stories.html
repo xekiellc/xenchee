@@ -5,6 +5,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Stories — Voxxee</title>
 
+  <meta property="og:title" content="Stories — Voxxee" />
+  <meta property="og:description" content="Share a moment on Voxxee. Gone in 24 hours." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://voxxee.com/stories.html" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Stories — Voxxee" />
+  <meta name="twitter:description" content="Share a moment on Voxxee. Gone in 24 hours." />
+
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192x192.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="/icon-512x512.png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <meta name="theme-color" content="#00e5ff" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Voxxee" />
+
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-FSCZJEWZ6F"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -18,195 +35,81 @@
 
   <style>
     .stories-bar {
-      display: flex;
-      gap: 12px;
-      overflow-x: auto;
-      padding: 4px 0 16px;
-      scrollbar-width: none;
-      margin-bottom: 24px;
+      display: flex; gap: 12px; overflow-x: auto;
+      padding: 4px 0 16px; scrollbar-width: none; margin-bottom: 24px;
     }
     .stories-bar::-webkit-scrollbar { display: none; }
-
-    .story-bubble {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-      cursor: pointer;
-      flex-shrink: 0;
-    }
+    .story-bubble { display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; flex-shrink: 0; }
     .story-ring {
-      width: 64px;
-      height: 64px;
-      border-radius: 50%;
-      padding: 3px;
+      width: 64px; height: 64px; border-radius: 50%; padding: 3px;
       background: linear-gradient(135deg, var(--primary), #a78bfa);
     }
-    .story-ring.viewed {
-      background: var(--border);
-    }
+    .story-ring.viewed { background: var(--border); }
     .story-ring-inner {
-      width: 100%;
-      height: 100%;
-      border-radius: 50%;
-      border: 2px solid var(--bg-card);
-      overflow: hidden;
-      background: var(--bg-input);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 22px;
-      font-weight: 800;
-      color: var(--primary);
-      font-family: var(--font-display);
+      width: 100%; height: 100%; border-radius: 50%;
+      border: 2px solid var(--bg-card); overflow: hidden;
+      background: var(--bg-input); display: flex; align-items: center;
+      justify-content: center; font-size: 22px; font-weight: 800;
+      color: var(--primary); font-family: var(--font-display);
     }
-    .story-ring-inner img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
+    .story-ring-inner img { width: 100%; height: 100%; object-fit: cover; }
     .story-label {
-      font-size: 11px;
-      color: var(--text-muted);
-      max-width: 64px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      text-align: center;
+      font-size: 11px; color: var(--text-muted); max-width: 64px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center;
     }
-
-    .add-story-bubble .story-ring {
-      background: var(--primary-dim);
-    }
-    .add-story-bubble .story-ring-inner {
-      font-size: 28px;
-      color: var(--primary);
-    }
-
-    /* Story viewer modal */
+    .add-story-bubble .story-ring { background: var(--primary-dim); }
+    .add-story-bubble .story-ring-inner { font-size: 28px; color: var(--primary); }
     .story-modal {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.95);
-      z-index: 2000;
-      align-items: center;
-      justify-content: center;
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.95); z-index: 2000;
+      align-items: center; justify-content: center;
     }
     .story-modal.active { display: flex; }
     .story-viewer {
-      position: relative;
-      width: 100%;
-      max-width: 400px;
-      height: 100vh;
-      max-height: 700px;
-      background: #000;
-      border-radius: 12px;
-      overflow: hidden;
+      position: relative; width: 100%; max-width: 400px;
+      height: 100vh; max-height: 700px; background: #000; border-radius: 12px; overflow: hidden;
     }
     .story-progress-bar {
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 3px;
-      background: rgba(255,255,255,0.3);
-      z-index: 10;
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 3px; background: rgba(255,255,255,0.3); z-index: 10;
     }
-    .story-progress-fill {
-      height: 100%;
-      background: #fff;
-      transition: width linear;
-    }
+    .story-progress-fill { height: 100%; background: #fff; transition: width linear; }
     .story-header {
-      position: absolute;
-      top: 12px; left: 12px; right: 12px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      z-index: 10;
+      position: absolute; top: 12px; left: 12px; right: 12px;
+      display: flex; align-items: center; gap: 10px; z-index: 10;
     }
     .story-avatar {
-      width: 36px; height: 36px;
-      border-radius: 50%;
-      background: var(--primary-dim);
-      color: var(--primary);
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--primary-dim); color: var(--primary);
       display: flex; align-items: center; justify-content: center;
-      font-size: 14px; font-weight: 800;
-      font-family: var(--font-display);
+      font-size: 14px; font-weight: 800; font-family: var(--font-display);
       border: 2px solid rgba(255,255,255,0.3);
     }
-    .story-username {
-      font-size: 14px;
-      font-weight: 600;
-      color: #fff;
-      flex: 1;
-    }
-    .story-time {
-      font-size: 12px;
-      color: rgba(255,255,255,0.6);
-    }
-    .story-close {
-      background: none;
-      border: none;
-      color: #fff;
-      font-size: 24px;
-      cursor: pointer;
-      padding: 0;
-      line-height: 1;
-    }
-    .story-media {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
+    .story-username { font-size: 14px; font-weight: 600; color: #fff; flex: 1; }
+    .story-time { font-size: 12px; color: rgba(255,255,255,0.6); }
+    .story-close { background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; padding: 0; line-height: 1; }
+    .story-media { width: 100%; height: 100%; object-fit: cover; }
     .story-caption {
-      position: absolute;
-      bottom: 0; left: 0; right: 0;
+      position: absolute; bottom: 0; left: 0; right: 0;
       padding: 60px 20px 20px;
       background: linear-gradient(transparent, rgba(0,0,0,0.7));
-      font-size: 15px;
-      color: #fff;
-      line-height: 1.5;
+      font-size: 15px; color: #fff; line-height: 1.5;
     }
-    .story-nav-left {
-      position: absolute;
-      left: 0; top: 0; bottom: 0;
-      width: 40%;
-      cursor: pointer;
-      z-index: 5;
-    }
-    .story-nav-right {
-      position: absolute;
-      right: 0; top: 0; bottom: 0;
-      width: 40%;
-      cursor: pointer;
-      z-index: 5;
-    }
-
-    /* Upload panel */
+    .story-nav-left { position: absolute; left: 0; top: 0; bottom: 0; width: 40%; cursor: pointer; z-index: 5; }
+    .story-nav-right { position: absolute; right: 0; top: 0; bottom: 0; width: 40%; cursor: pointer; z-index: 5; }
     .story-upload-panel {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 24px;
-      margin-bottom: 24px;
-      text-align: center;
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 24px; margin-bottom: 24px; text-align: center;
     }
-
     .mobile-nav {
-      display: none;
-      position: fixed;
-      bottom: 0; left: 0; right: 0;
-      height: 56px;
-      background: rgba(8,8,10,0.97);
-      border-top: 1px solid var(--border);
-      z-index: 1000;
-      backdrop-filter: blur(12px);
+      display: none; position: fixed; bottom: 0; left: 0; right: 0;
+      height: 56px; background: rgba(8,8,10,0.97);
+      border-top: 1px solid var(--border); z-index: 1000; backdrop-filter: blur(12px);
     }
     .mobile-nav-inner { display: flex; align-items: center; justify-content: space-around; height: 100%; }
     .mobile-nav-item {
       display: flex; flex-direction: column; align-items: center; gap: 2px;
-      padding: 6px 12px; text-decoration: none; color: #6a6a7a;
-      font-size: 10px; font-weight: 600;
+      padding: 6px 12px; text-decoration: none; color: #6a6a7a; font-size: 10px; font-weight: 600;
     }
     .mobile-nav-item.active { color: var(--primary); }
     .mobile-nav-item span { font-size: 20px; line-height: 1; }
@@ -252,7 +155,6 @@
         <div style="font-size:15px;color:var(--text-muted);">Share a moment. Gone in 24 hours.</div>
       </div>
 
-      <!-- Upload Panel -->
       <div class="story-upload-panel">
         <input type="file" id="story-file-input" accept="image/*,video/*" style="display:none;" />
         <div style="font-size:40px;margin-bottom:12px;">📸</div>
@@ -270,7 +172,6 @@
         <div id="story-upload-status" style="font-size:13px;color:var(--text-muted);margin-top:10px;"></div>
       </div>
 
-      <!-- Stories Bar -->
       <div style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--text);margin-bottom:12px;">Active Stories</div>
       <div class="stories-bar" id="stories-bar">
         <div class="loading"><div class="spinner"></div></div>
@@ -288,7 +189,6 @@
     </div>
   </div>
 
-  <!-- Story Viewer Modal -->
   <div class="story-modal" id="story-modal">
     <div class="story-viewer" id="story-viewer">
       <div class="story-progress-bar">
@@ -308,7 +208,6 @@
     </div>
   </div>
 
-  <!-- Mobile Bottom Nav -->
   <nav class="mobile-nav">
     <div class="mobile-nav-inner">
       <a href="/feed.html" class="mobile-nav-item"><span>🏠</span>Home</a>
