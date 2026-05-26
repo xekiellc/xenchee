@@ -10,6 +10,10 @@ let currentUser = null;
 let currentProfile = null;
 let currentCommunity = null;
 let isModerator = false;
+let callFrame = null;
+let currentLiveSession = null;
+let liveSessionSubscription = null;
+let viewerCountInterval = null;
 
 const REACTIONS = [
   { type: 'like', emoji: '❤️', label: 'Like' },
@@ -53,9 +57,295 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('post-btn').addEventListener('click', handleCreatePost);
 
+  setupLiveModalListeners();
+
   await loadCommunity(slug);
   await loadOtherCommunities(slug);
 });
+
+// ─── LIVE SESSION ────────────────────────────────────────────────────────────
+
+function setupLiveModalListeners() {
+  // Go Live button → open title modal
+  document.getElementById('go-live-btn').addEventListener('click', () => {
+    document.getElementById('golive-modal').classList.add('visible');
+    document.getElementById('golive-title-input').value = '';
+    document.getElementById('golive-title-input').focus();
+  });
+
+  // Cancel Go Live
+  document.getElementById('golive-cancel-btn').addEventListener('click', () => {
+    document.getElementById('golive-modal').classList.remove('visible');
+  });
+
+  // Start Stream
+  document.getElementById('golive-start-btn').addEventListener('click', startLiveSession);
+
+  // Join Live (viewer)
+  document.getElementById('join-live-btn').addEventListener('click', () => {
+    if (currentLiveSession) joinLiveSession(currentLiveSession, false);
+  });
+
+  // Leave Live
+  document.getElementById('leave-live-btn').addEventListener('click', leaveLiveSession);
+
+  // End Stream (host only)
+  document.getElementById('end-live-btn').addEventListener('click', endLiveSession);
+
+  // Close modal on backdrop click
+  document.getElementById('golive-modal').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('golive-modal')) {
+      document.getElementById('golive-modal').classList.remove('visible');
+    }
+  });
+}
+
+async function startLiveSession() {
+  if (!currentCommunity) return;
+  if (!currentProfile?.is_verified) {
+    alert('You must be a verified user to go live.');
+    return;
+  }
+
+  const title = document.getElementById('golive-title-input').value.trim();
+  const btn = document.getElementById('golive-start-btn');
+  btn.textContent = 'Starting...';
+  btn.disabled = true;
+
+  try {
+    // Check if user already has an active session
+    const { data: existing } = await window.db
+      .from('live_sessions')
+      .select('id')
+      .eq('host_user_id', currentUser.id)
+      .eq('is_active', true)
+      .single();
+
+    if (existing) {
+      alert('You already have an active live session.');
+      btn.textContent = 'Start Stream';
+      btn.disabled = false;
+      return;
+    }
+
+    const roomName = `voxxee-${currentCommunity.slug}-${Date.now()}`;
+
+    // Get auth token for function call
+    const { data: { session } } = await window.db.auth.getSession();
+
+    const response = await fetch('/.netlify/functions/create-room', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify({ room_name: roomName, title })
+    });
+
+    if (!response.ok) throw new Error('Failed to create room');
+
+    const { room_url } = await response.json();
+
+    // Insert live session into Supabase
+    const { data: liveSession, error } = await window.db
+      .from('live_sessions')
+      .insert({
+        host_user_id: currentUser.id,
+        community_id: currentCommunity.id,
+        room_name: roomName,
+        room_url,
+        title: title || null,
+        is_active: true
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    currentLiveSession = liveSession;
+
+    // Fire notification to community members
+    await notifyLive(liveSession, title);
+
+    document.getElementById('golive-modal').classList.remove('visible');
+    await joinLiveSession(liveSession, true);
+
+  } catch (err) {
+    console.error('Start live error:', err);
+    alert('Could not start live session. Please try again.');
+  }
+
+  btn.textContent = 'Start Stream';
+  btn.disabled = false;
+}
+
+async function joinLiveSession(session, isHost) {
+  const modal = document.getElementById('live-modal');
+  const container = document.getElementById('daily-frame-container');
+  const endBtn = document.getElementById('end-live-btn');
+  const titleEl = document.getElementById('live-modal-title-text');
+
+  titleEl.textContent = session.title
+    ? `Live: ${session.title}`
+    : 'Live Stream';
+
+  endBtn.style.display = isHost ? 'block' : 'none';
+
+  modal.classList.add('visible');
+  container.innerHTML = '';
+
+  callFrame = window.DailyIframe.createFrame(container, {
+    showLeaveButton: false,
+    showFullscreenButton: true,
+    iframeStyle: {
+      width: '100%',
+      height: '100%',
+      border: 'none'
+    }
+  });
+
+  await callFrame.join({ url: session.room_url });
+
+  callFrame.on('left-meeting', () => {
+    if (isHost) {
+      endLiveSession();
+    } else {
+      leaveLiveSession();
+    }
+  });
+
+  // Update viewer count every 10 seconds
+  updateViewerCount(session.id);
+  viewerCountInterval = setInterval(() => updateViewerCount(session.id), 10000);
+}
+
+async function updateViewerCount(sessionId) {
+  try {
+    if (!callFrame) return;
+    const participants = callFrame.participants();
+    const count = Object.keys(participants).length;
+    document.getElementById('live-viewer-count').textContent = `${count} viewer${count !== 1 ? 's' : ''}`;
+    await window.db
+      .from('live_sessions')
+      .update({ viewer_count: count })
+      .eq('id', sessionId);
+  } catch (err) {
+    console.error('Viewer count error:', err);
+  }
+}
+
+async function leaveLiveSession() {
+  if (callFrame) {
+    await callFrame.leave();
+    callFrame.destroy();
+    callFrame = null;
+  }
+  if (viewerCountInterval) {
+    clearInterval(viewerCountInterval);
+    viewerCountInterval = null;
+  }
+  document.getElementById('live-modal').classList.remove('visible');
+  document.getElementById('daily-frame-container').innerHTML = '';
+}
+
+async function endLiveSession() {
+  if (!confirm('End your live stream?')) return;
+
+  try {
+    if (currentLiveSession) {
+      await window.db
+        .from('live_sessions')
+        .update({ is_active: false, ended_at: new Date().toISOString() })
+        .eq('id', currentLiveSession.id);
+    }
+  } catch (err) {
+    console.error('End session error:', err);
+  }
+
+  await leaveLiveSession();
+  currentLiveSession = null;
+  hideLiveBanner();
+}
+
+async function notifyLive(session, title) {
+  try {
+    // Get community members to notify
+    const { data: members } = await window.db
+      .from('community_members')
+      .select('user_id')
+      .eq('community_id', currentCommunity.id)
+      .neq('user_id', currentUser.id)
+      .limit(100);
+
+    if (!members || members.length === 0) return;
+
+    const notifications = members.map(m => ({
+      user_id: m.user_id,
+      type: 'live_started',
+      reference_id: session.id,
+      reference_type: 'live_session',
+      content: `${currentProfile?.display_name || currentProfile?.username || 'Someone'} is live in ${currentCommunity.name}${title ? ': ' + title : ''}`
+    }));
+
+    await window.db.from('notifications').insert(notifications);
+  } catch (err) {
+    console.error('Notify live error:', err);
+  }
+}
+
+async function checkActiveLiveSession(communityId) {
+  try {
+    const { data: session } = await window.db
+      .from('live_sessions')
+      .select('*, profiles(username, display_name)')
+      .eq('community_id', communityId)
+      .eq('is_active', true)
+      .order('started_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (session) {
+      currentLiveSession = session;
+      showLiveBanner(session);
+    } else {
+      hideLiveBanner();
+    }
+  } catch {
+    hideLiveBanner();
+  }
+}
+
+function showLiveBanner(session) {
+  const banner = document.getElementById('live-banner');
+  const hostName = session.profiles?.display_name || session.profiles?.username || 'Someone';
+  document.getElementById('live-host-name').textContent = hostName;
+  const titleEl = document.getElementById('live-session-title');
+  titleEl.textContent = session.title ? `— ${session.title}` : '';
+  banner.classList.add('visible');
+}
+
+function hideLiveBanner() {
+  document.getElementById('live-banner').classList.remove('visible');
+}
+
+function subscribeToLiveSessions(communityId) {
+  if (liveSessionSubscription) {
+    liveSessionSubscription.unsubscribe();
+  }
+  liveSessionSubscription = window.db
+    .channel(`live-sessions-${communityId}`)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'live_sessions',
+      filter: `community_id=eq.${communityId}`
+    }, async () => {
+      await checkActiveLiveSession(communityId);
+    })
+    .subscribe();
+}
+
+// ─── COMMUNITY LOAD ───────────────────────────────────────────────────────────
 
 async function loadCommunity(slug) {
   const { data: community, error } = await window.db
@@ -67,7 +357,7 @@ async function loadCommunity(slug) {
   }
 
   currentCommunity = community;
-  document.title = community.name + ' — XenChee';
+  document.title = community.name + ' — Voxxee';
 
   document.getElementById('community-name').textContent = community.name;
   document.getElementById('community-slug').textContent = 'v/' + community.slug;
@@ -109,6 +399,12 @@ async function loadCommunity(slug) {
     joinBtn.addEventListener('click', () => handleJoin(community.id));
   }
 
+  // Show Go Live button only for verified users
+  if (currentProfile?.is_verified) {
+    const goLiveBtn = document.getElementById('go-live-btn');
+    if (goLiveBtn) goLiveBtn.style.display = 'block';
+  }
+
   const wikiBtn = document.getElementById('wiki-btn');
   if (wikiBtn) {
     wikiBtn.style.display = 'block';
@@ -116,6 +412,11 @@ async function loadCommunity(slug) {
   }
 
   renderRulesSidebar(community.rules || []);
+
+  // Check for active live session and subscribe to changes
+  await checkActiveLiveSession(community.id);
+  subscribeToLiveSessions(community.id);
+
   await loadCommunityPosts(community.id);
 }
 
@@ -798,7 +1099,6 @@ async function handleReaction(postId, type) {
     if (existing) {
       if (existing.reaction_type === type) {
         await window.db.from('reactions').delete().eq('id', existing.id);
-        // Reverse reputation
         const { data: post } = await window.db.from('posts').select('user_id').eq('id', postId).single();
         if (post && post.user_id !== currentUser.id) {
           const reversePoints = existing.reaction_type === 'downvote' ? 1 : -1;
@@ -819,7 +1119,6 @@ async function handleReaction(postId, type) {
       await window.db.from('reactions').insert({
         user_id: currentUser.id, target_id: postId, target_type: 'post', reaction_type: type
       });
-      // Award reputation to post owner
       const { data: post } = await window.db.from('posts').select('user_id').eq('id', postId).single();
       if (post && post.user_id !== currentUser.id) {
         const eventType = type === 'downvote' ? 'downvote_received' : 'reaction_received';
@@ -882,10 +1181,7 @@ async function handleCreatePost() {
       user_id: currentUser.id, community_id: currentCommunity.id, content
     }).select().single();
     if (error) throw error;
-
-    // Award reputation for posting
     await awardReputation(currentUser.id, 'post_created', post.id, 'post', null);
-
     document.getElementById('post-content').value = '';
     await loadCommunityPosts(currentCommunity.id);
   } catch (err) {
@@ -898,7 +1194,6 @@ async function handleCreatePost() {
 async function handleDeletePost(postId, postOwnerId, communityId) {
   if (!confirm('Delete this post?')) return;
   await window.db.from('posts').update({ is_removed: true }).eq('id', postId);
-  // Deduct reputation from post owner
   if (postOwnerId) {
     await awardReputation(postOwnerId, 'post_removed', postId, 'post', currentUser.id);
   }
@@ -918,10 +1213,7 @@ async function handleJoin(communityId) {
       .eq('id', communityId);
     currentCommunity.member_count = (currentCommunity.member_count || 0) + 1;
     document.getElementById('community-member-count').textContent = currentCommunity.member_count.toLocaleString();
-
-    // Award reputation for joining
     await awardReputation(currentUser.id, 'joined_community', communityId, 'community', null);
-
     btn.textContent = 'Joined ✓';
     btn.className = 'btn btn-ghost';
     btn.disabled = false;
