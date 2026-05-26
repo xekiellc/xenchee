@@ -13,6 +13,15 @@
   <meta name="twitter:title" content="Search — Voxxee" />
   <meta name="twitter:description" content="Search users, posts, and communities on Voxxee — the free speech maximalist social platform for verified adults." />
 
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192x192.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="/icon-512x512.png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <meta name="theme-color" content="#00e5ff" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Voxxee" />
+
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-FSCZJEWZ6F"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -30,29 +39,10 @@
       margin: 0 auto;
       padding: calc(var(--nav-height) + 24px) 16px 40px;
     }
-    .search-bar {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 20px;
-    }
-    .search-tabs {
-      display: flex;
-      gap: 6px;
-      margin-bottom: 24px;
-      flex-wrap: wrap;
-    }
-    .search-tab {
-      font-size: 13px;
-      padding: 6px 16px;
-      border-radius: var(--radius-full);
-    }
-    .search-empty {
-      text-align: center;
-      color: var(--text-muted);
-      font-size: 15px;
-      padding: 48px 0;
-    }
-
+    .search-bar { display: flex; gap: 8px; margin-bottom: 20px; }
+    .search-tabs { display: flex; gap: 6px; margin-bottom: 24px; flex-wrap: wrap; }
+    .search-tab { font-size: 13px; padding: 6px 16px; border-radius: var(--radius-full); }
+    .search-empty { text-align: center; color: var(--text-muted); font-size: 15px; padding: 48px 0; }
     .mobile-nav {
       display: none;
       position: fixed;
@@ -63,22 +53,11 @@
       z-index: 1000;
       backdrop-filter: blur(12px);
     }
-    .mobile-nav-inner {
-      display: flex;
-      align-items: center;
-      justify-content: space-around;
-      height: 100%;
-    }
+    .mobile-nav-inner { display: flex; align-items: center; justify-content: space-around; height: 100%; }
     .mobile-nav-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 2px;
-      padding: 6px 12px;
-      text-decoration: none;
-      color: #6a6a7a;
-      font-size: 10px;
-      font-weight: 600;
+      display: flex; flex-direction: column; align-items: center;
+      gap: 2px; padding: 6px 12px; text-decoration: none;
+      color: #6a6a7a; font-size: 10px; font-weight: 600;
     }
     .mobile-nav-item.active { color: var(--primary); }
     .mobile-nav-item span { font-size: 20px; line-height: 1; }
@@ -129,7 +108,6 @@
 
   </div>
 
-  <!-- Mobile Bottom Nav -->
   <nav class="mobile-nav">
     <div class="mobile-nav-inner">
       <a href="/feed.html" class="mobile-nav-item"><span>🏠</span>Home</a>
