@@ -49,12 +49,9 @@
     .profile-avatar-row {
       display: flex;
       align-items: flex-end;
-      justify-content: space-between;
       padding: 0 24px;
       margin-top: -40px;
       margin-bottom: 16px;
-      flex-wrap: wrap;
-      gap: 12px;
     }
     .profile-avatar-wrap {
       display: flex;
@@ -88,6 +85,14 @@
       border-radius: 50%;
     }
     .profile-body { padding: 0 24px 24px; }
+    .profile-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
     .profile-display-name {
       font-family: var(--font-display);
       font-size: 22px; font-weight: 900;
@@ -214,30 +219,41 @@
 
       <div class="profile-card" id="profile-header">
         <div class="profile-banner"></div>
+
+        <!-- Avatar row: just the avatar + upload button, left-aligned -->
         <div class="profile-avatar-row">
           <div class="profile-avatar-wrap">
             <div class="profile-avatar-large" id="profile-avatar-large">
               <span id="profile-avatar-initial">?</span>
               <img id="profile-avatar-img" src="" alt="" style="display:none;" />
             </div>
-            <!-- Real button — always visible on own profile, shown by JS -->
-            <button id="avatar-upload-btn" class="btn btn-ghost" style="display:none;font-size:12px;padding:4px 12px;margin-top:2px;">📷 Change Photo</button>
-            <span id="avatar-uploading" style="display:none;font-size:12px;color:var(--text-muted);">Uploading...</span>
+            <button id="avatar-upload-btn" class="btn btn-ghost"
+              style="display:none;font-size:12px;padding:4px 14px;margin-top:4px;white-space:nowrap;">
+              📷 Upload Profile Photo
+            </button>
+            <span id="avatar-uploading" style="display:none;font-size:12px;color:var(--text-muted);margin-top:4px;">Uploading...</span>
             <input type="file" id="avatar-file-input" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;" />
           </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;padding-bottom:4px;">
-            <button id="go-live-btn" class="btn btn-ghost" style="display:none;">🔴 Go Live</button>
-            <button id="follow-btn" class="btn btn-primary" style="display:none;">Follow</button>
-            <button id="edit-profile-btn" class="btn btn-ghost" style="display:none;">Edit Profile</button>
-          </div>
         </div>
+
         <div class="profile-body">
-          <div class="profile-display-name">
-            <span id="profile-display-name">Loading...</span>
-            <span id="verified-badge" style="display:none;font-size:16px;">✅</span>
+          <!-- Name row with action buttons -->
+          <div class="profile-top-row">
+            <div>
+              <div class="profile-display-name">
+                <span id="profile-display-name">Loading...</span>
+                <span id="verified-badge" style="display:none;font-size:16px;">✅</span>
+              </div>
+              <div class="profile-username-text" id="profile-username">@...</div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+              <button id="go-live-btn" class="btn btn-ghost" style="display:none;">🔴 Go Live</button>
+              <button id="follow-btn" class="btn btn-primary" style="display:none;">Follow</button>
+              <button id="edit-profile-btn" class="btn btn-ghost" style="display:none;">Edit Profile</button>
+            </div>
           </div>
-          <div class="profile-username-text" id="profile-username">@...</div>
-          <div id="profile-bio" style="font-size:15px;color:var(--text-muted);line-height:1.6;margin-top:8px;"></div>
+
+          <div id="profile-bio" style="font-size:15px;color:var(--text-muted);line-height:1.6;"></div>
           <div id="profile-meta" style="display:flex;gap:16px;margin-top:8px;flex-wrap:wrap;font-size:13px;color:var(--text-dim);"></div>
           <div id="profile-reputation" style="margin-top:10px;display:flex;align-items:center;gap:8px;"></div>
           <div class="profile-stats">
@@ -286,9 +302,10 @@
                 <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:2px;">Show Adult Content</div>
                 <div style="font-size:12px;color:var(--text-muted);">See 18+ posts in your feed.</div>
               </div>
-              <!-- Toggle: plain div, state managed entirely by JS via inline style -->
+              <!-- Toggle: outer track, inner knob. ALL pointer events on track only. -->
               <div id="toggle-show-adult"
-                style="position:relative;width:44px;height:24px;border-radius:100px;background:#444;cursor:pointer;flex-shrink:0;transition:background 0.2s;">
+                onclick="window._toggleClick('toggle-show-adult','toggle-show-adult-knob')"
+                style="position:relative;width:44px;height:24px;border-radius:100px;background:#444;cursor:pointer;flex-shrink:0;transition:background 0.2s;user-select:none;">
                 <div id="toggle-show-adult-knob"
                   style="position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:3px;left:3px;transition:transform 0.2s;pointer-events:none;"></div>
               </div>
@@ -302,7 +319,8 @@
                 <div style="font-size:12px;color:var(--text-muted);">Mark your posts as 18+ by default.</div>
               </div>
               <div id="toggle-is-adult-creator"
-                style="position:relative;width:44px;height:24px;border-radius:100px;background:#444;cursor:pointer;flex-shrink:0;transition:background 0.2s;">
+                onclick="window._toggleClick('toggle-is-adult-creator','toggle-is-adult-creator-knob')"
+                style="position:relative;width:44px;height:24px;border-radius:100px;background:#444;cursor:pointer;flex-shrink:0;transition:background 0.2s;user-select:none;">
                 <div id="toggle-is-adult-creator-knob"
                   style="position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:3px;left:3px;transition:transform 0.2s;pointer-events:none;"></div>
               </div>
@@ -407,6 +425,20 @@
       <a href="/profile.html" class="mobile-nav-item active"><span>👤</span>Profile</a>
     </div>
   </nav>
+
+  <!-- Toggle click handler — global function, inline onclick, no JS init needed -->
+  <script>
+    window._toggleClick = function(trackId, knobId) {
+      const track = document.getElementById(trackId);
+      const knob = document.getElementById(knobId);
+      if (!track || !knob) return;
+      const isOn = track.dataset.on === 'true';
+      const next = !isOn;
+      track.dataset.on = next ? 'true' : 'false';
+      track.style.background = next ? '#00e5ff' : '#444';
+      knob.style.transform = next ? 'translateX(20px)' : 'translateX(0px)';
+    };
+  </script>
 
   <script src="js/supabase.js"></script>
   <script src="js/reputation.js"></script>
