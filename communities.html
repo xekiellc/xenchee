@@ -67,6 +67,47 @@
     .page-title { font-family: var(--font-display); font-size: 24px; font-weight: 800; margin-bottom: 4px; letter-spacing: -0.02em; }
     .page-subtitle { color: var(--text-muted); font-size: 15px; }
 
+    /* Sort toggle */
+    .sort-toggle {
+      display: flex; gap: 0; border: 1px solid var(--border);
+      border-radius: var(--radius-md); overflow: hidden; flex-shrink: 0;
+    }
+    .sort-btn {
+      padding: 7px 14px; font-size: 13px; font-weight: 600;
+      font-family: var(--font-body); border: none; cursor: pointer;
+      background: transparent; color: var(--text-muted);
+      display: flex; align-items: center; gap: 6px;
+      transition: all 0.15s ease;
+    }
+    .sort-btn:first-child { border-right: 1px solid var(--border); }
+    .sort-btn.active { background: var(--primary); color: #000; }
+    .sort-btn:not(.active):hover { background: var(--bg-hover); color: var(--text); }
+
+    /* Category group headers */
+    .category-group-header {
+      grid-column: 1 / -1;
+      display: flex; align-items: center; gap: 12px;
+      margin-top: 8px; margin-bottom: 4px;
+    }
+    .category-group-label {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1.5px; color: var(--primary); white-space: nowrap;
+    }
+    .category-group-line {
+      flex: 1; height: 1px; background: var(--border);
+    }
+
+    /* Alpha group headers */
+    .alpha-group-header {
+      grid-column: 1 / -1;
+      font-family: var(--font-display);
+      font-size: 22px; font-weight: 900;
+      color: var(--primary); letter-spacing: -0.02em;
+      margin-top: 8px; margin-bottom: 4px;
+      padding-bottom: 6px;
+      border-bottom: 2px solid rgba(0,229,255,0.2);
+    }
+
     @media (max-width: 768px) {
       .mobile-nav { display: block; }
       .feed-main { padding-bottom: 72px; }
@@ -120,16 +161,27 @@
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
         <div>
           <div class="page-title">Communities</div>
-          <div class="page-subtitle">Find your people. Say exactly what you mean.</div>
+          <div class="page-subtitle">Find your people. Vox Populi Vox Dei.</div>
         </div>
         <a href="/create-community.html" class="btn btn-primary" style="flex-shrink:0;">+ Create Community</a>
       </div>
 
-      <div style="margin-bottom:20px;">
-        <input type="text" id="community-search" class="form-input" placeholder="Search communities..." style="max-width:400px;" />
+      <!-- Search + Sort row -->
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
+        <input type="text" id="community-search" class="form-input"
+          placeholder="Search communities..." style="flex:1;min-width:180px;max-width:360px;" />
+        <div class="sort-toggle">
+          <button class="sort-btn active" id="sort-alpha-btn" onclick="setSort('alpha')">
+            <i class="ti ti-sort-ascending-letters" style="font-size:15px;"></i> A–Z
+          </button>
+          <button class="sort-btn" id="sort-cat-btn" onclick="setSort('category')">
+            <i class="ti ti-layout-grid" style="font-size:15px;"></i> By Category
+          </button>
+        </div>
       </div>
 
-      <div style="display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap;">
+      <!-- Filter buttons -->
+      <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
         <button class="btn btn-primary community-filter-btn" data-filter="all">All</button>
         <button class="btn btn-ghost community-filter-btn" data-filter="local">📍 Near Me</button>
         <button class="btn btn-ghost community-filter-btn" data-filter="portfolio">Portfolio Sites</button>
@@ -193,14 +245,39 @@
 
     let allCommunities = [];
     let currentFilter = 'all';
+    let currentSort = 'alpha'; // 'alpha' or 'category'
     let currentUser = null;
     let currentProfile = null;
     let localCity = '';
     let localState = '';
 
+    // Display labels for community_type values
+    const CATEGORY_LABELS = {
+      sports:        '⚽ Sports',
+      music:         '🎵 Music',
+      politics:      '🏛️ Politics',
+      media:         '📰 News & Media',
+      finance:       '📈 Finance',
+      tech:          '💻 Tech',
+      entertainment: '🎬 Entertainment',
+      gaming:        '🎮 Gaming',
+      lifestyle:     '🌿 Lifestyle',
+      food:          '🍔 Food & Drink',
+      health:        '💊 Health',
+      culture:       '🎨 Culture',
+      alternative:   '🔍 Alternative',
+      hobbies:       '🛠️ Hobbies',
+      marketplace:   '🛒 Marketplace',
+      pets:          '🐾 Pets',
+      local:         '📍 Local',
+      topic:         '💬 Topics',
+      science:       '🔬 Science',
+      crypto:        '₿ Crypto',
+      other:         '✨ Other',
+    };
+
     document.addEventListener('DOMContentLoaded', async () => {
       await waitForDb();
-
       currentUser = await window.auth.getUser();
       if (!currentUser) { window.location.href = '/login.html'; return; }
 
@@ -228,6 +305,14 @@
       setupLocalDiscovery();
     });
 
+    function setSort(mode) {
+      currentSort = mode;
+      document.getElementById('sort-alpha-btn').classList.toggle('active', mode === 'alpha');
+      document.getElementById('sort-cat-btn').classList.toggle('active', mode === 'category');
+      if (currentFilter === 'local') applyLocalFilter();
+      else applyFilters();
+    }
+
     async function loadCommunities() {
       const { data: communities } = await window.db
         .from('communities').select('*').order('name');
@@ -251,8 +336,36 @@
       return `<div style="width:${size}px;height:${size}px;border-radius:10px;background:var(--primary-dim);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:${Math.round(size*0.4)}px;font-weight:800;flex-shrink:0;">${c.name.charAt(0)}</div>`;
     }
 
+    function communityCardHtml(c) {
+      const locationBadge = c.is_local && c.location
+        ? `<span style="font-size:11px;padding:2px 8px;border-radius:100px;background:rgba(76,175,125,0.15);color:#4caf7d;font-weight:600;">📍 ${escapeHtml(c.location)}</span>`
+        : '';
+      return `
+        <a href="/community.html?slug=${c.slug}" style="text-decoration:none;">
+          <div class="community-card" style="height:100%;">
+            <div class="community-card-header">
+              ${communityLogoHtml(c, 48)}
+              <div>
+                <div class="community-name">${escapeHtml(c.name)}</div>
+                <div class="community-type">v/${c.slug}</div>
+              </div>
+            </div>
+            <div class="community-description">${escapeHtml(c.description || '')}</div>
+            <div class="community-footer">
+              <span class="community-members">${c.member_count > 0 ? c.member_count.toLocaleString() + ' members' : 'Be the first to join'}</span>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                ${c.is_official ? '<span class="community-badge badge-official">Official</span>' : ''}
+                ${locationBadge}
+                ${c.community_type === 'private' ? '<span style="font-size:11px;padding:2px 8px;border-radius:100px;background:rgba(245,166,35,0.2);color:#f5a623;font-weight:600;">Private</span>' : ''}
+              </div>
+            </div>
+          </div>
+        </a>`;
+    }
+
     function renderCommunities(communities) {
       const grid = document.getElementById('communities-grid');
+
       if (!communities || communities.length === 0) {
         const isLocal = currentFilter === 'local';
         grid.innerHTML = `
@@ -269,32 +382,70 @@
           </div>`;
         return;
       }
-      grid.innerHTML = communities.map(c => {
-        const locationBadge = c.is_local && c.location
-          ? `<span style="font-size:11px;padding:2px 8px;border-radius:100px;background:rgba(76,175,125,0.15);color:#4caf7d;font-weight:600;">📍 ${escapeHtml(c.location)}</span>`
-          : '';
-        return `
-          <a href="/community.html?slug=${c.slug}" style="text-decoration:none;">
-            <div class="community-card" style="height:100%;">
-              <div class="community-card-header">
-                ${communityLogoHtml(c, 48)}
-                <div>
-                  <div class="community-name">${escapeHtml(c.name)}</div>
-                  <div class="community-type">v/${c.slug}</div>
-                </div>
-              </div>
-              <div class="community-description">${escapeHtml(c.description || '')}</div>
-              <div class="community-footer">
-                <span class="community-members">${c.member_count > 0 ? c.member_count.toLocaleString() + ' members' : 'Be the first to join'}</span>
-                <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                  ${c.is_official ? '<span class="community-badge badge-official">Official</span>' : ''}
-                  ${locationBadge}
-                  ${c.community_type === 'private' ? '<span style="font-size:11px;padding:2px 8px;border-radius:100px;background:rgba(245,166,35,0.2);color:#f5a623;font-weight:600;">Private</span>' : ''}
-                </div>
-              </div>
-            </div>
-          </a>`;
-      }).join('');
+
+      if (currentSort === 'alpha') {
+        renderAlpha(communities, grid);
+      } else {
+        renderByCategory(communities, grid);
+      }
+    }
+
+    function renderAlpha(communities, grid) {
+      const sorted = [...communities].sort((a, b) => a.name.localeCompare(b.name));
+      let html = '';
+      let lastLetter = '';
+      sorted.forEach(c => {
+        const letter = c.name.charAt(0).toUpperCase();
+        if (letter !== lastLetter) {
+          lastLetter = letter;
+          html += `<div class="alpha-group-header">${letter}</div>`;
+        }
+        html += communityCardHtml(c);
+      });
+      grid.innerHTML = html;
+    }
+
+    function renderByCategory(communities, grid) {
+      // Group by community_type
+      const groups = {};
+      communities.forEach(c => {
+        const key = c.community_type || 'other';
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(c);
+      });
+
+      // Sort groups by label, official first
+      const sortedKeys = Object.keys(groups).sort((a, b) => {
+        const la = CATEGORY_LABELS[a] || a;
+        const lb = CATEGORY_LABELS[b] || b;
+        return la.localeCompare(lb);
+      });
+
+      // Put official communities at the top as their own group
+      const officials = communities.filter(c => c.is_official);
+      let html = '';
+
+      if (officials.length > 0) {
+        html += `<div class="category-group-header">
+          <span class="category-group-label">⭐ Official Voxxee</span>
+          <div class="category-group-line"></div>
+        </div>`;
+        officials.sort((a, b) => a.name.localeCompare(b.name)).forEach(c => {
+          html += communityCardHtml(c);
+        });
+      }
+
+      sortedKeys.forEach(key => {
+        const label = CATEGORY_LABELS[key] || key;
+        const cats = groups[key].sort((a, b) => a.name.localeCompare(b.name));
+        html += `<div class="category-group-header">
+          <span class="category-group-label">${label}</span>
+          <div class="category-group-line"></div>
+        </div>`;
+        cats.forEach(c => { html += communityCardHtml(c); });
+      });
+
+      grid.innerHTML = html;
     }
 
     function renderActiveSidebar(communities) {
