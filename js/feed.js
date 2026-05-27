@@ -16,6 +16,7 @@ let selectedCheckin = null;
 let linkPreviewData = null;
 let linkPreviewTimeout = null;
 let liveSubscription = null;
+let photoTags = []; // { mediaIndex, taggedUserId, taggedUsername, xPercent, yPercent }
 
 const REACTIONS = [
   { type: 'like', emoji: '❤️', label: 'Like' },
@@ -87,6 +88,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!e.target.closest('.diagnostics-panel') && !e.target.closest('.view-label-btn')) {
       document.querySelectorAll('.diagnostics-panel').forEach(p => p.style.display = 'none');
     }
+    if (!e.target.closest('.tag-search-dropdown') && !e.target.closest('.tag-overlay-wrap')) {
+      document.querySelectorAll('.tag-search-dropdown').forEach(d => d.remove());
+    }
   });
 });
 
@@ -95,15 +99,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function loadLiveBanner() {
   const banner = document.getElementById('feed-live-banner');
   if (!banner || !currentUser) return;
-
   try {
-    // Get who the current user follows
     const { data: follows } = await window.db
       .from('follows').select('following_id').eq('follower_id', currentUser.id);
     const followingIds = follows ? follows.map(f => f.following_id) : [];
     if (followingIds.length === 0) { banner.style.display = 'none'; return; }
 
-    // Check for active live sessions from followed users
     const { data: sessions } = await window.db
       .from('live_sessions')
       .select('id, host_user_id, title, viewer_count, started_at')
@@ -113,14 +114,12 @@ async function loadLiveBanner() {
 
     if (!sessions || sessions.length === 0) { banner.style.display = 'none'; return; }
 
-    // Get profiles for live hosts
     const hostIds = sessions.map(s => s.host_user_id);
     const { data: profiles } = await window.db
       .from('profiles').select('user_id, username, display_name').in('user_id', hostIds);
     const profileMap = {};
     if (profiles) profiles.forEach(p => { profileMap[p.user_id] = p; });
 
-    // Render live banner — show up to 3 live streams
     const items = sessions.slice(0, 3).map(session => {
       const profile = profileMap[session.host_user_id];
       const username = profile?.username || 'someone';
@@ -145,9 +144,7 @@ async function loadLiveBanner() {
         <span style="font-size:13px;font-weight:700;color:var(--text);">Live Now</span>
         <span style="font-size:12px;color:var(--text-muted);">${sessions.length} stream${sessions.length !== 1 ? 's' : ''} from people you follow</span>
       </div>
-      <div style="display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;">
-        ${items}
-      </div>
+      <div style="display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;">${items}</div>
     `;
     banner.style.display = 'block';
   } catch (err) {
@@ -166,12 +163,177 @@ function subscribeToLiveSessions() {
     .subscribe();
 }
 
+// ─── PHOTO TAGGING ───────────────────────────────────────────────────────────
+
+function setupPhotoTagging(mediaIndex) {
+  const wrap = document.querySelector(`.tag-overlay-wrap[data-media-index="${mediaIndex}"]`);
+  if (!wrap) return;
+
+  wrap.addEventListener('click', (e) => {
+    // Remove any existing dropdowns
+    document.querySelectorAll('.tag-search-dropdown').forEach(d => d.remove());
+
+    const rect = wrap.getBoundingClientRect();
+    const xPercent = ((e.clientX - rect.left) / rect.width * 100).toFixed(1);
+    const yPercent = ((e.clientY - rect.top) / rect.height * 100).toFixed(1);
+
+    // Place a pin
+    const pin = document.createElement('div');
+    pin.className = 'tag-pin-temp';
+    pin.style.cssText = `position:absolute;left:${xPercent}%;top:${yPercent}%;transform:translate(-50%,-50%);width:24px;height:24px;border-radius:50%;background:var(--primary);border:2px solid #fff;z-index:10;pointer-events:none;`;
+    wrap.appendChild(pin);
+
+    // Show user search dropdown
+    const dropdown = document.createElement('div');
+    dropdown.className = 'tag-search-dropdown';
+    dropdown.style.cssText = `position:absolute;left:${Math.min(parseFloat(xPercent), 70)}%;top:${Math.min(parseFloat(yPercent) + 5, 80)}%;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.4);z-index:20;width:220px;overflow:hidden;`;
+    dropdown.innerHTML = `
+      <div style="padding:8px;">
+        <input type="text" class="form-input tag-user-search" placeholder="Search users..." style="font-size:13px;width:100%;" autocomplete="off" />
+      </div>
+      <div class="tag-user-results" style="max-height:180px;overflow-y:auto;"></div>
+    `;
+    wrap.appendChild(dropdown);
+
+    const input = dropdown.querySelector('.tag-user-search');
+    const results = dropdown.querySelector('.tag-user-results');
+    input.focus();
+
+    let searchTimeout;
+    input.addEventListener('input', () => {
+      clearTimeout(searchTimeout);
+      const q = input.value.trim();
+      if (q.length < 1) { results.innerHTML = ''; return; }
+      searchTimeout = setTimeout(() => searchUsersForTag(q, results, mediaIndex, xPercent, yPercent, pin, dropdown), 300);
+    });
+
+    e.stopPropagation();
+  });
+}
+
+async function searchUsersForTag(query, resultsEl, mediaIndex, xPercent, yPercent, pin, dropdown) {
+  resultsEl.innerHTML = '<div style="padding:10px;font-size:13px;color:var(--text-muted);">Searching...</div>';
+  try {
+    const { data: users } = await window.db
+      .from('profiles')
+      .select('user_id, username, display_name')
+      .ilike('username', `%${query}%`)
+      .limit(8);
+
+    if (!users || users.length === 0) {
+      resultsEl.innerHTML = '<div style="padding:10px;font-size:13px;color:var(--text-muted);">No users found.</div>';
+      return;
+    }
+
+    resultsEl.innerHTML = users.map(u => `
+      <div class="tag-user-result" data-user-id="${u.user_id}" data-username="${escapeHtml(u.username)}"
+        style="display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;transition:background 0.1s;">
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--primary-dim);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">${u.username.charAt(0).toUpperCase()}</div>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--text);">${escapeHtml(u.display_name || u.username)}</div>
+          <div style="font-size:11px;color:var(--text-muted);">@${escapeHtml(u.username)}</div>
+        </div>
+      </div>
+    `).join('');
+
+    resultsEl.querySelectorAll('.tag-user-result').forEach(el => {
+      el.addEventListener('mouseover', () => { el.style.background = 'var(--bg-hover)'; });
+      el.addEventListener('mouseout', () => { el.style.background = ''; });
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const userId = el.dataset.userId;
+        const username = el.dataset.username;
+
+        // Replace temp pin with permanent tag
+        pin.remove();
+        dropdown.remove();
+
+        // Check for duplicate
+        const exists = photoTags.find(t => t.mediaIndex === parseInt(mediaIndex) && t.taggedUserId === userId);
+        if (exists) return;
+
+        photoTags.push({
+          mediaIndex: parseInt(mediaIndex),
+          taggedUserId: userId,
+          taggedUsername: username,
+          xPercent: parseFloat(xPercent),
+          yPercent: parseFloat(yPercent)
+        });
+
+        renderTagPins(mediaIndex);
+      });
+    });
+  } catch (err) {
+    console.error('Tag search error:', err);
+    resultsEl.innerHTML = '<div style="padding:10px;font-size:13px;color:var(--text-muted);">Error searching.</div>';
+  }
+}
+
+function renderTagPins(mediaIndex) {
+  const wrap = document.querySelector(`.tag-overlay-wrap[data-media-index="${mediaIndex}"]`);
+  if (!wrap) return;
+
+  // Clear existing pins for this image
+  wrap.querySelectorAll('.tag-pin').forEach(p => p.remove());
+
+  const tagsForImage = photoTags.filter(t => t.mediaIndex === parseInt(mediaIndex));
+  tagsForImage.forEach(tag => {
+    const pin = document.createElement('div');
+    pin.className = 'tag-pin';
+    pin.style.cssText = `position:absolute;left:${tag.xPercent}%;top:${tag.yPercent}%;transform:translate(-50%,-50%);z-index:10;`;
+    pin.innerHTML = `
+      <div style="position:relative;">
+        <div style="width:24px;height:24px;border-radius:50%;background:var(--primary);border:2px solid #fff;cursor:pointer;"></div>
+        <div style="position:absolute;top:28px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.8);color:#fff;font-size:11px;font-weight:600;padding:2px 8px;border-radius:100px;white-space:nowrap;">@${escapeHtml(tag.taggedUsername)} <span class="remove-tag" data-user-id="${tag.taggedUserId}" data-media-index="${mediaIndex}" style="cursor:pointer;margin-left:4px;opacity:0.7;">×</span></div>
+      </div>
+    `;
+    wrap.appendChild(pin);
+  });
+
+  // Attach remove listeners
+  wrap.querySelectorAll('.remove-tag').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      photoTags = photoTags.filter(t => !(t.mediaIndex === parseInt(btn.dataset.mediaIndex) && t.taggedUserId === btn.dataset.userId));
+      renderTagPins(mediaIndex);
+    });
+  });
+}
+
+async function savePhotoTags(postId) {
+  if (photoTags.length === 0) return;
+  try {
+    await window.db.from('photo_tags').insert(
+      photoTags.map(t => ({
+        post_id: postId,
+        media_index: t.mediaIndex,
+        tagged_user_id: t.taggedUserId,
+        x_percent: t.xPercent,
+        y_percent: t.yPercent
+      }))
+    );
+    // Send notifications to tagged users
+    for (const tag of photoTags) {
+      if (tag.taggedUserId !== currentUser.id) {
+        await window.db.from('notifications').insert({
+          user_id: tag.taggedUserId,
+          type: 'photo_tag',
+          actor_id: currentUser.id,
+          target_id: postId,
+          target_type: 'post'
+        });
+      }
+    }
+  } catch (err) {
+    console.error('Save photo tags error:', err);
+  }
+}
+
 // ─── MEDIA UPLOAD ────────────────────────────────────────────────────────────
 
 function setupMediaUpload() {
   const mediaBtn = document.getElementById('media-upload-btn');
   const mediaInput = document.getElementById('media-file-input');
-  const mediaPreview = document.getElementById('media-preview');
   if (!mediaBtn || !mediaInput) return;
 
   mediaBtn.addEventListener('click', () => mediaInput.click());
@@ -188,6 +350,7 @@ function setupMediaUpload() {
     }
 
     selectedMediaFiles = [...selectedMediaFiles, ...valid].slice(0, 4);
+    photoTags = photoTags.filter(t => t.mediaIndex < selectedMediaFiles.length);
     renderMediaPreview();
     mediaInput.value = '';
   });
@@ -200,6 +363,7 @@ function renderMediaPreview() {
   if (selectedMediaFiles.length === 0) {
     preview.innerHTML = '';
     preview.style.display = 'none';
+    photoTags = [];
     return;
   }
 
@@ -211,21 +375,37 @@ function renderMediaPreview() {
   preview.innerHTML = selectedMediaFiles.map((file, idx) => {
     const url = URL.createObjectURL(file);
     const isVideo = file.type.startsWith('video/');
+    const isImage = !isVideo;
     return `
       <div style="position:relative;border-radius:8px;overflow:hidden;aspect-ratio:${selectedMediaFiles.length === 1 ? '16/9' : '1'};">
         ${isVideo
           ? `<video src="${url}" style="width:100%;height:100%;object-fit:cover;" muted playsinline></video>`
-          : `<img src="${url}" style="width:100%;height:100%;object-fit:cover;" />`
+          : `<div class="tag-overlay-wrap" data-media-index="${idx}" style="position:relative;width:100%;height:100%;cursor:crosshair;">
+               <img src="${url}" style="width:100%;height:100%;object-fit:cover;display:block;" />
+               <div style="position:absolute;bottom:4px;left:4px;background:rgba(0,0,0,0.6);color:#fff;font-size:10px;font-weight:600;padding:2px 6px;border-radius:100px;pointer-events:none;">🏷 Click to tag</div>
+             </div>`
         }
         <button onclick="removeMediaFile(${idx})"
-          style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.7);color:#fff;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:14px;line-height:24px;text-align:center;">×</button>
+          style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.7);color:#fff;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:14px;line-height:24px;text-align:center;z-index:15;">×</button>
       </div>
     `;
   }).join('');
+
+  // Setup tagging for each image
+  selectedMediaFiles.forEach((file, idx) => {
+    if (!file.type.startsWith('video/')) {
+      setupPhotoTagging(idx);
+      renderTagPins(idx);
+    }
+  });
 }
 
 function removeMediaFile(idx) {
   selectedMediaFiles.splice(idx, 1);
+  photoTags = photoTags.filter(t => t.mediaIndex !== idx).map(t => ({
+    ...t,
+    mediaIndex: t.mediaIndex > idx ? t.mediaIndex - 1 : t.mediaIndex
+  }));
   renderMediaPreview();
 }
 
@@ -257,10 +437,7 @@ function setupCheckin() {
 
   checkinBtn.addEventListener('click', () => {
     const visible = checkinPanel.style.display === 'block';
-    if (visible) {
-      checkinPanel.style.display = 'none';
-      return;
-    }
+    if (visible) { checkinPanel.style.display = 'none'; return; }
     checkinPanel.style.display = 'block';
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(async (pos) => {
@@ -307,7 +484,6 @@ function clearCheckin() {
 function setupLinkPreview() {
   const textarea = document.getElementById('post-content');
   if (!textarea) return;
-
   textarea.addEventListener('input', () => {
     clearTimeout(linkPreviewTimeout);
     linkPreviewTimeout = setTimeout(() => detectAndFetchLinkPreview(textarea.value), 800);
@@ -316,28 +492,21 @@ function setupLinkPreview() {
 
 async function detectAndFetchLinkPreview(text) {
   const urlMatch = text.match(/https?:\/\/[^\s]+/);
-  if (!urlMatch) {
-    linkPreviewData = null;
-    renderLinkPreview(null);
-    return;
-  }
+  if (!urlMatch) { linkPreviewData = null; renderLinkPreview(null); return; }
   const url = urlMatch[0];
   try {
     const res = await fetch(`https://api.microlink.io?url=${encodeURIComponent(url)}`);
     const data = await res.json();
     if (data.status === 'success') {
       linkPreviewData = {
-        url,
-        title: data.data.title || '',
+        url, title: data.data.title || '',
         description: data.data.description || '',
         image: data.data.image?.url || '',
         siteName: data.data.publisher || new URL(url).hostname
       };
       renderLinkPreview(linkPreviewData);
     }
-  } catch {
-    linkPreviewData = null;
-  }
+  } catch { linkPreviewData = null; }
 }
 
 function renderLinkPreview(data) {
@@ -347,8 +516,7 @@ function renderLinkPreview(data) {
   container.style.display = 'block';
   container.innerHTML = `
     <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:10px;position:relative;">
-      <button onclick="clearLinkPreview()"
-        style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:14px;line-height:24px;text-align:center;z-index:1;">×</button>
+      <button onclick="clearLinkPreview()" style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:14px;line-height:24px;text-align:center;z-index:1;">×</button>
       ${data.image ? `<img src="${data.image}" style="width:100%;height:160px;object-fit:cover;" onerror="this.style.display='none'" />` : ''}
       <div style="padding:12px;">
         <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">${escapeHtml(data.siteName)}</div>
@@ -382,8 +550,7 @@ async function loadBirthdays() {
         if (u.id === currentUser.id) return false;
         const dob = new Date(u.date_of_birth);
         return dob.getMonth() + 1 === month && dob.getDate() === day;
-      })
-      .map(u => u.id);
+      }).map(u => u.id);
     if (birthdayUserIds.length === 0) return;
     const { data: profiles } = await window.db
       .from('profiles').select('user_id, username, display_name').in('user_id', birthdayUserIds);
@@ -403,9 +570,7 @@ async function loadBirthdays() {
         </a>
       `;
     }).join('');
-  } catch (err) {
-    console.error('Birthdays error:', err);
-  }
+  } catch (err) { console.error('Birthdays error:', err); }
 }
 
 async function loadNotifBadge() {
@@ -418,22 +583,15 @@ async function loadNotifBadge() {
     if (count && count > 0) {
       badge.textContent = count > 99 ? '99+' : count;
       badge.style.display = 'inline-flex';
-    } else {
-      badge.style.display = 'none';
-    }
-  } catch (err) {
-    console.error('Notif badge error:', err);
-  }
+    } else { badge.style.display = 'none'; }
+  } catch (err) { console.error('Notif badge error:', err); }
 }
 
 function setupEventListeners() {
   document.getElementById('post-btn').addEventListener('click', handleCreatePost);
-
   document.getElementById('logout-btn').addEventListener('click', async () => {
-    await window.auth.signOut();
-    window.location.href = '/';
+    await window.auth.signOut(); window.location.href = '/';
   });
-
   document.querySelectorAll('.feed-tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       feedMode = btn.dataset.mode;
@@ -442,21 +600,17 @@ function setupEventListeners() {
       loadFeed();
     });
   });
-
   document.getElementById('poll-toggle-btn').addEventListener('click', () => {
     pollVisible = !pollVisible;
     document.getElementById('poll-creator').style.display = pollVisible ? 'block' : 'none';
   });
-
   document.getElementById('add-option-btn').addEventListener('click', () => {
     const container = document.getElementById('poll-options').querySelector('.form-group');
     const options = container.querySelectorAll('.poll-option');
     if (options.length >= 4) return;
     const input = document.createElement('input');
-    input.type = 'text';
-    input.className = 'form-input poll-option';
-    input.placeholder = `Option ${options.length + 1}`;
-    input.maxLength = 100;
+    input.type = 'text'; input.className = 'form-input poll-option';
+    input.placeholder = `Option ${options.length + 1}`; input.maxLength = 100;
     input.style.marginTop = '8px';
     container.appendChild(input);
   });
@@ -465,7 +619,6 @@ function setupEventListeners() {
 async function loadFeed() {
   const container = document.getElementById('feed-container');
   container.innerHTML = '<div class="loading"><div class="spinner"></div>Loading feed...</div>';
-
   try {
     let posts = [];
 
@@ -505,12 +658,8 @@ async function loadFeed() {
         const { data: reactions } = await window.db
           .from('reactions').select('target_id').in('target_id', postIds).eq('target_type', 'post');
         const reactionCounts = {};
-        if (reactions) reactions.forEach(r => {
-          reactionCounts[r.target_id] = (reactionCounts[r.target_id] || 0) + 1;
-        });
-        posts = allPosts
-          .sort((a, b) => (reactionCounts[b.id] || 0) - (reactionCounts[a.id] || 0))
-          .slice(0, 50);
+        if (reactions) reactions.forEach(r => { reactionCounts[r.target_id] = (reactionCounts[r.target_id] || 0) + 1; });
+        posts = allPosts.sort((a, b) => (reactionCounts[b.id] || 0) - (reactionCounts[a.id] || 0)).slice(0, 50);
       }
 
     } else if (feedMode === 'hot') {
@@ -528,20 +677,14 @@ async function loadFeed() {
           window.db.from('comments').select('post_id').in('post_id', postIds).eq('is_removed', false)
         ]);
         const reactionCounts = {};
-        if (reactionsRes.data) reactionsRes.data.forEach(r => {
-          reactionCounts[r.target_id] = (reactionCounts[r.target_id] || 0) + 1;
-        });
+        if (reactionsRes.data) reactionsRes.data.forEach(r => { reactionCounts[r.target_id] = (reactionCounts[r.target_id] || 0) + 1; });
         const commentCounts = {};
-        if (commentsRes.data) commentsRes.data.forEach(c => {
-          commentCounts[c.post_id] = (commentCounts[c.post_id] || 0) + 1;
-        });
-        posts = allPosts
-          .sort((a, b) => {
-            const scoreA = (reactionCounts[a.id] || 0) + (commentCounts[a.id] || 0) * 2;
-            const scoreB = (reactionCounts[b.id] || 0) + (commentCounts[b.id] || 0) * 2;
-            return scoreB - scoreA;
-          })
-          .slice(0, 50);
+        if (commentsRes.data) commentsRes.data.forEach(c => { commentCounts[c.post_id] = (commentCounts[c.post_id] || 0) + 1; });
+        posts = allPosts.sort((a, b) => {
+          const scoreA = (reactionCounts[a.id] || 0) + (commentCounts[a.id] || 0) * 2;
+          const scoreB = (reactionCounts[b.id] || 0) + (commentCounts[b.id] || 0) * 2;
+          return scoreB - scoreA;
+        }).slice(0, 50);
       }
     }
 
@@ -566,8 +709,7 @@ async function loadFeed() {
 
     const userIds = [...new Set(posts.map(p => p.user_id))];
     const { data: profiles } = await window.db
-      .from('profiles')
-      .select('user_id, username, display_name, avatar_url, is_verified, verified_type, reputation')
+      .from('profiles').select('user_id, username, display_name, avatar_url, is_verified, verified_type, reputation')
       .in('user_id', userIds);
     const profileMap = {};
     if (profiles) profiles.forEach(p => { profileMap[p.user_id] = p; });
@@ -586,21 +728,18 @@ async function loadFeed() {
     let sharedPostMap = {};
     let sharedProfileMap = {};
     if (sharedPostIds.length > 0) {
-      const { data: sharedPosts } = await window.db
-        .from('posts').select('*').in('id', sharedPostIds);
+      const { data: sharedPosts } = await window.db.from('posts').select('*').in('id', sharedPostIds);
       if (sharedPosts) {
         sharedPosts.forEach(p => { sharedPostMap[p.id] = p; });
         const sharedUserIds = [...new Set(sharedPosts.map(p => p.user_id))];
         const { data: sharedProfiles } = await window.db
-          .from('profiles').select('user_id, username, display_name, is_verified, verified_type')
-          .in('user_id', sharedUserIds);
+          .from('profiles').select('user_id, username, display_name, is_verified, verified_type').in('user_id', sharedUserIds);
         if (sharedProfiles) sharedProfiles.forEach(p => { sharedProfileMap[p.user_id] = p; });
       }
     }
 
     const { data: reactions } = await window.db
-      .from('reactions').select('target_id, reaction_type')
-      .in('target_id', postIds).eq('target_type', 'post');
+      .from('reactions').select('target_id, reaction_type').in('target_id', postIds).eq('target_type', 'post');
     const reactionMap = {};
     if (reactions) {
       reactions.forEach(r => {
@@ -612,9 +751,7 @@ async function loadFeed() {
     const { data: comments } = await window.db
       .from('comments').select('post_id').in('post_id', postIds).eq('is_removed', false);
     const commentCountMap = {};
-    if (comments) {
-      comments.forEach(c => { commentCountMap[c.post_id] = (commentCountMap[c.post_id] || 0) + 1; });
-    }
+    if (comments) comments.forEach(c => { commentCountMap[c.post_id] = (commentCountMap[c.post_id] || 0) + 1; });
 
     let myReactionMap = {};
     if (currentUser) {
@@ -624,29 +761,24 @@ async function loadFeed() {
       if (myReactions) myReactions.forEach(r => { myReactionMap[r.target_id] = r.reaction_type; });
     }
 
-    const { data: views } = await window.db
-      .from('post_views').select('post_id').in('post_id', postIds);
+    const { data: views } = await window.db.from('post_views').select('post_id').in('post_id', postIds);
     const viewCountMap = {};
     if (views) views.forEach(v => { viewCountMap[v.post_id] = (viewCountMap[v.post_id] || 0) + 1; });
 
-    const { data: shares } = await window.db
-      .from('shares').select('post_id').in('post_id', postIds);
+    const { data: shares } = await window.db.from('shares').select('post_id').in('post_id', postIds);
     const shareCountMap = {};
     if (shares) shares.forEach(s => { shareCountMap[s.post_id] = (shareCountMap[s.post_id] || 0) + 1; });
 
-    const { data: polls } = await window.db
-      .from('polls').select('*').in('post_id', postIds);
+    const { data: polls } = await window.db.from('polls').select('*').in('post_id', postIds);
     const pollMap = {};
     if (polls) polls.forEach(p => { pollMap[p.post_id] = p; });
 
     if (polls && polls.length > 0) {
       const pollIds = polls.map(p => p.id);
       const { data: myVotes } = await window.db
-        .from('poll_votes').select('poll_id, option_index')
-        .in('poll_id', pollIds).eq('user_id', currentUser.id);
+        .from('poll_votes').select('poll_id, option_index').in('poll_id', pollIds).eq('user_id', currentUser.id);
       const myVoteMap = {};
       if (myVotes) myVotes.forEach(v => { myVoteMap[v.poll_id] = v.option_index; });
-
       const { data: allVotes } = await window.db
         .from('poll_votes').select('poll_id, option_index').in('poll_id', pollIds);
       const pollVoteCountMap = {};
@@ -663,8 +795,29 @@ async function loadFeed() {
       });
     }
 
+    // Fetch photo tags for all posts with media
+    const postsWithMedia = posts.filter(p => p.media_urls && p.media_urls.length > 0);
+    let photoTagMap = {};
+    if (postsWithMedia.length > 0) {
+      const mediaPostIds = postsWithMedia.map(p => p.id);
+      const { data: allTags } = await window.db
+        .from('photo_tags').select('post_id, media_index, tagged_user_id, x_percent, y_percent')
+        .in('post_id', mediaPostIds);
+      if (allTags && allTags.length > 0) {
+        const tagUserIds = [...new Set(allTags.map(t => t.tagged_user_id))];
+        const { data: tagProfiles } = await window.db
+          .from('profiles').select('user_id, username').in('user_id', tagUserIds);
+        const tagProfileMap = {};
+        if (tagProfiles) tagProfiles.forEach(p => { tagProfileMap[p.user_id] = p; });
+        allTags.forEach(tag => {
+          if (!photoTagMap[tag.post_id]) photoTagMap[tag.post_id] = [];
+          photoTagMap[tag.post_id].push({ ...tag, username: tagProfileMap[tag.tagged_user_id]?.username || 'unknown' });
+        });
+      }
+    }
+
     container.innerHTML = posts.map(post =>
-      renderPost(post, profileMap, communityMap, reactionMap, commentCountMap, myReactionMap, viewCountMap, pollMap, shareCountMap, sharedPostMap, sharedProfileMap)
+      renderPost(post, profileMap, communityMap, reactionMap, commentCountMap, myReactionMap, viewCountMap, pollMap, shareCountMap, sharedPostMap, sharedProfileMap, photoTagMap)
     ).join('');
 
     if (!document.getElementById('share-modal')) {
@@ -706,16 +859,7 @@ async function loadFeed() {
           <div style="padding:20px 24px;">
             <div style="font-size:14px;color:var(--text-muted);margin-bottom:16px;">Why are you reporting this post?</div>
             <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
-              ${[
-                ['spam', '🚫 Spam or advertising'],
-                ['harassment', '😡 Harassment or bullying'],
-                ['hate_speech', '🤬 Hate speech or discrimination'],
-                ['misinformation', '📰 Misinformation or false content'],
-                ['illegal', '⚖️ Illegal content'],
-                ['adult', '🔞 Adult content shown to minors'],
-                ['violence', '💢 Violence or threats'],
-                ['other', '❓ Other']
-              ].map(([value, label]) => `
+              ${[['spam','🚫 Spam or advertising'],['harassment','😡 Harassment or bullying'],['hate_speech','🤬 Hate speech or discrimination'],['misinformation','📰 Misinformation or false content'],['illegal','⚖️ Illegal content'],['adult','🔞 Adult content shown to minors'],['violence','💢 Violence or threats'],['other','❓ Other']].map(([value, label]) => `
                 <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;cursor:pointer;">
                   <input type="radio" name="report-reason" value="${value}" style="accent-color:var(--primary);" />
                   <span style="font-size:14px;color:var(--text);">${label}</span>
@@ -748,75 +892,37 @@ async function loadFeed() {
 async function handleViewDiagnostics(postId, viewCount, reactionMap, commentCount, shareCount) {
   const card = document.querySelector(`.post-card[data-post-id="${postId}"]`);
   if (!card) return;
-
   const existing = card.querySelector('.diagnostics-panel');
-  if (existing) {
-    existing.style.display = existing.style.display === 'none' ? 'block' : 'none';
-    return;
-  }
-
+  if (existing) { existing.style.display = existing.style.display === 'none' ? 'block' : 'none'; return; }
   const { data: reactions } = await window.db
-    .from('reactions').select('reaction_type')
-    .eq('target_id', postId).eq('target_type', 'post');
-
+    .from('reactions').select('reaction_type').eq('target_id', postId).eq('target_type', 'post');
   const counts = {};
-  if (reactions) reactions.forEach(r => {
-    counts[r.reaction_type] = (counts[r.reaction_type] || 0) + 1;
-  });
-
+  if (reactions) reactions.forEach(r => { counts[r.reaction_type] = (counts[r.reaction_type] || 0) + 1; });
   const totalReactions = Object.values(counts).reduce((a, b) => a + b, 0);
-
-  const reactionRows = REACTIONS
-    .filter(r => counts[r.type] > 0)
-    .map(r => `
-      <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;">
-        <span style="color:var(--text-muted);">${r.emoji} ${r.label}</span>
-        <span style="font-weight:600;color:var(--text);">${counts[r.type]}</span>
-      </div>
-    `).join('');
-
-  const engagementRate = viewCount > 0
-    ? ((totalReactions + commentCount) / viewCount * 100).toFixed(1)
-    : '0.0';
-
+  const reactionRows = REACTIONS.filter(r => counts[r.type] > 0).map(r => `
+    <div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;">
+      <span style="color:var(--text-muted);">${r.emoji} ${r.label}</span>
+      <span style="font-weight:600;color:var(--text);">${counts[r.type]}</span>
+    </div>
+  `).join('');
+  const engagementRate = viewCount > 0 ? ((totalReactions + commentCount) / viewCount * 100).toFixed(1) : '0.0';
   const panel = document.createElement('div');
   panel.className = 'diagnostics-panel';
   panel.style.cssText = 'margin-top:12px;background:var(--bg-input);border:1px solid var(--border);border-radius:12px;padding:16px;font-size:13px;';
   panel.innerHTML = `
     <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px;">📊 Post Analytics</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;">
-        <div style="font-size:22px;font-weight:800;color:var(--primary);">${viewCount.toLocaleString()}</div>
-        <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">👁 Views</div>
-      </div>
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;">
-        <div style="font-size:22px;font-weight:800;color:var(--primary);">${totalReactions}</div>
-        <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">❤️ Reactions</div>
-      </div>
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;">
-        <div style="font-size:22px;font-weight:800;color:var(--primary);">${commentCount}</div>
-        <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">💬 Comments</div>
-      </div>
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;">
-        <div style="font-size:22px;font-weight:800;color:var(--primary);">${shareCount}</div>
-        <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">🔁 Reposts</div>
-      </div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;"><div style="font-size:22px;font-weight:800;color:var(--primary);">${viewCount.toLocaleString()}</div><div style="font-size:12px;color:var(--text-muted);margin-top:2px;">👁 Views</div></div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;"><div style="font-size:22px;font-weight:800;color:var(--primary);">${totalReactions}</div><div style="font-size:12px;color:var(--text-muted);margin-top:2px;">❤️ Reactions</div></div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;"><div style="font-size:22px;font-weight:800;color:var(--primary);">${commentCount}</div><div style="font-size:12px;color:var(--text-muted);margin-top:2px;">💬 Comments</div></div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;"><div style="font-size:22px;font-weight:800;color:var(--primary);">${shareCount}</div><div style="font-size:12px;color:var(--text-muted);margin-top:2px;">🔁 Reposts</div></div>
     </div>
-    ${reactionRows ? `
-      <div style="border-top:1px solid var(--border);padding-top:12px;margin-bottom:12px;">
-        <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Reaction Breakdown</div>
-        ${reactionRows}
-      </div>
-    ` : ''}
+    ${reactionRows ? `<div style="border-top:1px solid var(--border);padding-top:12px;margin-bottom:12px;"><div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Reaction Breakdown</div>${reactionRows}</div>` : ''}
     <div style="border-top:1px solid var(--border);padding-top:12px;">
-      <div style="display:flex;justify-content:space-between;font-size:13px;">
-        <span style="color:var(--text-muted);">Engagement rate</span>
-        <span style="font-weight:700;color:${parseFloat(engagementRate) >= 5 ? '#4caf7d' : 'var(--text)'};">${engagementRate}%</span>
-      </div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--text-muted);">Engagement rate</span><span style="font-weight:700;color:${parseFloat(engagementRate) >= 5 ? '#4caf7d' : 'var(--text)'};">${engagementRate}%</span></div>
       <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">(reactions + comments) ÷ views</div>
     </div>
   `;
-
   const postActions = card.querySelector('.post-actions');
   if (postActions) postActions.before(panel);
 }
@@ -831,9 +937,7 @@ function renderSharedPost(sharedPost, sharedProfileMap) {
   const initial = username.charAt(0).toUpperCase();
   const verifiedBadge = getVerifiedBadge(profile);
   const timestamp = new Date(sharedPost.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-  const content = sharedPost.is_removed
-    ? '<em style="color:var(--text-muted);">This post has been deleted.</em>'
-    : escapeHtml(sharedPost.content || '');
+  const content = sharedPost.is_removed ? '<em style="color:var(--text-muted);">This post has been deleted.</em>' : escapeHtml(sharedPost.content || '');
   return `
     <div style="margin-top:12px;padding:14px;background:var(--bg-input);border:1px solid var(--border);border-radius:12px;cursor:pointer;"
       onclick="window.location.href='/comments.html?post=${sharedPost.id}'">
@@ -871,18 +975,13 @@ async function handleReport(postId) {
   const errorEl = document.getElementById('report-error');
   if (!reason) { errorEl.textContent = 'Please select a reason.'; errorEl.style.display = 'block'; return; }
   const submitBtn = document.getElementById('report-modal-submit');
-  submitBtn.textContent = 'Submitting...';
-  submitBtn.disabled = true;
+  submitBtn.textContent = 'Submitting...'; submitBtn.disabled = true;
   try {
-    const { data: existing } = await window.db
-      .from('reports').select('id')
+    const { data: existing } = await window.db.from('reports').select('id')
       .eq('reporter_id', currentUser.id).eq('target_id', postId).eq('target_type', 'post').single();
     if (existing) {
-      errorEl.textContent = 'You have already reported this post.';
-      errorEl.style.display = 'block';
-      submitBtn.textContent = 'Submit Report';
-      submitBtn.disabled = false;
-      return;
+      errorEl.textContent = 'You have already reported this post.'; errorEl.style.display = 'block';
+      submitBtn.textContent = 'Submit Report'; submitBtn.disabled = false; return;
     }
     const { error } = await window.db.from('reports').insert({
       reporter_id: currentUser.id, target_id: postId, target_type: 'post', reason, status: 'pending'
@@ -891,11 +990,9 @@ async function handleReport(postId) {
     closeReportModal();
   } catch (err) {
     console.error('Report error:', err);
-    errorEl.textContent = 'Something went wrong. Please try again.';
-    errorEl.style.display = 'block';
+    errorEl.textContent = 'Something went wrong. Please try again.'; errorEl.style.display = 'block';
   }
-  submitBtn.textContent = 'Submit Report';
-  submitBtn.disabled = false;
+  submitBtn.textContent = 'Submit Report'; submitBtn.disabled = false;
 }
 
 function openShareModal(postId, postContent, postUsername) {
@@ -921,20 +1018,14 @@ async function handleShare(postId) {
   if (!currentUser) return;
   const comment = document.getElementById('share-comment').value.trim();
   const submitBtn = document.getElementById('share-modal-submit');
-  submitBtn.textContent = 'Reposting...';
-  submitBtn.disabled = true;
+  submitBtn.textContent = 'Reposting...'; submitBtn.disabled = true;
   try {
     await window.db.from('shares').insert({ post_id: postId, user_id: currentUser.id, comment });
     const shareContent = comment ? `${comment}\n\n🔁 [Reposted]` : '🔁 [Reposted]';
     await window.db.from('posts').insert({ user_id: currentUser.id, content: shareContent, shared_post_id: postId });
     closeShareModal();
-  } catch (err) {
-    console.error('Share error:', err);
-    closeShareModal();
-  } finally {
-    submitBtn.textContent = '🔁 Repost';
-    submitBtn.disabled = false;
-  }
+  } catch (err) { console.error('Share error:', err); closeShareModal(); }
+  finally { submitBtn.textContent = '🔁 Repost'; submitBtn.disabled = false; }
 }
 
 async function recordFeedViews(postIds) {
@@ -949,7 +1040,7 @@ async function recordFeedViews(postIds) {
   } catch (err) {}
 }
 
-function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap, myReactionMap, viewCountMap, pollMap, shareCountMap, sharedPostMap, sharedProfileMap) {
+function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap, myReactionMap, viewCountMap, pollMap, shareCountMap, sharedPostMap, sharedProfileMap, photoTagMap) {
   const profile = profileMap[post.user_id];
   const username = profile?.username || 'unknown';
   const displayName = profile?.display_name || username;
@@ -970,8 +1061,7 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
   const isOwnPost = post.user_id === currentUser?.id;
 
   const totalReactions = Object.values(postReactions).reduce((a, b) => a + b, 0);
-  const topEmojis = REACTIONS
-    .filter(r => postReactions[r.type] > 0)
+  const topEmojis = REACTIONS.filter(r => postReactions[r.type] > 0)
     .sort((a, b) => (postReactions[b.type] || 0) - (postReactions[a.type] || 0))
     .slice(0, 3).map(r => r.emoji).join('');
 
@@ -993,16 +1083,35 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
     ? (post.content || '').replace(/\n\n🔁 \[Reposted\]$/, '').trim()
     : (post.content || '');
 
+  // Media with photo tag overlays
   const mediaUrls = post.media_urls || [];
+  const postPhotoTags = photoTagMap ? (photoTagMap[post.id] || []) : [];
   let mediaHtml = '';
   if (mediaUrls.length > 0) {
     const grid = mediaUrls.length === 1 ? '1fr' : 'repeat(2,1fr)';
     mediaHtml = `<div style="display:grid;grid-template-columns:${grid};gap:6px;margin-top:10px;border-radius:10px;overflow:hidden;">
-      ${mediaUrls.map(url => {
+      ${mediaUrls.map((url, idx) => {
         const isVideo = url.match(/\.(mp4|mov|webm)(\?|$)/i);
-        return isVideo
-          ? `<video src="${url}" controls style="width:100%;max-height:400px;object-fit:cover;background:#000;" playsinline></video>`
-          : `<img src="${url}" style="width:100%;${mediaUrls.length===1?'max-height:400px;':'aspect-ratio:1;'}object-fit:cover;cursor:pointer;" onclick="window.open('${url}','_blank')" />`;
+        const tagsForImage = postPhotoTags.filter(t => t.media_index === idx);
+        if (isVideo) {
+          return `<video src="${url}" controls style="width:100%;max-height:400px;object-fit:cover;background:#000;" playsinline></video>`;
+        }
+        const tagPins = tagsForImage.map(tag => `
+          <div class="feed-tag-pin" style="position:absolute;left:${tag.x_percent}%;top:${tag.y_percent}%;transform:translate(-50%,-50%);z-index:10;">
+            <div style="position:relative;">
+              <div style="width:20px;height:20px;border-radius:50%;background:var(--primary);border:2px solid #fff;"></div>
+              <div style="position:absolute;top:24px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.8);color:#fff;font-size:10px;font-weight:600;padding:2px 6px;border-radius:100px;white-space:nowrap;pointer-events:none;">
+                <a href="/profile.html?user=${encodeURIComponent(tag.username)}" style="color:#fff;text-decoration:none;">@${escapeHtml(tag.username)}</a>
+              </div>
+            </div>
+          </div>
+        `).join('');
+        return `
+          <div style="position:relative;${mediaUrls.length===1?'':'aspect-ratio:1;'}overflow:hidden;">
+            <img src="${url}" style="width:100%;${mediaUrls.length===1?'max-height:400px;':'height:100%;'}object-fit:cover;cursor:pointer;display:block;" onclick="window.open('${url}','_blank')" />
+            ${tagPins}
+          </div>
+        `;
       }).join('')}
     </div>`;
   }
@@ -1053,11 +1162,9 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
                   </div>
                 </div>`;
             } else {
-              return `
-                <button class="poll-vote-btn" data-poll-id="${poll.id}" data-option-index="${idx}"
-                  style="display:block;width:100%;text-align:left;padding:10px 14px;margin-bottom:6px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:14px;color:var(--text);">
-                  ${escapeHtml(opt)}
-                </button>`;
+              return `<button class="poll-vote-btn" data-poll-id="${poll.id}" data-option-index="${idx}"
+                style="display:block;width:100%;text-align:left;padding:10px 14px;margin-bottom:6px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:14px;color:var(--text);">
+                ${escapeHtml(opt)}</button>`;
             }
           }).join('')}
         </div>
@@ -1260,9 +1367,7 @@ function attachPostListeners() {
         activeGifPicker = postId;
         loadGifPickerTrending(postId);
         panel.querySelector('.gif-search-input').focus();
-      } else {
-        activeGifPicker = null;
-      }
+      } else { activeGifPicker = null; }
     });
   });
 
@@ -1299,9 +1404,7 @@ async function loadGifPickerTrending(postId) {
     const res = await fetch(`https://api.giphy.com/v1/gifs/trending?api_key=${key}&limit=12&rating=g`);
     const data = await res.json();
     renderGifPickerResults(postId, data.data);
-  } catch {
-    resultsEl.innerHTML = '<div style="grid-column:1/-1;font-size:12px;color:var(--text-muted);padding:8px;">Could not load GIFs.</div>';
-  }
+  } catch { resultsEl.innerHTML = '<div style="grid-column:1/-1;font-size:12px;color:var(--text-muted);padding:8px;">Could not load GIFs.</div>'; }
 }
 
 async function searchGifsForPost(postId, query) {
@@ -1314,28 +1417,20 @@ async function searchGifsForPost(postId, query) {
     const res = await fetch(`https://api.giphy.com/v1/gifs/search?api_key=${key}&q=${encodeURIComponent(query)}&limit=12&rating=g`);
     const data = await res.json();
     renderGifPickerResults(postId, data.data);
-  } catch {
-    resultsEl.innerHTML = '<div style="grid-column:1/-1;font-size:12px;color:var(--text-muted);padding:8px;">Search failed.</div>';
-  }
+  } catch { resultsEl.innerHTML = '<div style="grid-column:1/-1;font-size:12px;color:var(--text-muted);padding:8px;">Search failed.</div>'; }
 }
 
 function renderGifPickerResults(postId, gifs) {
   const resultsEl = document.querySelector(`.gif-results[data-post-id="${postId}"]`);
   if (!resultsEl) return;
-  if (!gifs || gifs.length === 0) {
-    resultsEl.innerHTML = '<div style="grid-column:1/-1;font-size:12px;color:var(--text-muted);padding:8px;">No GIFs found.</div>';
-    return;
-  }
+  if (!gifs || gifs.length === 0) { resultsEl.innerHTML = '<div style="grid-column:1/-1;font-size:12px;color:var(--text-muted);padding:8px;">No GIFs found.</div>'; return; }
   resultsEl.innerHTML = gifs.map(gif => `
     <img src="${gif.images.fixed_height_small.url}" data-full="${gif.images.fixed_height.url}"
       style="width:100%;height:70px;object-fit:cover;border-radius:6px;cursor:pointer;"
       class="gif-pick-item" data-post-id="${postId}" />
   `).join('');
   resultsEl.querySelectorAll('.gif-pick-item').forEach(img => {
-    img.addEventListener('click', (e) => {
-      e.stopPropagation();
-      postGifReaction(postId, img.dataset.full);
-    });
+    img.addEventListener('click', (e) => { e.stopPropagation(); postGifReaction(postId, img.dataset.full); });
   });
 }
 
@@ -1347,13 +1442,10 @@ async function postGifReaction(postId, gifUrl) {
     await window.db.from('comments').insert({ post_id: postId, user_id: currentUser.id, content: gifUrl });
     const gifBtn = document.querySelector(`.gif-react-btn[data-post-id="${postId}"]`);
     if (gifBtn) {
-      gifBtn.textContent = '✅ Sent!';
-      gifBtn.style.color = '#4caf7d';
+      gifBtn.textContent = '✅ Sent!'; gifBtn.style.color = '#4caf7d';
       setTimeout(() => { gifBtn.textContent = '🎞️ GIF'; gifBtn.style.color = ''; }, 2000);
     }
-  } catch (err) {
-    console.error('GIF reaction error:', err);
-  }
+  } catch (err) { console.error('GIF reaction error:', err); }
 }
 
 async function handlePollVote(pollId, optionIndex) {
@@ -1364,9 +1456,7 @@ async function handlePollVote(pollId, optionIndex) {
     if (existing) return;
     await window.db.from('poll_votes').insert({ poll_id: pollId, user_id: currentUser.id, option_index: optionIndex });
     await refreshPollResults(pollId);
-  } catch (err) {
-    console.error('Poll vote error:', err);
-  }
+  } catch (err) { console.error('Poll vote error:', err); }
 }
 
 async function refreshPollResults(pollId) {
@@ -1429,21 +1519,16 @@ function showEditForm(postId, currentContent) {
 
 async function handleEditPost(postId, newContent, wrapper, originalContent) {
   if (!newContent) return;
-  if (newContent === originalContent) {
-    wrapper.innerHTML = `<div class="post-content">${renderMentions(originalContent)}</div>`;
-    return;
-  }
+  if (newContent === originalContent) { wrapper.innerHTML = `<div class="post-content">${renderMentions(originalContent)}</div>`; return; }
   const saveBtn = wrapper.querySelector('.save-edit-btn');
-  saveBtn.textContent = 'Saving...';
-  saveBtn.disabled = true;
+  saveBtn.textContent = 'Saving...'; saveBtn.disabled = true;
   try {
     const { error } = await window.db.from('posts').update({ content: newContent, is_edited: true }).eq('id', postId).eq('user_id', currentUser.id);
     if (error) throw error;
     wrapper.innerHTML = `<div class="post-content">${renderMentions(newContent)}</div>`;
   } catch (err) {
     console.error('Edit error:', err);
-    saveBtn.textContent = 'Save';
-    saveBtn.disabled = false;
+    saveBtn.textContent = 'Save'; saveBtn.disabled = false;
   }
 }
 
@@ -1466,9 +1551,7 @@ async function handleReaction(postId, type) {
       }
     }
     await refreshPostReactions(postId);
-  } catch (err) {
-    console.error('Reaction error:', err);
-  }
+  } catch (err) { console.error('Reaction error:', err); }
 }
 
 async function refreshPostReactions(postId) {
@@ -1489,9 +1572,7 @@ async function refreshPostReactions(postId) {
       summary = card.querySelector('.reaction-summary');
     }
     summary.textContent = `${topEmojis} ${total}`;
-  } else if (summary) {
-    summary.parentElement.remove();
-  }
+  } else if (summary) { summary.parentElement.remove(); }
   const { data: myReaction } = await window.db.from('reactions').select('reaction_type').eq('target_id', postId).eq('target_type', 'post').eq('user_id', currentUser.id).single();
   const reactBtn = card.querySelector('.react-btn');
   if (reactBtn) {
@@ -1509,13 +1590,11 @@ async function handleCreatePost() {
   if (!content && !hasPoll && selectedMediaFiles.length === 0) return;
 
   const btn = document.getElementById('post-btn');
-  btn.textContent = 'Posting...';
-  btn.disabled = true;
+  btn.textContent = 'Posting...'; btn.disabled = true;
 
   try {
     const postData = {
-      user_id: currentUser.id,
-      content,
+      user_id: currentUser.id, content,
       is_adult: currentProfile?.is_adult_creator || false
     };
 
@@ -1525,12 +1604,9 @@ async function handleCreatePost() {
       postData.checkin_lng = selectedCheckin.longitude;
     }
 
-    if (linkPreviewData) {
-      postData.link_preview = linkPreviewData;
-    }
+    if (linkPreviewData) postData.link_preview = linkPreviewData;
 
-    const { data: post, error: postError } = await window.db
-      .from('posts').insert(postData).select().single();
+    const { data: post, error: postError } = await window.db.from('posts').insert(postData).select().single();
     if (postError) throw postError;
 
     if (selectedMediaFiles.length > 0 && post) {
@@ -1538,6 +1614,7 @@ async function handleCreatePost() {
       if (mediaUrls.length > 0) {
         await window.db.from('posts').update({ media_urls: mediaUrls }).eq('id', post.id);
       }
+      await savePhotoTags(post.id);
     }
 
     await awardReputation(currentUser.id, 'post_created', post.id, 'post', null);
@@ -1560,6 +1637,7 @@ async function handleCreatePost() {
     selectedMediaFiles = [];
     selectedCheckin = null;
     linkPreviewData = null;
+    photoTags = [];
     renderMediaPreview();
     renderLinkPreview(null);
     clearCheckin();
@@ -1571,13 +1649,11 @@ async function handleCreatePost() {
       pollVisible = false;
     }
 
-    btn.textContent = 'Post';
-    btn.disabled = false;
+    btn.textContent = 'Post'; btn.disabled = false;
     await loadFeed();
   } catch (err) {
     console.error('Post error:', err);
-    btn.textContent = 'Post';
-    btn.disabled = false;
+    btn.textContent = 'Post'; btn.disabled = false;
   }
 }
 
