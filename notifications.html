@@ -31,65 +31,50 @@
   </script>
 
   <link rel="stylesheet" href="/css/main.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
+    .sidebar-nav li a {
+      display: flex; align-items: center; gap: 10px;
+      padding: 7px 10px; border-radius: var(--radius-md);
+      text-decoration: none; color: var(--text-muted);
+      font-size: 14px; font-weight: 500; transition: all 0.15s ease;
+    }
+    .sidebar-nav li a:hover { background: var(--bg-hover); color: var(--text); }
+    .sidebar-nav li a.active { background: rgba(0,229,255,0.08); color: var(--primary); }
+    .nav-icon-box {
+      width: 28px; height: 28px; border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
     .mobile-nav {
-      display: none;
-      position: fixed;
-      bottom: 0; left: 0; right: 0;
-      height: 56px;
-      background: rgba(8,8,10,0.97);
-      border-top: 1px solid var(--border);
-      z-index: 1000;
-      backdrop-filter: blur(12px);
+      display: none; position: fixed; bottom: 0; left: 0; right: 0;
+      height: 56px; background: rgba(8,8,10,0.97);
+      border-top: 1px solid var(--border); z-index: 1000; backdrop-filter: blur(12px);
     }
-    .mobile-nav-inner {
-      display: flex;
-      align-items: center;
-      justify-content: space-around;
-      height: 100%;
-      padding: 0 8px;
-    }
+    .mobile-nav-inner { display: flex; align-items: center; justify-content: space-around; height: 100%; padding: 0 8px; }
     .mobile-nav-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 2px;
-      padding: 6px 12px;
-      text-decoration: none;
-      color: #6a6a7a;
-      font-size: 10px;
-      font-weight: 600;
-      transition: color 0.15s ease;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 2px; padding: 6px 12px; text-decoration: none;
+      color: #6a6a7a; font-size: 10px; font-weight: 600; transition: color 0.15s ease;
     }
     .mobile-nav-item.active { color: var(--primary); }
     .mobile-nav-item span { font-size: 20px; line-height: 1; }
-    .notif-page-wrap {
-      max-width: 680px;
-      margin: 0 auto;
-      padding: calc(var(--nav-height) + 24px) 16px 40px;
-    }
+
     .notif-page-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 24px;
-      flex-wrap: wrap;
-      gap: 12px;
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 24px; flex-wrap: wrap; gap: 12px;
     }
     .notif-page-title {
-      font-family: var(--font-display);
-      font-size: 1.5rem;
-      font-weight: 900;
-      letter-spacing: -0.03em;
-      color: var(--text);
+      font-family: var(--font-display); font-size: 1.5rem; font-weight: 900;
+      letter-spacing: -0.03em; color: var(--text);
     }
 
     @media (max-width: 768px) {
       .mobile-nav { display: block; }
-      .notif-page-wrap { padding-bottom: 80px; }
+      .feed-main { padding-bottom: 80px; }
     }
   </style>
 </head>
@@ -99,20 +84,61 @@
     <a href="/feed.html" class="nav-brand">Voxxee</a>
     <div class="nav-actions">
       <a href="/feed.html" class="btn btn-ghost">Feed</a>
-      <a href="/stories.html" class="btn btn-ghost">📸 Stories</a>
       <a href="/profile.html" class="btn btn-ghost">Profile</a>
       <button id="logout-btn" class="btn btn-ghost">Log Out</button>
     </div>
   </nav>
 
-  <div class="notif-page-wrap">
-    <div class="notif-page-header">
-      <div class="notif-page-title">Notifications</div>
-      <button id="mark-all-read-btn" class="btn btn-ghost btn-sm">Mark all read</button>
+  <div class="app-layout">
+
+    <div class="sidebar-left">
+      <ul class="sidebar-nav">
+        <li><a href="/feed.html">
+          <div class="nav-icon-box" style="background:#00e5ff;"><i class="ti ti-home" style="color:#000;font-size:15px;"></i></div>Home</a></li>
+        <li><a href="/search.html">
+          <div class="nav-icon-box" style="background:#8b5cf6;"><i class="ti ti-search" style="color:#fff;font-size:15px;"></i></div>Search</a></li>
+        <li><a href="/communities.html">
+          <div class="nav-icon-box" style="background:#22c55e;"><i class="ti ti-messages" style="color:#fff;font-size:15px;"></i></div>Communities</a></li>
+        <li><a href="/events.html">
+          <div class="nav-icon-box" style="background:#f59e0b;"><i class="ti ti-calendar" style="color:#000;font-size:15px;"></i></div>Events</a></li>
+        <li><a href="/messages.html">
+          <div class="nav-icon-box" style="background:#fbbf24;"><i class="ti ti-mail" style="color:#000;font-size:15px;"></i></div>Messages</a></li>
+        <li><a href="/notifications.html" class="active">
+          <div class="nav-icon-box" style="background:#f43f5e;"><i class="ti ti-bell" style="color:#fff;font-size:15px;"></i></div>Notifications</a></li>
+        <li><a href="/memories.html">
+          <div class="nav-icon-box" style="background:#06b6d4;"><i class="ti ti-clock" style="color:#fff;font-size:15px;"></i></div>Memories</a></li>
+        <li><a href="/stories.html">
+          <div class="nav-icon-box" style="background:#ec4899;"><i class="ti ti-camera" style="color:#fff;font-size:15px;"></i></div>Stories</a></li>
+        <li><a href="/games.html">
+          <div class="nav-icon-box" style="background:#6366f1;"><i class="ti ti-device-gamepad-2" style="color:#fff;font-size:15px;"></i></div>Games</a></li>
+        <li><a href="/profile.html">
+          <div class="nav-icon-box" style="background:#64748b;"><i class="ti ti-user" style="color:#fff;font-size:15px;"></i></div>Profile</a></li>
+        <li><a href="/ecosystem.html">
+          <div class="nav-icon-box" style="background:#0ea5e9;"><i class="ti ti-world" style="color:#fff;font-size:15px;"></i></div>Ecosystem</a></li>
+      </ul>
     </div>
-    <div id="notifications-container">
-      <div class="loading"><div class="spinner"></div>Loading notifications...</div>
+
+    <div class="feed-main">
+      <div class="notif-page-header">
+        <div class="notif-page-title">Notifications</div>
+        <button id="mark-all-read-btn" class="btn btn-ghost btn-sm">Mark all read</button>
+      </div>
+      <div id="notifications-container">
+        <div class="loading"><div class="spinner"></div>Loading notifications...</div>
+      </div>
     </div>
+
+    <div class="sidebar-right">
+      <div style="font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">Notification Types</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="font-size:13px;color:var(--text-muted);">❤️ Reactions to your posts</div>
+        <div style="font-size:13px;color:var(--text-muted);">💬 Comments on your posts</div>
+        <div style="font-size:13px;color:var(--text-muted);">👥 New followers</div>
+        <div style="font-size:13px;color:var(--text-muted);">🏷️ Photo tags</div>
+        <div style="font-size:13px;color:var(--text-muted);">🔴 Live stream alerts</div>
+      </div>
+    </div>
+
   </div>
 
   <nav class="mobile-nav">
