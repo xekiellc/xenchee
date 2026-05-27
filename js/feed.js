@@ -16,7 +16,7 @@ let selectedCheckin = null;
 let linkPreviewData = null;
 let linkPreviewTimeout = null;
 let liveSubscription = null;
-let photoTags = []; // { mediaIndex, taggedUserId, taggedUsername, xPercent, yPercent }
+let photoTags = [];
 
 const REACTIONS = [
   { type: 'like', emoji: '❤️', label: 'Like' },
@@ -37,6 +37,19 @@ function getVerifiedBadge(profile) {
   return badges[profile.verified_type] || badges.identity;
 }
 
+function avatarHtml(profile, size = 40) {
+  const username = profile?.username || '?';
+  const initial = username.charAt(0).toUpperCase();
+  const avatarUrl = profile?.avatar_url || '';
+  if (avatarUrl) {
+    return `<img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(username)}"
+      style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;flex-shrink:0;cursor:pointer;"
+      onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
+      <div class="post-avatar" style="display:none;width:${size}px;height:${size}px;cursor:pointer;">${initial}</div>`;
+  }
+  return `<div class="post-avatar" style="width:${size}px;height:${size}px;cursor:pointer;">${initial}</div>`;
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   await waitForDb();
 
@@ -52,8 +65,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   currentProfile = profile;
 
   if (profile) {
-    const avatar = document.getElementById('current-user-avatar');
-    if (avatar) avatar.textContent = profile.username.charAt(0).toUpperCase();
+    const avatarEl = document.getElementById('current-user-avatar');
+    if (avatarEl) {
+      if (profile.avatar_url) {
+        avatarEl.innerHTML = `<img src="${escapeHtml(profile.avatar_url)}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" onerror="this.textContent='${profile.username.charAt(0).toUpperCase()}';this.style.display='flex';" />`;
+      } else {
+        avatarEl.textContent = profile.username.charAt(0).toUpperCase();
+      }
+    }
   }
 
   initMentionAutocomplete('post-content', 'post-mention-dropdown');
@@ -170,20 +189,17 @@ function setupPhotoTagging(mediaIndex) {
   if (!wrap) return;
 
   wrap.addEventListener('click', (e) => {
-    // Remove any existing dropdowns
     document.querySelectorAll('.tag-search-dropdown').forEach(d => d.remove());
 
     const rect = wrap.getBoundingClientRect();
     const xPercent = ((e.clientX - rect.left) / rect.width * 100).toFixed(1);
     const yPercent = ((e.clientY - rect.top) / rect.height * 100).toFixed(1);
 
-    // Place a pin
     const pin = document.createElement('div');
     pin.className = 'tag-pin-temp';
     pin.style.cssText = `position:absolute;left:${xPercent}%;top:${yPercent}%;transform:translate(-50%,-50%);width:24px;height:24px;border-radius:50%;background:var(--primary);border:2px solid #fff;z-index:10;pointer-events:none;`;
     wrap.appendChild(pin);
 
-    // Show user search dropdown
     const dropdown = document.createElement('div');
     dropdown.className = 'tag-search-dropdown';
     dropdown.style.cssText = `position:absolute;left:${Math.min(parseFloat(xPercent), 70)}%;top:${Math.min(parseFloat(yPercent) + 5, 80)}%;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.4);z-index:20;width:220px;overflow:hidden;`;
@@ -243,15 +259,10 @@ async function searchUsersForTag(query, resultsEl, mediaIndex, xPercent, yPercen
         e.stopPropagation();
         const userId = el.dataset.userId;
         const username = el.dataset.username;
-
-        // Replace temp pin with permanent tag
         pin.remove();
         dropdown.remove();
-
-        // Check for duplicate
         const exists = photoTags.find(t => t.mediaIndex === parseInt(mediaIndex) && t.taggedUserId === userId);
         if (exists) return;
-
         photoTags.push({
           mediaIndex: parseInt(mediaIndex),
           taggedUserId: userId,
@@ -259,7 +270,6 @@ async function searchUsersForTag(query, resultsEl, mediaIndex, xPercent, yPercen
           xPercent: parseFloat(xPercent),
           yPercent: parseFloat(yPercent)
         });
-
         renderTagPins(mediaIndex);
       });
     });
@@ -272,10 +282,7 @@ async function searchUsersForTag(query, resultsEl, mediaIndex, xPercent, yPercen
 function renderTagPins(mediaIndex) {
   const wrap = document.querySelector(`.tag-overlay-wrap[data-media-index="${mediaIndex}"]`);
   if (!wrap) return;
-
-  // Clear existing pins for this image
   wrap.querySelectorAll('.tag-pin').forEach(p => p.remove());
-
   const tagsForImage = photoTags.filter(t => t.mediaIndex === parseInt(mediaIndex));
   tagsForImage.forEach(tag => {
     const pin = document.createElement('div');
@@ -289,8 +296,6 @@ function renderTagPins(mediaIndex) {
     `;
     wrap.appendChild(pin);
   });
-
-  // Attach remove listeners
   wrap.querySelectorAll('.remove-tag').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -312,7 +317,6 @@ async function savePhotoTags(postId) {
         y_percent: t.yPercent
       }))
     );
-    // Send notifications to tagged users
     for (const tag of photoTags) {
       if (tag.taggedUserId !== currentUser.id) {
         await window.db.from('notifications').insert({
@@ -341,14 +345,11 @@ function setupMediaUpload() {
   mediaInput.addEventListener('change', async () => {
     const files = Array.from(mediaInput.files);
     if (!files.length) return;
-
     const allowed = ['image/jpeg','image/png','image/gif','image/webp','video/mp4','video/quicktime','video/webm'];
     const valid = files.filter(f => allowed.includes(f.type) && f.size <= 50 * 1024 * 1024);
-
     if (valid.length !== files.length) {
       alert('Some files were skipped. Only images/videos under 50MB are allowed.');
     }
-
     selectedMediaFiles = [...selectedMediaFiles, ...valid].slice(0, 4);
     photoTags = photoTags.filter(t => t.mediaIndex < selectedMediaFiles.length);
     renderMediaPreview();
@@ -359,23 +360,19 @@ function setupMediaUpload() {
 function renderMediaPreview() {
   const preview = document.getElementById('media-preview');
   if (!preview) return;
-
   if (selectedMediaFiles.length === 0) {
     preview.innerHTML = '';
     preview.style.display = 'none';
     photoTags = [];
     return;
   }
-
   preview.style.display = 'grid';
   preview.style.gridTemplateColumns = selectedMediaFiles.length === 1 ? '1fr' : 'repeat(2, 1fr)';
   preview.style.gap = '8px';
   preview.style.marginTop = '10px';
-
   preview.innerHTML = selectedMediaFiles.map((file, idx) => {
     const url = URL.createObjectURL(file);
     const isVideo = file.type.startsWith('video/');
-    const isImage = !isVideo;
     return `
       <div style="position:relative;border-radius:8px;overflow:hidden;aspect-ratio:${selectedMediaFiles.length === 1 ? '16/9' : '1'};">
         ${isVideo
@@ -390,8 +387,6 @@ function renderMediaPreview() {
       </div>
     `;
   }).join('');
-
-  // Setup tagging for each image
   selectedMediaFiles.forEach((file, idx) => {
     if (!file.type.startsWith('video/')) {
       setupPhotoTagging(idx);
@@ -434,7 +429,6 @@ function setupCheckin() {
   const checkinBtn = document.getElementById('checkin-btn');
   const checkinPanel = document.getElementById('checkin-panel');
   if (!checkinBtn || !checkinPanel) return;
-
   checkinBtn.addEventListener('click', () => {
     const visible = checkinPanel.style.display === 'block';
     if (visible) { checkinPanel.style.display = 'none'; return; }
@@ -733,7 +727,7 @@ async function loadFeed() {
         sharedPosts.forEach(p => { sharedPostMap[p.id] = p; });
         const sharedUserIds = [...new Set(sharedPosts.map(p => p.user_id))];
         const { data: sharedProfiles } = await window.db
-          .from('profiles').select('user_id, username, display_name, is_verified, verified_type').in('user_id', sharedUserIds);
+          .from('profiles').select('user_id, username, display_name, avatar_url, is_verified, verified_type').in('user_id', sharedUserIds);
         if (sharedProfiles) sharedProfiles.forEach(p => { sharedProfileMap[p.user_id] = p; });
       }
     }
@@ -795,7 +789,6 @@ async function loadFeed() {
       });
     }
 
-    // Fetch photo tags for all posts with media
     const postsWithMedia = posts.filter(p => p.media_urls && p.media_urls.length > 0);
     let photoTagMap = {};
     if (postsWithMedia.length > 0) {
@@ -934,7 +927,6 @@ function renderSharedPost(sharedPost, sharedProfileMap) {
   const profile = sharedProfileMap[sharedPost.user_id];
   const username = profile?.username || 'unknown';
   const displayName = profile?.display_name || username;
-  const initial = username.charAt(0).toUpperCase();
   const verifiedBadge = getVerifiedBadge(profile);
   const timestamp = new Date(sharedPost.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   const content = sharedPost.is_removed ? '<em style="color:var(--text-muted);">This post has been deleted.</em>' : escapeHtml(sharedPost.content || '');
@@ -942,7 +934,9 @@ function renderSharedPost(sharedPost, sharedProfileMap) {
     <div style="margin-top:12px;padding:14px;background:var(--bg-input);border:1px solid var(--border);border-radius:12px;cursor:pointer;"
       onclick="window.location.href='/comments.html?post=${sharedPost.id}'">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-        <div style="width:28px;height:28px;border-radius:50%;background:var(--primary-dim);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">${initial}</div>
+        <div style="display:flex;align-items:center;flex-shrink:0;">
+          ${avatarHtml(profile, 28)}
+        </div>
         <div>
           <span style="font-size:13px;font-weight:700;color:var(--text);">${escapeHtml(displayName)}</span>
           ${verifiedBadge}
@@ -1044,7 +1038,6 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
   const profile = profileMap[post.user_id];
   const username = profile?.username || 'unknown';
   const displayName = profile?.display_name || username;
-  const initial = username.charAt(0).toUpperCase();
   const verifiedBadge = getVerifiedBadge(profile);
   const repBadge = repBadgeHtml(profile?.reputation);
   const community = post.community_id && communityMap[post.community_id]
@@ -1083,7 +1076,6 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
     ? (post.content || '').replace(/\n\n🔁 \[Reposted\]$/, '').trim()
     : (post.content || '');
 
-  // Media with photo tag overlays
   const mediaUrls = post.media_urls || [];
   const postPhotoTags = photoTagMap ? (photoTagMap[post.id] || []) : [];
   let mediaHtml = '';
@@ -1184,7 +1176,9 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
   return `
     <div class="post-card" data-post-id="${post.id}">
       <div class="post-header">
-        <div class="post-avatar" style="cursor:pointer;" onclick="window.location.href='/profile.html?user=${encodeURIComponent(username)}'">${initial}</div>
+        <div style="display:flex;align-items:center;flex-shrink:0;" onclick="window.location.href='/profile.html?user=${encodeURIComponent(username)}'">
+          ${avatarHtml(profile, 40)}
+        </div>
         <div class="post-meta">
           <div class="post-username">
             <a href="/profile.html?user=${encodeURIComponent(username)}" style="text-decoration:none;color:inherit;">${escapeHtml(displayName)}</a>
