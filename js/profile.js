@@ -45,17 +45,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ─── AVATAR UPLOAD ────────────────────────────────────────────────────────────
 
 function setupAvatarUpload() {
-  const avatarEl = document.getElementById('profile-avatar-large');
-  const label = document.getElementById('avatar-upload-label');
+  const uploadBtn = document.getElementById('avatar-upload-btn');
   const fileInput = document.getElementById('avatar-file-input');
-  if (!avatarEl || !fileInput) return;
+  if (!uploadBtn || !fileInput) return;
 
-  if (label) label.classList.add('visible');
-  avatarEl.style.cursor = 'pointer';
+  uploadBtn.style.display = 'block';
 
-  avatarEl.addEventListener('click', () => fileInput.click());
-  if (label) label.addEventListener('click', () => fileInput.click());
-
+  uploadBtn.addEventListener('click', () => fileInput.click());
   fileInput.addEventListener('change', async () => {
     const file = fileInput.files[0];
     if (!file) return;
@@ -75,13 +71,11 @@ async function uploadAvatar(file) {
     return;
   }
 
+  const uploadBtn = document.getElementById('avatar-upload-btn');
   const uploadingEl = document.getElementById('avatar-uploading');
-  const labelEl = document.getElementById('avatar-upload-label');
-  const avatarEl = document.getElementById('profile-avatar-large');
 
-  if (uploadingEl) uploadingEl.classList.add('visible');
-  if (labelEl) labelEl.classList.remove('visible');
-  if (avatarEl) avatarEl.style.cursor = 'default';
+  if (uploadBtn) uploadBtn.style.display = 'none';
+  if (uploadingEl) uploadingEl.style.display = 'block';
 
   try {
     const ext = file.name.split('.').pop().toLowerCase() || 'jpg';
@@ -113,9 +107,8 @@ async function uploadAvatar(file) {
     console.error('Avatar upload error:', err);
     alert('Upload failed. Please try again.');
   } finally {
-    if (uploadingEl) uploadingEl.classList.remove('visible');
-    if (labelEl) labelEl.classList.add('visible');
-    if (avatarEl) avatarEl.style.cursor = 'pointer';
+    if (uploadBtn) uploadBtn.style.display = 'block';
+    if (uploadingEl) uploadingEl.style.display = 'none';
   }
 }
 
@@ -138,27 +131,31 @@ function renderAvatarEl(avatarUrl, username) {
 }
 
 // ─── TOGGLE HELPERS ───────────────────────────────────────────────────────────
+// Each toggle: outer div (track) + inner div (knob). State via inline styles only.
 
-function initToggle(id) {
-  const track = document.getElementById(id);
-  if (!track) return;
-  if (track.dataset.init === 'true') return;
+function initToggle(trackId, knobId) {
+  const track = document.getElementById(trackId);
+  if (!track || track.dataset.init === 'true') return;
   track.dataset.init = 'true';
   track.addEventListener('click', () => {
-    track.classList.toggle('on');
+    const isOn = track.dataset.on === 'true';
+    setToggleState(trackId, knobId, !isOn);
   });
 }
 
-function setToggle(id, value) {
-  const track = document.getElementById(id);
-  if (!track) return;
-  track.classList.toggle('on', !!value);
+function setToggleState(trackId, knobId, value) {
+  const track = document.getElementById(trackId);
+  const knob = document.getElementById(knobId);
+  if (!track || !knob) return;
+  track.dataset.on = value ? 'true' : 'false';
+  track.style.background = value ? '#00e5ff' : '#444';
+  knob.style.transform = value ? 'translateX(20px)' : 'translateX(0)';
 }
 
-function getToggle(id) {
-  const track = document.getElementById(id);
+function getToggleValue(trackId) {
+  const track = document.getElementById(trackId);
   if (!track) return false;
-  return track.classList.contains('on');
+  return track.dataset.on === 'true';
 }
 
 // ─── LIVE SESSION ─────────────────────────────────────────────────────────────
@@ -382,8 +379,7 @@ function showLiveBanner(session) {
   const banner = document.getElementById('live-banner');
   const hostName = viewingProfile?.display_name || viewingProfile?.username || 'Someone';
   document.getElementById('live-host-name').textContent = hostName;
-  const titleEl = document.getElementById('live-session-title');
-  titleEl.textContent = session.title ? `— ${session.title}` : '';
+  document.getElementById('live-session-title').textContent = session.title ? `— ${session.title}` : '';
   banner.classList.add('visible');
 }
 
@@ -649,10 +645,10 @@ function showEditForm(profile) {
     window.loadMutedCommunities(profile.muted_communities || []);
   }
 
-  initToggle('toggle-show-adult');
-  initToggle('toggle-is-adult-creator');
-  setToggle('toggle-show-adult', !!profile.show_adult_content);
-  setToggle('toggle-is-adult-creator', !!profile.is_adult_creator);
+  initToggle('toggle-show-adult', 'toggle-show-adult-knob');
+  initToggle('toggle-is-adult-creator', 'toggle-is-adult-creator-knob');
+  setToggleState('toggle-show-adult', 'toggle-show-adult-knob', !!profile.show_adult_content);
+  setToggleState('toggle-is-adult-creator', 'toggle-is-adult-creator-knob', !!profile.is_adult_creator);
 
   const addBtn = document.getElementById('add-keyword-btn');
   const keywordInput = document.getElementById('keyword-input');
@@ -681,8 +677,8 @@ async function saveProfile() {
   const bio = document.getElementById('edit-bio').value.trim();
   const location = document.getElementById('edit-location').value.trim();
   const website = document.getElementById('edit-website').value.trim();
-  const showAdultContent = getToggle('toggle-show-adult');
-  const isAdultCreator = getToggle('toggle-is-adult-creator');
+  const showAdultContent = getToggleValue('toggle-show-adult');
+  const isAdultCreator = getToggleValue('toggle-is-adult-creator');
 
   const mutedCommunityEls = document.querySelectorAll('#muted-communities-list .muted-community-item');
   const currentMutedCommunities = Array.from(mutedCommunityEls).map(el => el.id.replace('muted-c-', ''));
@@ -819,9 +815,7 @@ async function loadProfilePosts(userId) {
     return `
       <div class="post-card" data-post-id="${post.id}">
         <div class="post-header">
-          <div style="display:flex;align-items:center;flex-shrink:0;">
-            ${postAvatarHtml}
-          </div>
+          <div style="display:flex;align-items:center;flex-shrink:0;">${postAvatarHtml}</div>
           <div class="post-meta">
             <div class="post-username">
               ${escapeHtml(displayName)}
@@ -842,9 +836,7 @@ async function loadProfilePosts(userId) {
             💬 ${commentCount > 0 ? commentCount : ''} Comment${commentCount !== 1 ? 's' : ''}
           </button>
           <button class="post-action-btn share-link-btn" data-post-id="${post.id}">🔗 Share</button>
-          ${isOwnProfile ? `
-            <button class="post-action-btn delete-btn" data-post-id="${post.id}" style="margin-left:auto;color:var(--danger);">🗑️</button>
-          ` : ''}
+          ${isOwnProfile ? `<button class="post-action-btn delete-btn" data-post-id="${post.id}" style="margin-left:auto;color:var(--danger);">🗑️</button>` : ''}
         </div>
       </div>
     `;
