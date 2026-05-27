@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ecosystem — Voxxee</title>
+
+  <meta property="og:title" content="Ecosystem — Voxxee" />
+  <meta property="og:description" content="The Voxxee ecosystem — a network of independent platforms built for free speech, verified adults, and open markets." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://voxxee.com/ecosystem.html" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Ecosystem — Voxxee" />
+  <meta name="twitter:description" content="The Voxxee ecosystem — a network of independent platforms built for free speech, verified adults, and open markets." />
+
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192x192.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="/icon-512x512.png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <meta name="theme-color" content="#00e5ff" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Voxxee" />
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-FSCZJEWZ6F"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-FSCZJEWZ6F');
+  </script>
+
+  <link rel="stylesheet" href="/css/main.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    .sidebar-nav li a {
+      display: flex; align-items: center; gap: 10px;
+      padding: 7px 10px; border-radius: var(--radius-md);
+      text-decoration: none; color: var(--text-muted);
+      font-size: 14px; font-weight: 500; transition: all 0.15s ease;
+    }
+    .sidebar-nav li a:hover { background: var(--bg-hover); color: var(--text); }
+    .sidebar-nav li a.active { background: rgba(0,229,255,0.08); color: var(--primary); }
+    .nav-icon-box {
+      width: 28px; height: 28px; border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .page-title {
+      font-family: var(--font-display);
+      font-size: 22px; font-weight: 900;
+      letter-spacing: -0.03em; color: var(--text);
+      margin-bottom: 4px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .page-title-icon {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: linear-gradient(135deg, #0ea5e9, #00e5ff);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .section-label {
+      font-size: 11px; font-weight: 700; color: var(--text-dim);
+      text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 16px;
+      margin-top: 32px;
+    }
+    .eco-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    .eco-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      text-decoration: none;
+      display: block;
+      transition: border-color 0.15s ease, transform 0.15s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .eco-card:hover { border-color: var(--primary); transform: translateY(-2px); }
+    .eco-card-accent {
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 3px;
+    }
+    .eco-card-header {
+      display: flex; align-items: center; gap: 12px; margin-bottom: 10px;
+    }
+    .eco-card-icon {
+      width: 44px; height: 44px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .eco-card-icon i { font-size: 22px; }
+    .eco-card-name {
+      font-family: var(--font-display);
+      font-size: 16px; font-weight: 800;
+      letter-spacing: -0.02em; color: var(--text);
+    }
+    .eco-card-domain {
+      font-size: 12px; color: var(--text-dim); margin-top: 1px;
+    }
+    .eco-card-desc {
+      font-size: 13px; color: var(--text-muted);
+      line-height: 1.6; margin-bottom: 14px;
+    }
+    .eco-card-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 11px; font-weight: 700;
+      padding: 3px 10px; border-radius: 100px;
+    }
+    .eco-card-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-top: 14px; padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+    .eco-card-status {
+      font-size: 11px; font-weight: 700;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .eco-card-status .dot {
+      width: 7px; height: 7px; border-radius: 50%;
+    }
+    .eco-visit {
+      font-size: 12px; font-weight: 600; color: var(--primary);
+      display: flex; align-items: center; gap: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="nav">
+    <a href="/feed.html" class="nav-brand">Voxxee</a>
+    <div class="nav-actions">
+      <a href="/feed.html" class="btn btn-ghost">Feed</a>
+      <a href="/profile.html" class="btn btn-ghost">Profile</a>
+      <button id="logout-btn" class="btn btn-ghost">Log Out</button>
+    </div>
+  </nav>
+
+  <div class="app-layout">
+    <div class="sidebar-left">
+      <ul class="sidebar-nav">
+        <li><a href="/feed.html">
+          <div class="nav-icon-box" style="background:#00e5ff;"><i class="ti ti-home" style="color:#000;font-size:15px;"></i></div>Home</a></li>
+        <li><a href="/search.html">
+          <div class="nav-icon-box" style="background:#8b5cf6;"><i class="ti ti-search" style="color:#fff;font-size:15px;"></i></div>Search</a></li>
+        <li><a href="/communities.html">
+          <div class="nav-icon-box" style="background:#22c55e;"><i class="ti ti-messages" style="color:#fff;font-size:15px;"></i></div>Communities</a></li>
+        <li><a href="/events.html">
+          <div class="nav-icon-box" style="background:#f59e0b;"><i class="ti ti-calendar" style="color:#000;font-size:15px;"></i></div>Events</a></li>
+        <li><a href="/messages.html">
+          <div class="nav-icon-box" style="background:#fbbf24;"><i class="ti ti-mail" style="color:#000;font-size:15px;"></i></div>Messages</a></li>
+        <li><a href="/notifications.html">
+          <div class="nav-icon-box" style="background:#f43f5e;"><i class="ti ti-bell" style="color:#fff;font-size:15px;"></i></div>Notifications</a></li>
+        <li><a href="/memories.html">
+          <div class="nav-icon-box" style="background:#06b6d4;"><i class="ti ti-clock" style="color:#fff;font-size:15px;"></i></div>Memories</a></li>
+        <li><a href="/stories.html">
+          <div class="nav-icon-box" style="background:#ec4899;"><i class="ti ti-camera" style="color:#fff;font-size:15px;"></i></div>Stories</a></li>
+        <li><a href="/games.html">
+          <div class="nav-icon-box" style="background:#6366f1;"><i class="ti ti-device-gamepad-2" style="color:#fff;font-size:15px;"></i></div>Games</a></li>
+        <li><a href="/profile.html">
+          <div class="nav-icon-box" style="background:#64748b;"><i class="ti ti-user" style="color:#fff;font-size:15px;"></i></div>Profile</a></li>
+        <li><a href="/ecosystem.html" class="active">
+          <div class="nav-icon-box" style="background:#0ea5e9;"><i class="ti ti-world" style="color:#fff;font-size:15px;"></i></div>Ecosystem</a></li>
+      </ul>
+    </div>
+
+    <div class="feed-main">
+
+      <div style="margin-bottom:28px;">
+        <div class="page-title">
+          <div class="page-title-icon">
+            <i class="ti ti-world" style="color:#fff;font-size:20px;"></i>
+          </div>
+          Ecosystem
+        </div>
+        <div style="font-size:15px;color:var(--text-muted);margin-top:4px;">A network of independent platforms built for free speech, verified adults, and open markets.</div>
+      </div>
+
+      <!-- VOXXEE NETWORK -->
+      <div class="section-label">Voxxee Network</div>
+      <div class="eco-grid">
+
+        <a href="https://voxxee.com" target="_blank" class="eco-card">
+          <div class="eco-card-accent" style="background:linear-gradient(90deg,#00e5ff,#8b5cf6);"></div>
+          <div class="eco-card-header">
+            <div class="eco-card-icon" style="background:rgba(0,229,255,0.12);border:1px solid rgba(0,229,255,0.25);">
+              <i class="ti ti-message-circle" style="color:#00e5ff;"></i>
+            </div>
+            <div>
+              <div class="eco-card-name">Voxxee</div>
+              <div class="eco-card-domain">voxxee.com</div>
+            </div>
+          </div>
+          <div class="eco-card-desc">The free speech maximalist social platform for verified adults. No shadowbans. No censorship. No algorithm.</div>
+          <span class="eco-card-badge" style="background:rgba(0,229,255,0.1);color:#00e5ff;">Social Platform</span>
+          <div class="eco-card-footer">
+            <div class="eco-card-status" style="color:#22c55e;"><div class="dot" style="background:#22c55e;"></div>Live</div>
+            <div class="eco-visit"><i class="ti ti-external-link" style="font-size:13px;"></i>Visit</div>
+          </div>
+        </a>
+
+        <a href="https://kyzmyt.com" target="_blank" class="eco-card">
+          <div class="eco-card-accent" style="background:linear-gradient(90deg,#f43f5e,#8b5cf6);"></div>
+          <div class="eco-card-header">
+            <div class="eco-card-icon" style="background:rgba(244,63,94,0.12);border:1px solid rgba(244,63,94,0.25);">
+              <i class="ti ti-heart" style="color:#f43f5e;"></i>
+            </div>
+            <div>
+              <div class="eco-card-name">Kyzmyt</div>
+              <div class="eco-card-domain">kyzmyt.com</div>
+            </div>
+          </div>
+          <div class="eco-card-desc">Triple-verified adult dating platform. Age, identity, and background checked. Like kismet, but real.</div>
+          <span class="eco-card-badge" style="background:rgba(244,63,94,0.1);color:#f43f5e;">Dating</span>
+          <div class="eco-card-footer">
+            <div class="eco-card-status" style="color:#22c55e;"><div class="dot" style="background:#22c55e;"></div>Live</div>
+            <div class="eco-visit"><i class="ti ti-external-link" style="font-size:13px;"></i>Visit</div>
+          </div>
+        </a>
+
+        <a href="https://silquefans.com" target="_blank" class="eco-card">
+          <div class="eco-card-accent" style="background:linear-gradient(90deg,#ec4899,#f43f5e);"></div>
+          <div class="eco-card-header">
+            <div class="eco-card-icon" style="background:rgba(236,72,153,0.12);border:1px solid rgba(236,72,153,0.25);">
+              <i class="ti ti-star" style="color:#ec4899;"></i>
+            </div>
+            <div>
+              <div class="eco-card-name">SilqueFans</div>
+              <div class="eco-card-domain">silquefans.com</div>
+            </div>
+          </div>
+          <div class="eco-card-desc">Creator monetization platform. 90/10 revenue split. Crypto-native payouts. Adult-adjacent content.</div>
+          <span class="eco-card-badge" style="background:rgba(236,72,153,0.1);color:#ec4899;">Creator Platform</span>
+          <div class="eco-card-footer">
+            <div class="eco-card-status" style="color:#22c55e;"><div class="dot" style="background:#22c55e;"></div>Live</div>
+            <div class="eco-visit"><i class="ti ti-external-link" style="font-size:13px;"></i>Visit</div>
+          </div>
+        </a>
+
+        <a href="https://xekie.com" target="_blank" class="eco-card">
+          <div class="eco-card-accent" style="background:linear-gradient(90deg,#00e5ff,#22c55e);"></div>
+          <div class="eco-card-header">
+            <div class="eco-card-icon" style="background:rgba(0,229,255,0.12);border:1px solid rgba(0,229,255,0.25);">
+              <i class="ti ti-shopping-bag" style="color:#00e5ff;"></i>
+            </div>
+            <div>
+              <div class="eco-card-name">XEKIE</div>
+              <div class="eco-card-domain">xekie.com</div>
+            </div>
+          </div>
+          <div class="eco-card-desc">The world's first demand-side marketplace. Post what you want, let sellers respond. Buyers drive the market.</div>
+          <span class="eco-card-badge" style="background:rgba(0,229,255,0.1);color:#00e5ff;">Marketplace</span>
+          <div class="eco-card-footer">
+            <div class="eco-card-status" style="color:#22c55e;"><div class="dot" style="background:#22c55e;"></div>Live</div>
+            <div class="eco-visit"><i class="ti ti-external-link" style="font-size:13px;"></i>Visit</div>
+          </div>
+        </a>
+
+      </div>
+
+      <!-- NEWS & MEDIA -->
+      <div class="section-label">News & Media</div>
+      <div class="eco-grid">
+
+        <a href="https://globalpolitics360.com" target="_blank" class="eco-card">
+          <div class="eco-card-accent" style="background:linear-gradient(90deg,#6366f1,#8b5cf6);"></div>
+          <div class="eco-card-header">
+            <div class="eco-card-icon" style="background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.25);">
+              <i class="ti ti-globe" style="color:#6366f1;"></i>
+            </div>
+            <div>
+              <div class="eco-card-name">Global Politics 360</div>
+              <div class="eco-card-domain">globalpolitics360.com</div>
+            </div>
+          </div>
+          <div class="eco-card-desc">Independent global political news and analysis. Refreshes every 3 hours. No mainstream media spin.</div>
+          <span class="eco-card-badge" style="background:rgba(99,102,241,0.1);color:#6366f1;">News</span>
+          <div class="eco-card-footer">
+            <div class="eco-card-status" style="color:#22c55e;"><div class="dot" style="background:#22c55e;"></div>Live</div>
+            <div class="eco-visit"><i class="ti ti-external-link" style="font-size:13px;"></i>Visit</div>
+          </div>
+        </a>
+
+        <a href="https://unipartypolitics.com" target="_blank" class="eco-card">
+          <div class="eco-card-accent" style="background:linear-gradient(90deg,#ef4444,#8b5cf6);"></div>
+          <div class="eco-card-header">
+            <div class="eco-card-icon" style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.25);">
+              <i class="ti ti-alert-triangle" style="color:#ef4444;"></i>
+            </div>
+            <div>
+              <div class="eco-card-name">Uniparty Politics</div>
+              <div class="eco-card-domain">unipartypolitics.com</div>
+            </div>
+          </div>
+          <div class="eco-card-desc">Red team. Blue team. Same owners. Political watchdog exposing the uniparty consensus.</div>
+          <span class="eco-card-badge" style="background:rgba(239,68,68,0.1);color:#ef4444;">Political Watchdog</span>
+          <div class="eco-card-footer">
+            <div class="eco-card-status" style="color:#22c55e;"><div class="dot" style="background:#22c55e;"></div>Live</div>
+            <div class="eco-visit"><i class="ti ti-external-link" style="font-size:13px;"></i>Visit</div>
+          </div>
+        </a>
+
+        <a href="https://sciencesilenced.com" target="_blank" class="eco-card">
+          <div class="eco-card-accent" style="background:linear-gradient(90deg,#06b6d4,#6366f1);"></div>
+          <div class="eco-card-header">
+            <div class="eco-card-icon" style="background:rgba(6,182,212,0.12);border:1px solid rgba(6,182,212,0.25);">
+              <i class="ti ti-microscope" style="color:#06b6d4;"></i>
+            </div>
+            <div>
+              <div class="eco-card-name">Science Silenced</div>
+              <div class="eco-card-domain">sciencesilenced.com</div>
+            </div>
+          </div>
+          <div class="eco-card-desc">Heterodox science and medicine. Research they don't want you to see. Updated 4x daily.</div>
+          <span class="eco-card-badge" style="background:rgba(6,182,212,0.1);color:#06b6d4;">Science</span>
+          <div class="eco-card-footer">
+            <div class="eco-card-status" style="color:#22c55e;"><div class="dot" style="background:#22c55e;"></div>Live</div>
+            <div class="eco-visit"><i class="ti ti-external-link" style="font-size:13px;"></i>Visit</div>
+          </div>
+        </a>
+
+        <a href="https://lulz-sec.com" target="_blank" class="eco-card">
+          <div class="eco-card-accent" style="background:linear-gradient(90deg,#22c55e,#06b6d4);"></div>
+          <div class="eco-card-header">
+            <div class="eco-card-icon" style="background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.25);">
+              <i class="ti ti-terminal-2" style="color:#22c55e;"></i>
+            </div>
+            <div>
+              <div class="eco-card-name">LulzSec</div>
+              <div class="eco-card-domain">lulz-sec.com</div>
+            </div>
+          </div>
+          <div class="eco-card-desc">Legal tribute and educational platform honoring LulzSec and digital freedom fighters worldwide.</div>
+          <span class="eco-card-badge" style="background:rgba(34,197,94,0.1);color:#22c55e;">Tribute</span>
+          <div class="eco-card-footer">
+            <div class="eco-card-status" style="color:#22c55e;"><div class="dot" style="background:#22c55e;"></div>Live</div>
+            <div class="eco-visit"><i class="ti ti-external-link" style="font-size:13px;"></i>Visit</div>
+          </div>
+        </a>
+
+      </div>
+
+      <!-- SPORTS & ENTERTAINMENT -->
+      <div class="section-label">Sports & Entertainment</div>
+      <div class="eco-grid">
+
+        <a href="https://golazoglobal.com" target="_blank" class="eco-card">
+          <div class="eco-card-accent" style="background:linear-gradient(90deg,#64b9f0,#22c55e);"></div>
+          <div class="eco-card-header">
+            <div class="eco-card-icon" style="background:rgba(100,185,240,0.12);border:1px solid rgba(100,185,240,0.25);">
+              <i class="ti ti-ball-football" style="color:#64b9f0;"></i>
+            </div>
+            <div>
+              <div class="eco-card-name">Golazo Global</div>
+              <div class="eco-card-domain">golazoglobal.com</div>
+            </div>
+          </div>
+          <div class="eco-card-desc">Global soccer news, scores, and standings. 12 leagues. Updated 4x daily. World Cup 2026 coverage.</div>
+          <span class="eco-card-badge" style="background:rgba(100,185,240,0.1);color:#64b9f0;">Soccer</span>
+          <div class="eco-card-footer">
+            <div class="eco-card-status" style="color:#22c55e;"><div class="dot" style="background:#22c55e;"></div>Live</div>
+            <div class="eco-visit"><i class="ti ti-external-link" style="font-size:13px;"></i>Visit</div>
+          </div>
+        </a>
+
+        <a href="https://majesticwicket.com" target="_blank" class="eco-card">
+          <div class="eco-card-accent" style="background:linear-gradient(90deg,#f59e0b,#22c55e);"></div>
+          <div class="eco-card-header">
+            <div class="eco-card-icon" style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.25);">
+              <i class="ti ti-trophy" style="color:#f59e0b;"></i>
+            </div>
+            <div>
+              <div class="eco-card-name">Majestic Wicket</div>
+              <div class="eco-card-domain">majesticwicket.com</div>
+            </div>
+          </div>
+          <div class="eco-card-desc">Global cricket news targeting the US market. Scores, standings, and analysis updated 4x daily.</div>
+          <span class="eco-card-badge" style="background:rgba(245,158,11,0.1);color:#f59e0b;">Cricket</span>
+          <div class="eco-card-footer">
+            <div class="eco-card-status" style="color:#22c55e;"><div class="dot" style="background:#22c55e;"></div>Live</div>
+            <div class="eco-visit"><i class="ti ti-external-link" style="font-size:13px;"></i>Visit</div>
+          </div>
+        </a>
+
+        <a href="https://kayfabeheat.com" target="_blank" class="eco-card">
+          <div class="eco-card-accent" style="background:linear-gradient(90deg,#ef4444,#f59e0b);"></div>
+          <div class="eco-card-header">
+            <div class="eco-card-icon" style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.25);">
+              <i class="ti ti-flame" style="color:#ef4444;"></i>
+            </div>
+            <div>
+              <div class="eco-card-name">Kayfabe Heat</div>
+              <div class="eco-card-domain">kayfabeheat.com</div>
+            </div>
+          </div>
+          <div class="eco-card-desc">Pro wrestling news aggregator and indie promotion directory. WWE, AEW, and beyond. Updated 4x daily.</div>
+          <span class="eco-card-badge" style="background:rgba(239,68,68,0.1);color:#ef4444;">Wrestling</span>
+          <div class="eco-card-footer">
+            <div class="eco-card-status" style="color:#22c55e;"><div class="dot" style="background:#22c55e;"></div>Live</div>
+            <div class="eco-visit"><i class="ti ti-external-link" style="font-size:13px;"></i>Visit</div>
+          </div>
+        </a>
+
+      </div>
+
+      <!-- SCIENCE & HEALTH -->
+      <div class="section-label">Science & Health</div>
+      <div class="eco-grid">
+
+        <a href="https://yamanakafactors.com" target="_blank" class="eco-card">
+          <div class="eco-card-accent" style="background:linear-gradient(90deg,#22c55e,#06b6d4);"></div>
+          <div class="eco-card-header">
+            <div class="eco-card-icon" style="background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.25);">
+              <i class="ti ti-dna" style="color:#22c55e;"></i>
+            </div>
+            <div>
+              <div class="eco-card-name">Yamanaka Factors</div>
+              <div class="eco-card-domain">yamanakafactors.com</div>
+            </div>
+          </div>
+          <div class="eco-card-desc">AI-curated longevity science aggregator. Anti-aging research, biohacking, and healthspan news.</div>
+          <span class="eco-card-badge" style="background:rgba(34,197,94,0.1);color:#22c55e;">Longevity</span>
+          <div class="eco-card-footer">
+            <div class="eco-card-status" style="color:#22c55e;"><div class="dot" style="background:#22c55e;"></div>Live</div>
+            <div class="eco-visit"><i class="ti ti-external-link" style="font-size:13px;"></i>Visit</div>
+          </div>
+        </a>
+
+      </div>
+
+      <!-- ADVOCACY -->
+      <div class="section-label">Advocacy</div>
+      <div class="eco-grid">
+
+        <a href="https://freeelizabethholmes.com" target="_blank" class="eco-card">
+          <div class="eco-card-accent" style="background:linear-gradient(90deg,#8b5cf6,#6366f1);"></div>
+          <div class="eco-card-header">
+            <div class="eco-card-icon" style="background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.25);">
+              <i class="ti ti-scale" style="color:#8b5cf6;"></i>
+            </div>
+            <div>
+              <div class="eco-card-name">Free Elizabeth Holmes</div>
+              <div class="eco-card-domain">freeelizabethholmes.com</div>
+            </div>
+          </div>
+          <div class="eco-card-desc">Advocacy site for Elizabeth Holmes. Failure is not fraud. Updated 4x daily with sympathetic coverage.</div>
+          <span class="eco-card-badge" style="background:rgba(139,92,246,0.1);color:#8b5cf6;">Advocacy</span>
+          <div class="eco-card-footer">
+            <div class="eco-card-status" style="color:#22c55e;"><div class="dot" style="background:#22c55e;"></div>Live</div>
+            <div class="eco-visit"><i class="ti ti-external-link" style="font-size:13px;"></i>Visit</div>
+          </div>
+        </a>
+
+      </div>
+
+      <!-- TECH & DESIGN -->
+      <div class="section-label">Tech & Design</div>
+      <div class="eco-grid">
+
+        <a href="https://sirjonyive.com" target="_blank" class="eco-card">
+          <div class="eco-card-accent" style="background:linear-gradient(90deg,#64748b,#94a3b8);"></div>
+          <div class="eco-card-header">
+            <div class="eco-card-icon" style="background:rgba(100,116,139,0.12);border:1px solid rgba(100,116,139,0.25);">
+              <i class="ti ti-pencil" style="color:#94a3b8;"></i>
+            </div>
+            <div>
+              <div class="eco-card-name">Sir Jony Ive</div>
+              <div class="eco-card-domain">sirjonyive.com</div>
+            </div>
+          </div>
+          <div class="eco-card-desc">Premium tribute to the greatest industrial designer of our time. Daily news on Jony Ive and Apple design.</div>
+          <span class="eco-card-badge" style="background:rgba(100,116,139,0.1);color:#94a3b8;">Design</span>
+          <div class="eco-card-footer">
+            <div class="eco-card-status" style="color:#22c55e;"><div class="dot" style="background:#22c55e;"></div>Live</div>
+            <div class="eco-visit"><i class="ti ti-external-link" style="font-size:13px;"></i>Visit</div>
+          </div>
+        </a>
+
+      </div>
+
+    </div>
+
+    <div class="sidebar-right">
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;margin-bottom:16px;">
+        <div style="font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Network Stats</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:13px;color:var(--text-muted);">Total Sites</span>
+            <span style="font-size:15px;font-weight:800;color:var(--primary);">13</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:13px;color:var(--text-muted);">All Live</span>
+            <span style="font-size:13px;font-weight:700;color:#22c55e;">✓ Yes</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:13px;color:var(--text-muted);">Stack</span>
+            <span style="font-size:12px;font-weight:600;color:var(--text);">Cloudflare + Netlify</span>
+          </div>
+        </div>
+      </div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;">
+        <div style="font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Categories</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="font-size:13px;color:var(--text);">🔵 Social &amp; Platforms <span style="color:var(--text-dim);float:right;">4</span></div>
+          <div style="font-size:13px;color:var(--text);">🟣 News &amp; Media <span style="color:var(--text-dim);float:right;">4</span></div>
+          <div style="font-size:13px;color:var(--text);">🟢 Sports &amp; Entertainment <span style="color:var(--text-dim);float:right;">3</span></div>
+          <div style="font-size:13px;color:var(--text);">🟡 Science &amp; Health <span style="color:var(--text-dim);float:right;">1</span></div>
+          <div style="font-size:13px;color:var(--text);">🔴 Advocacy <span style="color:var(--text-dim);float:right;">1</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="/js/supabase.js"></script>
+  <script>
+    async function waitForDb(timeout = 5000) {
+      const start = Date.now();
+      while (!window.db) {
+        if (Date.now() - start > timeout) throw new Error('timeout');
+        await new Promise(r => setTimeout(r, 50));
+      }
+    }
+    document.addEventListener('DOMContentLoaded', async () => {
+      await waitForDb();
+      const user = await window.auth.getUser();
+      if (!user) { window.location.href = '/login.html'; return; }
+      document.getElementById('logout-btn').addEventListener('click', async () => {
+        await window.auth.signOut();
+        window.location.href = '/';
+      });
+    });
+  </script>
+</body>
+</html>
