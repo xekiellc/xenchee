@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Profile — Voxxee</title>
+  <title>Voxxee — Feed</title>
 
-  <meta property="og:title" content="Profile — Voxxee" />
-  <meta property="og:description" content="View profiles on Voxxee — the free speech maximalist social platform for verified adults." />
-  <meta property="og:type" content="profile" />
-  <meta property="og:url" content="https://voxxee.com/profile.html" />
+  <meta property="og:title" content="Voxxee — Feed" />
+  <meta property="og:description" content="Your Voxxee feed. No algorithm. No shadowbans. Just real people saying exactly what they mean." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://voxxee.com/feed.html" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Profile — Voxxee" />
-  <meta name="twitter:description" content="View profiles on Voxxee — the free speech maximalist social platform for verified adults." />
+  <meta name="twitter:title" content="Voxxee — Feed" />
+  <meta name="twitter:description" content="Your Voxxee feed. No algorithm. No shadowbans. Just real people saying exactly what they mean." />
 
   <link rel="manifest" href="/manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="/icon-192x192.png" />
@@ -31,131 +31,114 @@
   </script>
 
   <link rel="stylesheet" href="css/main.css" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://unpkg.com/@daily-co/daily-js"></script>
 
   <style>
-    .sidebar-nav li a {
-      display: flex; align-items: center; gap: 10px;
-      padding: 7px 10px; border-radius: var(--radius-md);
-      text-decoration: none; color: var(--text-muted);
-      font-size: 14px; font-weight: 500; transition: all 0.15s ease;
+    .create-post {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      margin-bottom: 20px;
     }
-    .sidebar-nav li a:hover { background: var(--bg-hover); color: var(--text); }
-    .sidebar-nav li a.active { background: rgba(0,229,255,0.08); color: var(--primary); }
-    .nav-icon-box {
-      width: 28px; height: 28px; border-radius: 7px;
+    .create-post-header {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+    .post-avatar {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: var(--primary-dim);
+      color: var(--primary);
       display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-    }
-
-    .profile-banner {
-      height: 160px;
-      background: linear-gradient(135deg, var(--primary) 0%, #a78bfa 100%);
-      position: relative;
-      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-    }
-    .profile-avatar-large {
-      position: absolute; bottom: -36px; left: 24px;
-      width: 80px; height: 80px; border-radius: 50%;
-      background: var(--bg-card); border: 4px solid var(--bg-card);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 32px; font-weight: 800; color: var(--primary);
+      font-weight: 800; font-size: 14px; flex-shrink: 0;
       font-family: var(--font-display);
     }
-    .profile-card {
-      background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); margin-bottom: 20px; overflow: hidden;
+    .create-post-input {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 14px;
+      padding: 10px 14px;
+      resize: vertical;
+      min-height: 80px;
+      outline: none;
+      transition: border-color var(--transition);
     }
-    .profile-body { padding: 52px 24px 24px; }
-    .profile-top-row {
-      display: flex; justify-content: space-between; align-items: flex-start;
-      flex-wrap: wrap; gap: 12px; margin-bottom: 12px;
+    .create-post-input:focus { border-color: var(--primary); }
+    .create-post-input::placeholder { color: var(--text-dim); }
+    .create-post-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
     }
-    .profile-name-block { min-width: 0; }
-    .profile-display-name {
-      font-family: var(--font-display); font-size: 22px; font-weight: 900;
-      letter-spacing: -0.03em; color: var(--text);
-      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    .create-post-tools { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+    .tool-btn {
+      background: transparent;
+      border: none;
+      font-size: 18px;
+      cursor: pointer;
+      padding: 6px 8px;
+      border-radius: var(--radius-sm);
+      transition: background var(--transition);
+      line-height: 1;
     }
-    .profile-username-text { font-size: 15px; color: var(--text-muted); margin-top: 2px; }
-    .profile-stats { display: flex; gap: 24px; margin-top: 16px; flex-wrap: wrap; }
-    .profile-stat { font-size: 14px; color: var(--text-muted); }
-    .profile-stat strong { font-weight: 700; color: var(--text); }
-    .form-hint { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
-    .section-heading { font-family: var(--font-display); font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 16px; }
-    .widget-title { font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; }
-    .analytics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
-    .analytics-cell { background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px; text-align: center; }
-    .analytics-cell .val { font-family: var(--font-display); font-size: 20px; font-weight: 900; color: var(--primary); }
-    .analytics-cell .lbl { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
-    .live-banner {
-      display: none; background: var(--bg-card); border: 1px solid var(--primary);
-      border-radius: var(--radius-lg); padding: 14px 18px; margin-bottom: 20px;
-      align-items: center; gap: 12px; flex-wrap: wrap;
+    .tool-btn:hover { background: var(--bg-hover); }
+    .feed-tabs-row {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
     }
-    .live-banner.visible { display: flex; }
-    .live-dot { width: 10px; height: 10px; border-radius: 50%; background: #ff3b3b; animation: livepulse 1.2s infinite; flex-shrink: 0; }
+    .feed-tab-btn { font-size: 13px; padding: 6px 14px; border-radius: var(--radius-full); }
+    .notif-badge {
+      position: absolute; top: 6px; right: 12px;
+      background: var(--primary); color: #000;
+      font-size: 10px; font-weight: 700;
+      min-width: 16px; height: 16px;
+      border-radius: var(--radius-full);
+      display: none; align-items: center; justify-content: center;
+      padding: 0 4px; line-height: 16px;
+    }
+    .sidebar-section-title {
+      font-size: 11px; font-weight: 700; color: var(--text-dim);
+      text-transform: uppercase; letter-spacing: 1px;
+      margin-bottom: 12px; padding: 0 4px;
+    }
+    .widget-section-title {
+      font-size: 11px; font-weight: 700; color: var(--text-dim);
+      text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px;
+    }
     @keyframes livepulse {
       0%, 100% { opacity: 1; transform: scale(1); }
       50% { opacity: 0.5; transform: scale(1.3); }
     }
-    .live-banner-text { flex: 1; font-size: 14px; color: var(--text); }
-    .live-banner-text strong { color: var(--primary); }
-    .live-modal {
-      display: none; position: fixed; inset: 0;
-      background: rgba(0,0,0,0.88); z-index: 3000;
-      align-items: center; justify-content: center;
-      padding: 20px; backdrop-filter: blur(8px);
-    }
-    .live-modal.visible { display: flex; }
-    .live-modal-inner {
-      background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: var(--radius-xl); width: 100%; max-width: 900px;
-      overflow: hidden; display: flex; flex-direction: column;
-    }
-    .live-modal-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border); }
-    .live-modal-title { font-family: var(--font-display); font-size: 16px; font-weight: 800; color: var(--text); display: flex; align-items: center; gap: 10px; }
-    #daily-frame-container { width: 100%; height: 560px; background: #000; }
-    #daily-frame-container iframe { width: 100%; height: 100%; border: none; }
-    .golive-modal {
-      display: none; position: fixed; inset: 0;
-      background: rgba(0,0,0,0.75); z-index: 2000;
-      align-items: center; justify-content: center;
-      padding: 20px; backdrop-filter: blur(6px);
-    }
-    .golive-modal.visible { display: flex; }
-    .mute-tag {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 4px 10px 4px 12px;
-      background: rgba(244,63,94,0.1); border: 1px solid rgba(244,63,94,0.3);
-      border-radius: 100px; font-size: 13px; font-weight: 600; color: #f43f5e;
-    }
-    .mute-tag button { background: none; border: none; cursor: pointer; color: #f43f5e; font-size: 14px; padding: 0; line-height: 1; opacity: 0.7; }
-    .mute-tag button:hover { opacity: 1; }
-    .muted-community-item {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 10px 14px; border-radius: 10px;
-      border: 1px solid rgba(244,63,94,0.25); background: rgba(244,63,94,0.05); margin-bottom: 8px;
-    }
-    .muted-community-name { font-size: 13px; font-weight: 600; color: var(--text); }
-    .unmute-btn {
-      font-size: 12px; font-weight: 700; color: #f43f5e;
-      background: none; border: 1px solid rgba(244,63,94,0.3);
-      border-radius: 100px; padding: 3px 10px; cursor: pointer; transition: all 0.15s ease;
-    }
-    .unmute-btn:hover { background: rgba(244,63,94,0.1); }
     .mobile-nav {
-      display: none; position: fixed; bottom: 0; left: 0; right: 0;
-      height: 56px; background: rgba(8,8,10,0.97);
-      border-top: 1px solid var(--border); z-index: 1000; backdrop-filter: blur(12px);
+      display: none;
+      position: fixed; bottom: 0; left: 0; right: 0;
+      height: 56px;
+      background: rgba(8,8,10,0.97);
+      border-top: 1px solid var(--border);
+      z-index: 1000;
+      backdrop-filter: blur(12px);
     }
-    .mobile-nav-inner { display: flex; align-items: center; justify-content: space-around; height: 100%; padding: 0 8px; }
+    .mobile-nav-inner {
+      display: flex; align-items: center; justify-content: space-around;
+      height: 100%; padding: 0 8px;
+    }
     .mobile-nav-item {
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: 2px; padding: 6px 12px; border-radius: var(--radius-sm);
-      text-decoration: none; color: #6a6a7a; font-size: 10px; font-weight: 600; transition: color var(--transition);
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 2px; padding: 6px 12px;
+      border-radius: var(--radius-sm); text-decoration: none;
+      color: #6a6a7a; font-size: 10px; font-weight: 600;
+      transition: color var(--transition); position: relative;
     }
     .mobile-nav-item.active { color: var(--primary); }
     .mobile-nav-item span { font-size: 20px; line-height: 1; }
@@ -163,14 +146,7 @@
     @media (max-width: 768px) {
       .mobile-nav { display: block; }
       .feed-main { padding-bottom: 72px; }
-      .profile-body { padding: 52px 16px 20px; }
-      .profile-display-name { font-size: 18px; }
-      .profile-banner { height: 120px; }
-      .profile-avatar-large { width: 64px; height: 64px; font-size: 24px; bottom: -28px; }
-      .profile-body { padding-top: 44px; }
-      #daily-frame-container { height: 380px; }
     }
-    @media (max-width: 480px) { .profile-stats { gap: 16px; } }
   </style>
 </head>
 <body>
@@ -178,7 +154,7 @@
   <nav class="nav">
     <a href="/feed.html" class="nav-brand">Voxxee</a>
     <div class="nav-actions">
-      <a href="/feed.html" class="btn btn-ghost">Feed</a>
+      <a href="/profile.html" class="btn btn-ghost" id="profile-link">Profile</a>
       <button class="btn btn-ghost" id="logout-btn">Log Out</button>
     </div>
   </nav>
@@ -187,161 +163,112 @@
 
     <div class="sidebar-left">
       <ul class="sidebar-nav">
-        <li><a href="/feed.html">
-          <div class="nav-icon-box" style="background:#00e5ff;"><i class="ti ti-home" style="color:#000;font-size:15px;"></i></div>Home</a></li>
-        <li><a href="/search.html">
-          <div class="nav-icon-box" style="background:#8b5cf6;"><i class="ti ti-search" style="color:#fff;font-size:15px;"></i></div>Search</a></li>
-        <li><a href="/communities.html">
-          <div class="nav-icon-box" style="background:#22c55e;"><i class="ti ti-messages" style="color:#fff;font-size:15px;"></i></div>Communities</a></li>
-        <li><a href="/events.html">
-          <div class="nav-icon-box" style="background:#f59e0b;"><i class="ti ti-calendar" style="color:#000;font-size:15px;"></i></div>Events</a></li>
-        <li><a href="/messages.html">
-          <div class="nav-icon-box" style="background:#fbbf24;"><i class="ti ti-mail" style="color:#000;font-size:15px;"></i></div>Messages</a></li>
-        <li><a href="/notifications.html">
-          <div class="nav-icon-box" style="background:#f43f5e;"><i class="ti ti-bell" style="color:#fff;font-size:15px;"></i></div>Notifications</a></li>
-        <li><a href="/memories.html">
-          <div class="nav-icon-box" style="background:#06b6d4;"><i class="ti ti-clock" style="color:#fff;font-size:15px;"></i></div>Memories</a></li>
-        <li><a href="/stories.html">
-          <div class="nav-icon-box" style="background:#ec4899;"><i class="ti ti-camera" style="color:#fff;font-size:15px;"></i></div>Stories</a></li>
-        <li><a href="/games.html">
-          <div class="nav-icon-box" style="background:#6366f1;"><i class="ti ti-device-gamepad-2" style="color:#fff;font-size:15px;"></i></div>Games</a></li>
-        <li><a href="/profile.html" class="active">
-          <div class="nav-icon-box" style="background:#64748b;"><i class="ti ti-user" style="color:#fff;font-size:15px;"></i></div>Profile</a></li>
-        <li><a href="/ecosystem.html">
-          <div class="nav-icon-box" style="background:#0ea5e9;"><i class="ti ti-world" style="color:#fff;font-size:15px;"></i></div>Ecosystem</a></li>
+        <li><a href="/feed.html" class="active"><span class="sidebar-nav-icon">🏠</span>Home</a></li>
+        <li><a href="/search.html"><span class="sidebar-nav-icon">🔍</span>Search</a></li>
+        <li><a href="/communities.html"><span class="sidebar-nav-icon">💬</span>Communities</a></li>
+        <li><a href="/events.html"><span class="sidebar-nav-icon">📅</span>Events</a></li>
+        <li><a href="/messages.html"><span class="sidebar-nav-icon">✉️</span>Messages</a></li>
+        <li>
+          <a href="/notifications.html" style="position:relative;">
+            <span class="sidebar-nav-icon">🔔</span>Notifications
+            <span id="notif-badge" class="notif-badge"></span>
+          </a>
+        </li>
+        <li><a href="/memories.html"><span class="sidebar-nav-icon">🕰️</span>Memories</a></li>
+        <li><a href="/stories.html"><span class="sidebar-nav-icon">📸</span>Stories</a></li>
+        <li><a href="/games.html"><span class="sidebar-nav-icon">🎮</span>Games</a></li>
+        <li><a href="/profile.html"><span class="sidebar-nav-icon">👤</span>Profile</a></li>
+        <li><a href="/ecosystem.html"><span class="sidebar-nav-icon">🌐</span>Ecosystem</a></li>
       </ul>
+
+      <div style="margin-top:32px;padding:0 6px;">
+        <div class="sidebar-section-title">Communities</div>
+        <div id="sidebar-communities"></div>
+      </div>
     </div>
 
     <div class="feed-main">
 
-      <div class="profile-card" id="profile-header">
-        <div class="profile-banner">
-          <div class="profile-avatar-large" id="profile-avatar-large">?</div>
+      <div class="create-post">
+        <div class="create-post-header">
+          <div class="post-avatar" id="current-user-avatar">?</div>
+          <div style="flex:1;position:relative;">
+            <textarea class="create-post-input" id="post-content"
+              placeholder="Say exactly what you mean..." maxlength="2000"></textarea>
+            <div id="post-mention-dropdown"
+              style="display:none;position:absolute;left:0;right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.3);z-index:200;max-height:220px;overflow-y:auto;padding:6px;"></div>
+          </div>
         </div>
-        <div class="profile-body">
-          <div class="profile-top-row">
-            <div class="profile-name-block">
-              <div class="profile-display-name">
-                <span id="profile-display-name">Loading...</span>
-                <span id="verified-badge" style="display:none;font-size:16px;" title="Verified">✅</span>
-              </div>
-              <div class="profile-username-text" id="profile-username">@...</div>
-            </div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;">
-              <button id="go-live-btn" class="btn btn-ghost" style="display:none;">🔴 Go Live</button>
-              <button id="follow-btn" class="btn btn-primary" style="display:none;">Follow</button>
-              <button id="edit-profile-btn" class="btn btn-ghost" style="display:none;">Edit Profile</button>
+
+        <div id="media-preview" style="display:none;margin-bottom:10px;"></div>
+        <div id="link-preview-container" style="display:none;margin-bottom:10px;"></div>
+        <div id="checkin-panel" style="display:none;margin-bottom:10px;"></div>
+
+        <div class="create-post-footer">
+          <div class="create-post-tools">
+            <input type="file" id="media-file-input" accept="image/*,video/*" multiple style="display:none;" />
+            <button class="tool-btn" id="media-upload-btn" title="Add photo or video">📷</button>
+            <button class="tool-btn" id="poll-toggle-btn" title="Create poll">🗳️</button>
+            <button class="tool-btn" id="checkin-btn" title="Add location">📍</button>
+          </div>
+          <button class="btn btn-primary" id="post-btn">Post</button>
+        </div>
+
+        <div id="poll-creator" style="display:none;margin-top:16px;border-top:1px solid var(--border);padding-top:16px;">
+          <div class="form-group">
+            <label class="form-label">Poll Question</label>
+            <input type="text" id="poll-question" class="form-input" placeholder="Ask something..." maxlength="200" />
+          </div>
+          <div id="poll-options">
+            <div class="form-group">
+              <label class="form-label">Options</label>
+              <input type="text" class="form-input poll-option" placeholder="Option 1" maxlength="100" style="margin-bottom:8px;" />
+              <input type="text" class="form-input poll-option" placeholder="Option 2" maxlength="100" />
             </div>
           </div>
-          <div id="profile-bio" style="font-size:15px;color:var(--text-muted);line-height:1.6;"></div>
-          <div id="profile-meta" style="display:flex;gap:16px;margin-top:8px;flex-wrap:wrap;font-size:13px;color:var(--text-dim);"></div>
-          <div id="profile-reputation" style="margin-top:10px;display:flex;align-items:center;gap:8px;"></div>
-          <div class="profile-stats">
-            <div class="profile-stat"><strong id="profile-post-count">0</strong> Posts</div>
-            <div class="profile-stat"><strong id="profile-follower-count">0</strong> Followers</div>
-            <div class="profile-stat"><strong id="profile-following-count">0</strong> Following</div>
+          <button class="btn btn-ghost btn-sm" id="add-option-btn" style="margin-top:8px;">+ Add Option</button>
+          <div class="form-group" style="margin-top:12px;">
+            <label class="form-label">Duration</label>
+            <select id="poll-duration" class="form-input">
+              <option value="1">1 hour</option>
+              <option value="24" selected>1 day</option>
+              <option value="72">3 days</option>
+              <option value="168">7 days</option>
+            </select>
           </div>
         </div>
       </div>
 
-      <div id="live-banner" class="live-banner">
-        <div class="live-dot"></div>
-        <div class="live-banner-text">
-          <strong id="live-host-name"></strong> is live now
-          <span id="live-session-title" style="color:var(--text-muted);margin-left:6px;"></span>
-        </div>
-        <button id="join-live-btn" class="btn btn-primary btn-sm">Watch Live</button>
+      <div class="feed-tabs-row">
+        <button class="btn btn-primary feed-tab-btn" data-mode="latest">⏱ Latest</button>
+        <button class="btn btn-ghost feed-tab-btn" data-mode="top">🔥 Top Today</button>
+        <button class="btn btn-ghost feed-tab-btn" data-mode="hot">📈 Hot This Week</button>
+        <button class="btn btn-ghost feed-tab-btn" data-mode="following">👥 Following</button>
       </div>
 
-      <div id="edit-profile-form" style="display:none;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;margin-bottom:20px;">
-        <div class="section-heading">Edit Profile</div>
-        <div class="form-group">
-          <label class="form-label">Display Name</label>
-          <input type="text" id="edit-display-name" class="form-input" placeholder="Your name" maxlength="50" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Bio</label>
-          <textarea id="edit-bio" class="form-textarea" placeholder="Tell people about yourself..." maxlength="160"></textarea>
-          <div class="form-hint">160 characters max</div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Location</label>
-          <input type="text" id="edit-location" class="form-input" placeholder="Where are you?" maxlength="50" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Website</label>
-          <input type="url" id="edit-website" class="form-input" placeholder="https://yoursite.com" />
-        </div>
-        <div style="border-top:1px solid var(--border);margin-top:20px;padding-top:20px;">
-          <div class="section-heading">🔞 Content Settings</div>
-          <div style="background:var(--bg-input);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
-              <div>
-                <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:2px;">Show Adult Content</div>
-                <div style="font-size:12px;color:var(--text-muted);">See 18+ posts in your feed. You must be 18+ to enable.</div>
-              </div>
-              <label style="position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;">
-                <input type="checkbox" id="toggle-show-adult" style="opacity:0;width:0;height:0;" />
-                <span style="position:absolute;cursor:pointer;inset:0;background:var(--border);border-radius:100px;transition:0.2s;" id="toggle-show-adult-track"></span>
-              </label>
-            </div>
-          </div>
-          <div style="background:var(--bg-input);border:1px solid var(--border);border-radius:10px;padding:16px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
-              <div>
-                <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:2px;">I Create Adult Content</div>
-                <div style="font-size:12px;color:var(--text-muted);">Mark your posts as 18+ by default.</div>
-              </div>
-              <label style="position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;">
-                <input type="checkbox" id="toggle-is-adult-creator" style="opacity:0;width:0;height:0;" />
-                <span style="position:absolute;cursor:pointer;inset:0;background:var(--border);border-radius:100px;transition:0.2s;" id="toggle-is-adult-creator-track"></span>
-              </label>
-            </div>
-          </div>
-        </div>
-        <div style="border-top:1px solid var(--border);margin-top:20px;padding-top:20px;">
-          <div class="section-heading">🔇 Muted Keywords</div>
-          <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Posts containing these words won't appear in your feed.</div>
-          <div id="muted-keywords-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;min-height:32px;"></div>
-          <div style="display:flex;gap:8px;">
-            <input type="text" id="keyword-input" class="form-input" placeholder="Add a keyword..." maxlength="50" style="flex:1;" />
-            <button id="add-keyword-btn" class="btn btn-ghost" style="flex-shrink:0;">+ Add</button>
-          </div>
-          <div class="form-hint" style="margin-top:6px;">Press Enter or click + Add. Up to 50 keywords. Case-insensitive.</div>
-        </div>
-        <div style="border-top:1px solid var(--border);margin-top:20px;padding-top:20px;">
-          <div class="section-heading">🚫 Muted Communities</div>
-          <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Posts from these communities won't appear in your feed. Click Unmute to restore them.</div>
-          <div id="muted-communities-list"></div>
-          <div id="muted-communities-empty" style="display:none;font-size:13px;color:var(--text-dim);padding:12px 0;">No communities muted.</div>
-        </div>
-        <div style="display:flex;gap:12px;margin-top:20px;flex-wrap:wrap;">
-          <button id="save-profile-btn" class="btn btn-primary">Save Profile</button>
-          <button id="cancel-edit-btn" class="btn btn-ghost">Cancel</button>
-        </div>
-      </div>
+      <div id="feed-live-banner" style="display:none;background:var(--bg-card);border:1px solid rgba(0,229,255,0.2);border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:16px;"></div>
 
-      <div class="section-heading">Posts</div>
-      <div id="profile-posts">
-        <div class="loading"><div class="spinner"></div>Loading posts...</div>
+      <div id="feed-container">
+        <div class="loading"><div class="spinner"></div>Loading feed...</div>
       </div>
 
     </div>
 
     <div class="sidebar-right">
-      <div id="profile-analytics" style="display:none;margin-bottom:32px;">
-        <div class="widget-title">📊 Your Analytics</div>
-        <div class="analytics-grid">
-          <div class="analytics-cell"><div class="val" id="analytics-views">—</div><div class="lbl">👁 Total Views</div></div>
-          <div class="analytics-cell"><div class="val" id="analytics-reactions">—</div><div class="lbl">❤️ Reactions</div></div>
-          <div class="analytics-cell"><div class="val" id="analytics-comments">—</div><div class="lbl">💬 Comments</div></div>
-          <div class="analytics-cell"><div class="val" id="analytics-engagement">—</div><div class="lbl">📈 Eng. Rate</div></div>
-        </div>
+
+      <div id="birthdays-sidebar" style="display:none;margin-bottom:32px;">
+        <div class="widget-section-title">🎂 Birthdays Today</div>
+        <div id="birthdays-list"></div>
       </div>
-      <div class="widget-title">Communities</div>
-      <div id="profile-communities"></div>
+
+      <div class="widget-section-title">Trending Communities</div>
+      <div id="trending-communities"></div>
+
+      <div class="widget-section-title" style="margin-top:32px;">Voxxee Ecosystem</div>
+      <div id="ecosystem-sidebar"></div>
+
       <div style="margin-top:32px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;">
-        <div class="widget-title">Reputation Ranks</div>
+        <div class="widget-section-title">Reputation Ranks</div>
         <div style="display:flex;flex-direction:column;gap:8px;">
           <div style="font-size:13px;color:var(--text);">👑 <span style="font-weight:600;">Legend</span> <span style="color:var(--text-dim);">1000+</span></div>
           <div style="font-size:13px;color:var(--text);">🔥 <span style="font-weight:600;">Veteran</span> <span style="color:var(--text-dim);">500+</span></div>
@@ -350,102 +277,24 @@
           <div style="font-size:13px;color:var(--text);">🌱 <span style="font-weight:600;">Seedling</span> <span style="color:var(--text-dim);">0+</span></div>
         </div>
       </div>
+
     </div>
 
-  </div>
-
-  <div id="golive-modal" class="golive-modal">
-    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-xl);padding:28px;width:100%;max-width:420px;">
-      <div style="font-family:var(--font-display);font-size:18px;font-weight:800;color:var(--text);margin-bottom:6px;">🔴 Go Live</div>
-      <div style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">You'll be live on your profile. Up to 10 participants.</div>
-      <div class="form-group">
-        <label class="form-label">Stream Title (optional)</label>
-        <input type="text" id="golive-title-input" class="form-input" placeholder="What are you streaming about?" maxlength="100" />
-      </div>
-      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;">
-        <button id="golive-cancel-btn" class="btn btn-ghost">Cancel</button>
-        <button id="golive-start-btn" class="btn btn-primary">Start Stream</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="live-modal" class="live-modal">
-    <div class="live-modal-inner">
-      <div class="live-modal-header">
-        <div class="live-modal-title">
-          <div class="live-dot"></div>
-          <span id="live-modal-title-text">Live Stream</span>
-        </div>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <span id="live-viewer-count" style="font-size:13px;color:var(--text-muted);"></span>
-          <button id="end-live-btn" class="btn btn-ghost btn-sm" style="display:none;color:#ff3b3b;">End Stream</button>
-          <button id="leave-live-btn" class="btn btn-ghost btn-sm">Leave</button>
-        </div>
-      </div>
-      <div id="daily-frame-container"></div>
-    </div>
   </div>
 
   <nav class="mobile-nav">
     <div class="mobile-nav-inner">
-      <a href="/feed.html" class="mobile-nav-item"><span>🏠</span>Home</a>
+      <a href="/feed.html" class="mobile-nav-item active"><span>🏠</span>Home</a>
       <a href="/search.html" class="mobile-nav-item"><span>🔍</span>Search</a>
       <a href="/communities.html" class="mobile-nav-item"><span>💬</span>Communities</a>
       <a href="/notifications.html" class="mobile-nav-item"><span>🔔</span>Alerts</a>
-      <a href="/profile.html" class="mobile-nav-item active"><span>👤</span>Profile</a>
+      <a href="/profile.html" class="mobile-nav-item"><span>👤</span>Profile</a>
     </div>
   </nav>
 
   <script src="js/supabase.js"></script>
+  <script src="js/mentions.js"></script>
   <script src="js/reputation.js"></script>
-  <script src="js/profile.js"></script>
-
-  <script>
-    window.loadMutedCommunities = async function(mutedIds) {
-      const list = document.getElementById('muted-communities-list');
-      const empty = document.getElementById('muted-communities-empty');
-      if (!mutedIds || mutedIds.length === 0) {
-        list.innerHTML = '';
-        empty.style.display = 'block';
-        return;
-      }
-      empty.style.display = 'none';
-      const { data: communities } = await window.db
-        .from('communities').select('id, name').in('id', mutedIds);
-      if (!communities || communities.length === 0) {
-        list.innerHTML = '';
-        empty.style.display = 'block';
-        return;
-      }
-      list.innerHTML = communities.map(c => `
-        <div class="muted-community-item" id="muted-c-${c.id}">
-          <div class="muted-community-name">${escapeHtml(c.name)}</div>
-          <button class="unmute-btn" onclick="unmuteCommmunity('${c.id}')">Unmute</button>
-        </div>
-      `).join('');
-    };
-
-    window.unmuteCommmunity = async function(communityId) {
-      const user = await window.auth.getUser();
-      if (!user) return;
-      const { data: profile } = await window.db
-        .from('profiles').select('muted_communities').eq('user_id', user.id).single();
-      const current = profile?.muted_communities || [];
-      const updated = current.filter(id => id !== communityId);
-      await window.db.from('profiles').update({ muted_communities: updated }).eq('user_id', user.id);
-      const el = document.getElementById(`muted-c-${communityId}`);
-      if (el) el.remove();
-      const list = document.getElementById('muted-communities-list');
-      if (!list.children.length) {
-        document.getElementById('muted-communities-empty').style.display = 'block';
-      }
-    };
-
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.appendChild(document.createTextNode(text || ''));
-      return div.innerHTML;
-    }
-  </script>
+  <script src="js/feed.js"></script>
 </body>
 </html>
