@@ -40,15 +40,17 @@
       background: linear-gradient(135deg, var(--primary) 0%, #a78bfa 100%);
       position: relative;
       border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+      /* overflow stays OFF the banner so avatar wrap can escape downward */
     }
     .profile-avatar-wrap {
       position: absolute;
-      bottom: -40px;
+      bottom: -48px;
       left: 24px;
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 4px;
+      z-index: 10;
     }
     .profile-avatar-large {
       width: 80px;
@@ -66,6 +68,7 @@
       overflow: hidden;
       position: relative;
       flex-shrink: 0;
+      cursor: pointer;
     }
     .profile-avatar-large img {
       width: 100%;
@@ -81,8 +84,8 @@
       background: rgba(0,0,0,0.55);
       align-items: center;
       justify-content: center;
-      cursor: pointer;
       font-size: 18px;
+      pointer-events: none;
     }
     .profile-avatar-large:hover .avatar-upload-overlay {
       display: flex;
@@ -114,9 +117,9 @@
       border: 1px solid var(--border);
       border-radius: var(--radius-lg);
       margin-bottom: 20px;
-      overflow: hidden;
+      /* overflow:hidden REMOVED — was clipping the avatar wrap */
     }
-    .profile-body { padding: 56px 24px 24px; }
+    .profile-body { padding: 64px 24px 24px; }
     .profile-top-row {
       display: flex;
       justify-content: space-between;
@@ -232,12 +235,12 @@
     @media (max-width: 768px) {
       .mobile-nav { display: block; }
       .feed-main { padding-bottom: 72px; }
-      .profile-body { padding: 52px 16px 20px; }
+      .profile-body { padding: 56px 16px 20px; }
       .profile-display-name { font-size: 18px; }
       .profile-banner { height: 120px; }
       .profile-avatar-large { width: 64px; height: 64px; font-size: 24px; }
-      .profile-avatar-wrap { bottom: -32px; }
-      .profile-body { padding-top: 48px; }
+      .profile-avatar-wrap { bottom: -36px; }
+      .profile-body { padding-top: 52px; }
       #daily-frame-container { height: 380px; }
     }
     @media (max-width: 480px) { .profile-stats { gap: 16px; } }
@@ -478,7 +481,6 @@
   <script src="js/profile.js"></script>
 
   <script>
-    // Muted communities management — loaded when edit form opens
     window.loadMutedCommunities = async function(mutedIds) {
       const list = document.getElementById('muted-communities-list');
       const empty = document.getElementById('muted-communities-empty');
