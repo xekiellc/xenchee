@@ -38,19 +38,29 @@
     .profile-banner {
       height: 160px;
       background: linear-gradient(135deg, var(--primary) 0%, #a78bfa 100%);
-      position: relative;
       border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-      /* overflow stays OFF the banner so avatar wrap can escape downward */
+    }
+    .profile-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      margin-bottom: 20px;
+    }
+    .profile-avatar-row {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      padding: 0 24px;
+      margin-top: -40px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      gap: 12px;
     }
     .profile-avatar-wrap {
-      position: absolute;
-      bottom: -48px;
-      left: 24px;
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 4px;
-      z-index: 10;
     }
     .profile-avatar-large {
       width: 80px;
@@ -66,29 +76,17 @@
       color: var(--primary);
       font-family: var(--font-display);
       overflow: hidden;
-      position: relative;
       flex-shrink: 0;
       cursor: pointer;
+      position: relative;
     }
     .profile-avatar-large img {
       width: 100%;
       height: 100%;
       object-fit: cover;
       border-radius: 50%;
-    }
-    .avatar-upload-overlay {
-      display: none;
       position: absolute;
       inset: 0;
-      border-radius: 50%;
-      background: rgba(0,0,0,0.55);
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-      pointer-events: none;
-    }
-    .profile-avatar-large:hover .avatar-upload-overlay {
-      display: flex;
     }
     .avatar-upload-label {
       display: none;
@@ -100,26 +98,15 @@
       letter-spacing: 0.03em;
       white-space: nowrap;
     }
-    .avatar-upload-label.visible {
-      display: block;
-    }
+    .avatar-upload-label.visible { display: block; }
     .avatar-uploading {
+      display: none;
       font-size: 11px;
       color: var(--text-muted);
-      display: none;
       text-align: center;
     }
-    .avatar-uploading.visible {
-      display: block;
-    }
-    .profile-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      margin-bottom: 20px;
-      /* overflow:hidden REMOVED — was clipping the avatar wrap */
-    }
-    .profile-body { padding: 64px 24px 24px; }
+    .avatar-uploading.visible { display: block; }
+    .profile-body { padding: 0 24px 24px; }
     .profile-top-row {
       display: flex;
       justify-content: space-between;
@@ -148,6 +135,38 @@
     .analytics-cell { background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px; text-align: center; }
     .analytics-cell .val { font-family: var(--font-display); font-size: 20px; font-weight: 900; color: var(--primary); }
     .analytics-cell .lbl { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+
+    /* Toggle switch — no label wrapper, pure div */
+    .toggle-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .toggle-track {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      border-radius: 100px;
+      background: var(--border);
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background 0.2s;
+    }
+    .toggle-knob {
+      position: absolute;
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.2s;
+      pointer-events: none;
+    }
+    .toggle-track.on { background: var(--primary); }
+    .toggle-track.on .toggle-knob { transform: translateX(20px); }
+
     .live-banner {
       display: none; background: var(--bg-card);
       border: 1px solid var(--primary); border-radius: var(--radius-lg);
@@ -185,23 +204,6 @@
       padding: 20px; backdrop-filter: blur(6px);
     }
     .golive-modal.visible { display: flex; }
-
-    /* Mute tags */
-    .mute-tag {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 4px 10px 4px 12px;
-      background: rgba(244,63,94,0.1);
-      border: 1px solid rgba(244,63,94,0.3);
-      border-radius: 100px;
-      font-size: 13px; font-weight: 600; color: #f43f5e;
-    }
-    .mute-tag button {
-      background: none; border: none; cursor: pointer;
-      color: #f43f5e; font-size: 14px; padding: 0; line-height: 1; opacity: 0.7;
-    }
-    .mute-tag button:hover { opacity: 1; }
-
-    /* Muted community items */
     .muted-community-item {
       display: flex; align-items: center; justify-content: space-between;
       padding: 10px 14px; border-radius: 10px;
@@ -217,7 +219,6 @@
       transition: all 0.15s ease;
     }
     .unmute-btn:hover { background: rgba(244,63,94,0.1); }
-
     .mobile-nav {
       display: none; position: fixed; bottom: 0; left: 0; right: 0;
       height: 56px; background: rgba(8,8,10,0.97);
@@ -235,12 +236,11 @@
     @media (max-width: 768px) {
       .mobile-nav { display: block; }
       .feed-main { padding-bottom: 72px; }
-      .profile-body { padding: 56px 16px 20px; }
       .profile-display-name { font-size: 18px; }
       .profile-banner { height: 120px; }
       .profile-avatar-large { width: 64px; height: 64px; font-size: 24px; }
-      .profile-avatar-wrap { bottom: -36px; }
-      .profile-body { padding-top: 52px; }
+      .profile-avatar-row { margin-top: -32px; padding: 0 16px; }
+      .profile-body { padding: 0 16px 20px; }
       #daily-frame-container { height: 380px; }
     }
     @media (max-width: 480px) { .profile-stats { gap: 16px; } }
@@ -257,7 +257,6 @@
   </nav>
 
   <div class="app-layout">
-
     <div class="sidebar-left">
       <ul class="sidebar-nav">
         <li><a href="/feed.html"><span class="sidebar-nav-icon">🏠</span>Home</a></li>
@@ -277,19 +276,26 @@
     <div class="feed-main">
 
       <div class="profile-card" id="profile-header">
-        <div class="profile-banner">
-          <div class="profile-avatar-wrap" id="profile-avatar-wrap">
+        <div class="profile-banner"></div>
+
+        <!-- Avatar row sits OUTSIDE the banner, below it -->
+        <div class="profile-avatar-row">
+          <div class="profile-avatar-wrap">
             <div class="profile-avatar-large" id="profile-avatar-large">
               <span id="profile-avatar-initial">?</span>
               <img id="profile-avatar-img" src="" alt="Profile photo" style="display:none;" />
-              <div class="avatar-upload-overlay" id="avatar-upload-overlay" title="Change photo">📷</div>
             </div>
-            <span class="avatar-upload-label" id="avatar-upload-label">Change Photo</span>
+            <span class="avatar-upload-label" id="avatar-upload-label">📷 Change Photo</span>
             <span class="avatar-uploading" id="avatar-uploading">Uploading...</span>
-            <input type="file" id="avatar-file-input" accept="image/jpeg,image/png,image/gif,image/webp"
-              style="display:none;" />
+            <input type="file" id="avatar-file-input" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;" />
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;padding-bottom:4px;">
+            <button id="go-live-btn" class="btn btn-ghost" style="display:none;">🔴 Go Live</button>
+            <button id="follow-btn" class="btn btn-primary" style="display:none;">Follow</button>
+            <button id="edit-profile-btn" class="btn btn-ghost" style="display:none;">Edit Profile</button>
           </div>
         </div>
+
         <div class="profile-body">
           <div class="profile-top-row">
             <div class="profile-name-block">
@@ -298,11 +304,6 @@
                 <span id="verified-badge" style="display:none;font-size:16px;" title="Verified">✅</span>
               </div>
               <div class="profile-username-text" id="profile-username">@...</div>
-            </div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;">
-              <button id="go-live-btn" class="btn btn-ghost" style="display:none;">🔴 Go Live</button>
-              <button id="follow-btn" class="btn btn-primary" style="display:none;">Follow</button>
-              <button id="edit-profile-btn" class="btn btn-ghost" style="display:none;">Edit Profile</button>
             </div>
           </div>
           <div id="profile-bio" style="font-size:15px;color:var(--text-muted);line-height:1.6;"></div>
@@ -327,7 +328,6 @@
 
       <div id="edit-profile-form" style="display:none;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;margin-bottom:20px;">
         <div class="section-heading">Edit Profile</div>
-
         <div class="form-group">
           <label class="form-label">Display Name</label>
           <input type="text" id="edit-display-name" class="form-input" placeholder="Your name" maxlength="50" />
@@ -346,31 +346,29 @@
           <input type="url" id="edit-website" class="form-input" placeholder="https://yoursite.com" />
         </div>
 
-        <!-- Content Settings -->
+        <!-- Content Settings — plain divs, no label wrappers -->
         <div style="border-top:1px solid var(--border);margin-top:20px;padding-top:20px;">
           <div class="section-heading">🔞 Content Settings</div>
           <div style="background:var(--bg-input);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+            <div class="toggle-row">
               <div>
                 <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:2px;">Show Adult Content</div>
                 <div style="font-size:12px;color:var(--text-muted);">See 18+ posts in your feed. You must be 18+ to enable.</div>
               </div>
-              <label style="position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;">
-                <input type="checkbox" id="toggle-show-adult" style="opacity:0;width:0;height:0;" />
-                <span style="position:absolute;cursor:pointer;inset:0;background:var(--border);border-radius:100px;transition:0.2s;" id="toggle-show-adult-track"></span>
-              </label>
+              <div class="toggle-track" id="toggle-show-adult">
+                <div class="toggle-knob"></div>
+              </div>
             </div>
           </div>
           <div style="background:var(--bg-input);border:1px solid var(--border);border-radius:10px;padding:16px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+            <div class="toggle-row">
               <div>
                 <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:2px;">I Create Adult Content</div>
                 <div style="font-size:12px;color:var(--text-muted);">Mark your posts as 18+ by default.</div>
               </div>
-              <label style="position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;">
-                <input type="checkbox" id="toggle-is-adult-creator" style="opacity:0;width:0;height:0;" />
-                <span style="position:absolute;cursor:pointer;inset:0;background:var(--border);border-radius:100px;transition:0.2s;" id="toggle-is-adult-creator-track"></span>
-              </label>
+              <div class="toggle-track" id="toggle-is-adult-creator">
+                <div class="toggle-knob"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -384,13 +382,13 @@
             <input type="text" id="keyword-input" class="form-input" placeholder="Add a keyword..." maxlength="50" style="flex:1;" />
             <button id="add-keyword-btn" class="btn btn-ghost" style="flex-shrink:0;">+ Add</button>
           </div>
-          <div class="form-hint" style="margin-top:6px;">Press Enter or click + Add. Up to 50 keywords. Case-insensitive.</div>
+          <div class="form-hint" style="margin-top:6px;">Press Enter or click + Add. Up to 50 keywords.</div>
         </div>
 
         <!-- Muted Communities -->
         <div style="border-top:1px solid var(--border);margin-top:20px;padding-top:20px;">
           <div class="section-heading">🚫 Muted Communities</div>
-          <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Posts from these communities won't appear in your feed. Click Unmute to restore them.</div>
+          <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Posts from these communities won't appear in your feed.</div>
           <div id="muted-communities-list"></div>
           <div id="muted-communities-empty" style="display:none;font-size:13px;color:var(--text-dim);padding:12px 0;">No communities muted.</div>
         </div>
@@ -431,7 +429,6 @@
         </div>
       </div>
     </div>
-
   </div>
 
   <div id="golive-modal" class="golive-modal">
