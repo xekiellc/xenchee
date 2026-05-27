@@ -45,17 +45,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ─── AVATAR UPLOAD ────────────────────────────────────────────────────────────
 
 function setupAvatarUpload() {
+  const avatarEl = document.getElementById('profile-avatar-large');
   const overlay = document.getElementById('avatar-upload-overlay');
   const label = document.getElementById('avatar-upload-label');
   const fileInput = document.getElementById('avatar-file-input');
 
-  if (!overlay || !fileInput) return;
+  if (!avatarEl || !fileInput) return;
 
-  // Show upload UI only on own profile
-  overlay.style.display = 'flex';
+  // Make overlay always visible on own profile (not just on hover)
+  // so clipping doesn't matter — user sees the label below instead
   if (label) label.classList.add('visible');
 
-  overlay.addEventListener('click', () => fileInput.click());
+  // Click anywhere on avatar circle triggers upload
+  avatarEl.style.cursor = 'pointer';
+  avatarEl.addEventListener('click', () => fileInput.click());
   if (label) label.addEventListener('click', () => fileInput.click());
 
   fileInput.addEventListener('change', async () => {
@@ -67,14 +70,11 @@ function setupAvatarUpload() {
 }
 
 async function uploadAvatar(file) {
-  // Validate type
   const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
   if (!allowed.includes(file.type)) {
     alert('Please choose a JPG, PNG, GIF, or WEBP image.');
     return;
   }
-
-  // Validate size — 5MB max
   if (file.size > 5 * 1024 * 1024) {
     alert('Image must be under 5MB.');
     return;
@@ -82,11 +82,11 @@ async function uploadAvatar(file) {
 
   const uploadingEl = document.getElementById('avatar-uploading');
   const labelEl = document.getElementById('avatar-upload-label');
-  const overlay = document.getElementById('avatar-upload-overlay');
+  const avatarEl = document.getElementById('profile-avatar-large');
 
   if (uploadingEl) uploadingEl.classList.add('visible');
   if (labelEl) labelEl.classList.remove('visible');
-  if (overlay) overlay.style.display = 'none';
+  if (avatarEl) avatarEl.style.cursor = 'default';
 
   try {
     const ext = file.name.split('.').pop().toLowerCase() || 'jpg';
@@ -111,10 +111,7 @@ async function uploadAvatar(file) {
 
     if (updateError) throw updateError;
 
-    // Update in-memory profile
     if (viewingProfile) viewingProfile.avatar_url = publicUrl;
-
-    // Re-render avatar in header
     renderAvatarEl(publicUrl, viewingProfile?.username || '');
 
   } catch (err) {
@@ -123,7 +120,7 @@ async function uploadAvatar(file) {
   } finally {
     if (uploadingEl) uploadingEl.classList.remove('visible');
     if (labelEl) labelEl.classList.add('visible');
-    if (overlay) overlay.style.display = 'flex';
+    if (avatarEl) avatarEl.style.cursor = 'pointer';
   }
 }
 
@@ -143,6 +140,48 @@ function renderAvatarEl(avatarUrl, username) {
       initialEl.textContent = initial;
     }
   }
+}
+
+// ─── TOGGLE HELPERS ───────────────────────────────────────────────────────────
+// Uses data-checked attribute on the track element — bypasses hidden checkbox
+
+function initToggle(trackId) {
+  const track = document.getElementById(trackId);
+  if (!track) return;
+  if (track.querySelector('span')) return; // already init'd
+
+  const knob = document.createElement('span');
+  knob.style.cssText = 'position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:0.2s;pointer-events:none;';
+  track.appendChild(knob);
+
+  track.style.cursor = 'pointer';
+  track.addEventListener('click', () => {
+    const current = track.dataset.checked === 'true';
+    setToggleState(track, !current);
+  });
+
+  // Init to off
+  setToggleState(track, false);
+}
+
+function setToggleState(track, value) {
+  if (!track) return;
+  track.dataset.checked = value ? 'true' : 'false';
+  track.style.background = value ? 'var(--primary)' : 'var(--border)';
+  const knob = track.querySelector('span');
+  if (knob) knob.style.transform = value ? 'translateX(20px)' : 'translateX(0)';
+}
+
+function setToggle(trackId, value) {
+  const track = document.getElementById(trackId);
+  if (!track) return;
+  setToggleState(track, !!value);
+}
+
+function getToggle(trackId) {
+  const track = document.getElementById(trackId);
+  if (!track) return false;
+  return track.dataset.checked === 'true';
 }
 
 // ─── LIVE SESSION ─────────────────────────────────────────────────────────────
@@ -231,7 +270,6 @@ async function startLiveSession() {
     if (error) throw error;
 
     currentLiveSession = liveSession;
-
     await notifyFollowersLive(liveSession, title);
 
     document.getElementById('golive-modal').classList.remove('visible');
@@ -443,7 +481,6 @@ async function loadProfileByUsername(username) {
   }
 
   renderProfile(profile);
-
   if (isOwnProfile) setupAvatarUpload();
 
   if (isOwnProfile && profile.is_verified) {
@@ -601,31 +638,6 @@ async function handleFollowToggle() {
   btn.disabled = false;
 }
 
-function initToggle(checkboxId, trackId) {
-  const checkbox = document.getElementById(checkboxId);
-  const track = document.getElementById(trackId);
-  if (!checkbox || !track || track.querySelector('span')) return;
-  const knob = document.createElement('span');
-  knob.style.cssText = 'position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:0.2s;pointer-events:none;';
-  track.appendChild(knob);
-  function update() {
-    track.style.background = checkbox.checked ? 'var(--primary)' : 'var(--border)';
-    knob.style.transform = checkbox.checked ? 'translateX(20px)' : 'translateX(0)';
-  }
-  track.addEventListener('click', () => { checkbox.checked = !checkbox.checked; update(); });
-  update();
-}
-
-function setToggle(checkboxId, trackId, value) {
-  const checkbox = document.getElementById(checkboxId);
-  const track = document.getElementById(trackId);
-  if (!checkbox || !track) return;
-  checkbox.checked = value;
-  track.style.background = value ? 'var(--primary)' : 'var(--border)';
-  const knob = track.querySelector('span');
-  if (knob) knob.style.transform = value ? 'translateX(20px)' : 'translateX(0)';
-}
-
 function renderKeywordTags() {
   const container = document.getElementById('muted-keywords-list');
   if (!container) return;
@@ -660,10 +672,11 @@ function showEditForm(profile) {
     window.loadMutedCommunities(profile.muted_communities || []);
   }
 
-  initToggle('toggle-show-adult', 'toggle-show-adult-track');
-  initToggle('toggle-is-adult-creator', 'toggle-is-adult-creator-track');
-  setToggle('toggle-show-adult', 'toggle-show-adult-track', !!profile.show_adult_content);
-  setToggle('toggle-is-adult-creator', 'toggle-is-adult-creator-track', !!profile.is_adult_creator);
+  // Init toggles using new data-checked system
+  initToggle('toggle-show-adult-track');
+  initToggle('toggle-is-adult-creator-track');
+  setToggle('toggle-show-adult-track', !!profile.show_adult_content);
+  setToggle('toggle-is-adult-creator-track', !!profile.is_adult_creator);
 
   const addBtn = document.getElementById('add-keyword-btn');
   const keywordInput = document.getElementById('keyword-input');
@@ -692,8 +705,10 @@ async function saveProfile() {
   const bio = document.getElementById('edit-bio').value.trim();
   const location = document.getElementById('edit-location').value.trim();
   const website = document.getElementById('edit-website').value.trim();
-  const showAdultContent = document.getElementById('toggle-show-adult')?.checked || false;
-  const isAdultCreator = document.getElementById('toggle-is-adult-creator')?.checked || false;
+
+  // Read from data-checked attribute — bypasses hidden checkbox
+  const showAdultContent = getToggle('toggle-show-adult-track');
+  const isAdultCreator = getToggle('toggle-is-adult-creator-track');
 
   const mutedCommunityEls = document.querySelectorAll('#muted-communities-list .muted-community-item');
   const currentMutedCommunities = Array.from(mutedCommunityEls).map(el => el.id.replace('muted-c-', ''));
@@ -787,9 +802,8 @@ async function loadProfilePosts(userId) {
   const username = profile?.username || 'unknown';
   const displayName = profile?.display_name || username;
   const avatarUrl = profile?.avatar_url || '';
-
-  // Build avatar HTML for posts — img if available, initial letter fallback
   const initial = username.charAt(0).toUpperCase();
+
   const postAvatarHtml = avatarUrl
     ? `<img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(displayName)}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" /><div class="post-avatar" style="display:none;">${initial}</div>`
     : `<div class="post-avatar">${initial}</div>`;
