@@ -52,7 +52,7 @@
       justify-content: space-between;
       padding: 0 24px;
       margin-top: -40px;
-      margin-bottom: 12px;
+      margin-bottom: 16px;
       flex-wrap: wrap;
       gap: 12px;
     }
@@ -60,7 +60,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 4px;
+      gap: 6px;
     }
     .profile-avatar-large {
       width: 80px;
@@ -77,45 +77,17 @@
       font-family: var(--font-display);
       overflow: hidden;
       flex-shrink: 0;
-      cursor: pointer;
       position: relative;
     }
     .profile-avatar-large img {
+      position: absolute;
+      inset: 0;
       width: 100%;
       height: 100%;
       object-fit: cover;
       border-radius: 50%;
-      position: absolute;
-      inset: 0;
     }
-    .avatar-upload-label {
-      display: none;
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--primary);
-      cursor: pointer;
-      text-align: center;
-      letter-spacing: 0.03em;
-      white-space: nowrap;
-    }
-    .avatar-upload-label.visible { display: block; }
-    .avatar-uploading {
-      display: none;
-      font-size: 11px;
-      color: var(--text-muted);
-      text-align: center;
-    }
-    .avatar-uploading.visible { display: block; }
     .profile-body { padding: 0 24px 24px; }
-    .profile-top-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin-bottom: 12px;
-    }
-    .profile-name-block { min-width: 0; }
     .profile-display-name {
       font-family: var(--font-display);
       font-size: 22px; font-weight: 900;
@@ -135,38 +107,6 @@
     .analytics-cell { background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px; text-align: center; }
     .analytics-cell .val { font-family: var(--font-display); font-size: 20px; font-weight: 900; color: var(--primary); }
     .analytics-cell .lbl { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
-
-    /* Toggle switch — no label wrapper, pure div */
-    .toggle-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-    }
-    .toggle-track {
-      position: relative;
-      width: 44px;
-      height: 24px;
-      border-radius: 100px;
-      background: var(--border);
-      cursor: pointer;
-      flex-shrink: 0;
-      transition: background 0.2s;
-    }
-    .toggle-knob {
-      position: absolute;
-      height: 18px;
-      width: 18px;
-      left: 3px;
-      bottom: 3px;
-      background: #fff;
-      border-radius: 50%;
-      transition: transform 0.2s;
-      pointer-events: none;
-    }
-    .toggle-track.on { background: var(--primary); }
-    .toggle-track.on .toggle-knob { transform: translateX(20px); }
-
     .live-banner {
       display: none; background: var(--bg-card);
       border: 1px solid var(--primary); border-radius: var(--radius-lg);
@@ -216,9 +156,7 @@
       font-size: 12px; font-weight: 700; color: #f43f5e;
       background: none; border: 1px solid rgba(244,63,94,0.3);
       border-radius: 100px; padding: 3px 10px; cursor: pointer;
-      transition: all 0.15s ease;
     }
-    .unmute-btn:hover { background: rgba(244,63,94,0.1); }
     .mobile-nav {
       display: none; position: fixed; bottom: 0; left: 0; right: 0;
       height: 56px; background: rgba(8,8,10,0.97);
@@ -228,19 +166,18 @@
     .mobile-nav-item {
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       gap: 2px; padding: 6px 12px; border-radius: var(--radius-sm);
-      text-decoration: none; color: #6a6a7a; font-size: 10px; font-weight: 600; transition: color var(--transition);
+      text-decoration: none; color: #6a6a7a; font-size: 10px; font-weight: 600;
     }
     .mobile-nav-item.active { color: var(--primary); }
     .mobile-nav-item span { font-size: 20px; line-height: 1; }
-
     @media (max-width: 768px) {
       .mobile-nav { display: block; }
       .feed-main { padding-bottom: 72px; }
-      .profile-display-name { font-size: 18px; }
       .profile-banner { height: 120px; }
       .profile-avatar-large { width: 64px; height: 64px; font-size: 24px; }
       .profile-avatar-row { margin-top: -32px; padding: 0 16px; }
       .profile-body { padding: 0 16px 20px; }
+      .profile-display-name { font-size: 18px; }
       #daily-frame-container { height: 380px; }
     }
     @media (max-width: 480px) { .profile-stats { gap: 16px; } }
@@ -277,16 +214,15 @@
 
       <div class="profile-card" id="profile-header">
         <div class="profile-banner"></div>
-
-        <!-- Avatar row sits OUTSIDE the banner, below it -->
         <div class="profile-avatar-row">
           <div class="profile-avatar-wrap">
             <div class="profile-avatar-large" id="profile-avatar-large">
               <span id="profile-avatar-initial">?</span>
-              <img id="profile-avatar-img" src="" alt="Profile photo" style="display:none;" />
+              <img id="profile-avatar-img" src="" alt="" style="display:none;" />
             </div>
-            <span class="avatar-upload-label" id="avatar-upload-label">📷 Change Photo</span>
-            <span class="avatar-uploading" id="avatar-uploading">Uploading...</span>
+            <!-- Real button — always visible on own profile, shown by JS -->
+            <button id="avatar-upload-btn" class="btn btn-ghost" style="display:none;font-size:12px;padding:4px 12px;margin-top:2px;">📷 Change Photo</button>
+            <span id="avatar-uploading" style="display:none;font-size:12px;color:var(--text-muted);">Uploading...</span>
             <input type="file" id="avatar-file-input" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;" />
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;padding-bottom:4px;">
@@ -295,18 +231,13 @@
             <button id="edit-profile-btn" class="btn btn-ghost" style="display:none;">Edit Profile</button>
           </div>
         </div>
-
         <div class="profile-body">
-          <div class="profile-top-row">
-            <div class="profile-name-block">
-              <div class="profile-display-name">
-                <span id="profile-display-name">Loading...</span>
-                <span id="verified-badge" style="display:none;font-size:16px;" title="Verified">✅</span>
-              </div>
-              <div class="profile-username-text" id="profile-username">@...</div>
-            </div>
+          <div class="profile-display-name">
+            <span id="profile-display-name">Loading...</span>
+            <span id="verified-badge" style="display:none;font-size:16px;">✅</span>
           </div>
-          <div id="profile-bio" style="font-size:15px;color:var(--text-muted);line-height:1.6;"></div>
+          <div class="profile-username-text" id="profile-username">@...</div>
+          <div id="profile-bio" style="font-size:15px;color:var(--text-muted);line-height:1.6;margin-top:8px;"></div>
           <div id="profile-meta" style="display:flex;gap:16px;margin-top:8px;flex-wrap:wrap;font-size:13px;color:var(--text-dim);"></div>
           <div id="profile-reputation" style="margin-top:10px;display:flex;align-items:center;gap:8px;"></div>
           <div class="profile-stats">
@@ -346,34 +277,39 @@
           <input type="url" id="edit-website" class="form-input" placeholder="https://yoursite.com" />
         </div>
 
-        <!-- Content Settings — plain divs, no label wrappers -->
         <div style="border-top:1px solid var(--border);margin-top:20px;padding-top:20px;">
           <div class="section-heading">🔞 Content Settings</div>
+
           <div style="background:var(--bg-input);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px;">
-            <div class="toggle-row">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
               <div>
                 <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:2px;">Show Adult Content</div>
-                <div style="font-size:12px;color:var(--text-muted);">See 18+ posts in your feed. You must be 18+ to enable.</div>
+                <div style="font-size:12px;color:var(--text-muted);">See 18+ posts in your feed.</div>
               </div>
-              <div class="toggle-track" id="toggle-show-adult">
-                <div class="toggle-knob"></div>
+              <!-- Toggle: plain div, state managed entirely by JS via inline style -->
+              <div id="toggle-show-adult"
+                style="position:relative;width:44px;height:24px;border-radius:100px;background:#444;cursor:pointer;flex-shrink:0;transition:background 0.2s;">
+                <div id="toggle-show-adult-knob"
+                  style="position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:3px;left:3px;transition:transform 0.2s;pointer-events:none;"></div>
               </div>
             </div>
           </div>
+
           <div style="background:var(--bg-input);border:1px solid var(--border);border-radius:10px;padding:16px;">
-            <div class="toggle-row">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
               <div>
                 <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:2px;">I Create Adult Content</div>
                 <div style="font-size:12px;color:var(--text-muted);">Mark your posts as 18+ by default.</div>
               </div>
-              <div class="toggle-track" id="toggle-is-adult-creator">
-                <div class="toggle-knob"></div>
+              <div id="toggle-is-adult-creator"
+                style="position:relative;width:44px;height:24px;border-radius:100px;background:#444;cursor:pointer;flex-shrink:0;transition:background 0.2s;">
+                <div id="toggle-is-adult-creator-knob"
+                  style="position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:3px;left:3px;transition:transform 0.2s;pointer-events:none;"></div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Muted Keywords -->
         <div style="border-top:1px solid var(--border);margin-top:20px;padding-top:20px;">
           <div class="section-heading">🔇 Muted Keywords</div>
           <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Posts containing these words won't appear in your feed.</div>
@@ -385,7 +321,6 @@
           <div class="form-hint" style="margin-top:6px;">Press Enter or click + Add. Up to 50 keywords.</div>
         </div>
 
-        <!-- Muted Communities -->
         <div style="border-top:1px solid var(--border);margin-top:20px;padding-top:20px;">
           <div class="section-heading">🚫 Muted Communities</div>
           <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Posts from these communities won't appear in your feed.</div>
