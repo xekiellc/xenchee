@@ -36,10 +36,36 @@
 
   <style>
     .profile-banner {
-      height: 160px;
+      height: 180px;
       background: linear-gradient(135deg, var(--primary) 0%, #a78bfa 100%);
       border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+      position: relative;
+      overflow: hidden;
     }
+    .profile-banner img.banner-img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .banner-upload-btn {
+      display: none;
+      position: absolute;
+      bottom: 10px;
+      right: 12px;
+      background: rgba(0,0,0,0.55);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      backdrop-filter: blur(4px);
+      z-index: 5;
+    }
+    .banner-upload-btn.visible { display: block; }
     .profile-card {
       background: var(--bg-card);
       border: 1px solid var(--border);
@@ -57,8 +83,8 @@
       gap: 8px;
     }
     .profile-avatar-large {
-      width: 80px;
-      height: 80px;
+      width: 84px;
+      height: 84px;
       border-radius: 50%;
       background: var(--bg-card);
       border: 4px solid var(--bg-card);
@@ -176,9 +202,9 @@
     @media (max-width: 768px) {
       .mobile-nav { display: block; }
       .feed-main { padding-bottom: 72px; }
-      .profile-banner { height: 120px; }
-      .profile-avatar-large { width: 64px; height: 64px; font-size: 24px; }
-      .profile-avatar-row { margin-top: -32px; padding: 0 16px; }
+      .profile-banner { height: 130px; }
+      .profile-avatar-large { width: 68px; height: 68px; font-size: 26px; }
+      .profile-avatar-row { margin-top: -34px; padding: 0 16px; }
       .profile-body { padding: 0 16px 20px; }
       .profile-display-name { font-size: 18px; }
       #daily-frame-container { height: 380px; }
@@ -216,7 +242,11 @@
     <div class="feed-main">
 
       <div class="profile-card" id="profile-header">
-        <div class="profile-banner"></div>
+        <div class="profile-banner" id="profile-banner">
+          <img id="profile-banner-img" src="" alt="" style="display:none;" />
+          <button id="banner-upload-btn" class="banner-upload-btn">📷 Change Banner</button>
+          <input type="file" id="banner-file-input" accept="image/jpeg,image/png,image/webp" style="display:none;" />
+        </div>
 
         <div class="profile-avatar-row">
           <div class="profile-avatar-large" id="profile-avatar-large">
@@ -241,10 +271,8 @@
             </div>
           </div>
 
-          <!-- Upload button sits here — in the card body, always visible on own profile -->
           <div id="avatar-upload-section" style="display:none;margin-bottom:12px;">
-            <button id="avatar-upload-btn" class="btn btn-ghost"
-              style="font-size:13px;padding:6px 16px;">
+            <button id="avatar-upload-btn" class="btn btn-ghost" style="font-size:13px;padding:6px 16px;">
               📷 Upload Profile Photo
             </button>
             <span id="avatar-uploading" style="display:none;font-size:13px;color:var(--text-muted);margin-left:8px;">Uploading...</span>
