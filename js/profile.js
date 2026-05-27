@@ -42,6 +42,109 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
+// ─── AVATAR UPLOAD ────────────────────────────────────────────────────────────
+
+function setupAvatarUpload() {
+  const overlay = document.getElementById('avatar-upload-overlay');
+  const label = document.getElementById('avatar-upload-label');
+  const fileInput = document.getElementById('avatar-file-input');
+
+  if (!overlay || !fileInput) return;
+
+  // Show upload UI only on own profile
+  overlay.style.display = 'flex';
+  if (label) label.classList.add('visible');
+
+  overlay.addEventListener('click', () => fileInput.click());
+  if (label) label.addEventListener('click', () => fileInput.click());
+
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+    await uploadAvatar(file);
+    fileInput.value = '';
+  });
+}
+
+async function uploadAvatar(file) {
+  // Validate type
+  const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+  if (!allowed.includes(file.type)) {
+    alert('Please choose a JPG, PNG, GIF, or WEBP image.');
+    return;
+  }
+
+  // Validate size — 5MB max
+  if (file.size > 5 * 1024 * 1024) {
+    alert('Image must be under 5MB.');
+    return;
+  }
+
+  const uploadingEl = document.getElementById('avatar-uploading');
+  const labelEl = document.getElementById('avatar-upload-label');
+  const overlay = document.getElementById('avatar-upload-overlay');
+
+  if (uploadingEl) uploadingEl.classList.add('visible');
+  if (labelEl) labelEl.classList.remove('visible');
+  if (overlay) overlay.style.display = 'none';
+
+  try {
+    const ext = file.name.split('.').pop().toLowerCase() || 'jpg';
+    const path = `avatars/${currentUser.id}/${Date.now()}.${ext}`;
+
+    const { error: uploadError } = await window.db.storage
+      .from('voxxee-media')
+      .upload(path, file, { upsert: true, contentType: file.type });
+
+    if (uploadError) throw uploadError;
+
+    const { data: urlData } = window.db.storage
+      .from('voxxee-media')
+      .getPublicUrl(path);
+
+    const publicUrl = urlData.publicUrl;
+
+    const { error: updateError } = await window.db
+      .from('profiles')
+      .update({ avatar_url: publicUrl })
+      .eq('user_id', currentUser.id);
+
+    if (updateError) throw updateError;
+
+    // Update in-memory profile
+    if (viewingProfile) viewingProfile.avatar_url = publicUrl;
+
+    // Re-render avatar in header
+    renderAvatarEl(publicUrl, viewingProfile?.username || '');
+
+  } catch (err) {
+    console.error('Avatar upload error:', err);
+    alert('Upload failed. Please try again.');
+  } finally {
+    if (uploadingEl) uploadingEl.classList.remove('visible');
+    if (labelEl) labelEl.classList.add('visible');
+    if (overlay) overlay.style.display = 'flex';
+  }
+}
+
+function renderAvatarEl(avatarUrl, username) {
+  const initial = (username || '?').charAt(0).toUpperCase();
+  const imgEl = document.getElementById('profile-avatar-img');
+  const initialEl = document.getElementById('profile-avatar-initial');
+
+  if (avatarUrl && imgEl) {
+    imgEl.src = avatarUrl;
+    imgEl.style.display = 'block';
+    if (initialEl) initialEl.style.display = 'none';
+  } else {
+    if (imgEl) imgEl.style.display = 'none';
+    if (initialEl) {
+      initialEl.style.display = 'block';
+      initialEl.textContent = initial;
+    }
+  }
+}
+
 // ─── LIVE SESSION ─────────────────────────────────────────────────────────────
 
 function setupLiveModalListeners() {
@@ -303,6 +406,7 @@ async function loadOwnProfile() {
   isOwnProfile = true;
   mutedKeywords = profile.muted_keywords || [];
   renderProfile(profile);
+  setupAvatarUpload();
 
   if (profile.is_verified) {
     document.getElementById('go-live-btn').style.display = 'block';
@@ -339,6 +443,8 @@ async function loadProfileByUsername(username) {
   }
 
   renderProfile(profile);
+
+  if (isOwnProfile) setupAvatarUpload();
 
   if (isOwnProfile && profile.is_verified) {
     document.getElementById('go-live-btn').style.display = 'block';
@@ -398,8 +504,8 @@ async function loadProfileAnalytics(userId) {
 }
 
 function renderProfile(profile) {
-  const initial = (profile.username || '?').charAt(0).toUpperCase();
-  document.getElementById('profile-avatar-large').textContent = initial;
+  renderAvatarEl(profile.avatar_url, profile.username);
+
   document.getElementById('profile-display-name').textContent = profile.display_name || profile.username;
   document.getElementById('profile-username').textContent = '@' + profile.username;
   document.getElementById('profile-post-count').textContent = (profile.post_count || 0).toLocaleString();
@@ -550,7 +656,6 @@ function showEditForm(profile) {
   mutedKeywords = [...(profile.muted_keywords || [])];
   renderKeywordTags();
 
-  // Load muted communities
   if (window.loadMutedCommunities) {
     window.loadMutedCommunities(profile.muted_communities || []);
   }
@@ -590,7 +695,6 @@ async function saveProfile() {
   const showAdultContent = document.getElementById('toggle-show-adult')?.checked || false;
   const isAdultCreator = document.getElementById('toggle-is-adult-creator')?.checked || false;
 
-  // Collect current muted communities from the DOM
   const mutedCommunityEls = document.querySelectorAll('#muted-communities-list .muted-community-item');
   const currentMutedCommunities = Array.from(mutedCommunityEls).map(el => el.id.replace('muted-c-', ''));
 
@@ -638,6 +742,7 @@ async function saveProfile() {
     document.getElementById('edit-profile-form').style.display = 'none';
   } catch (err) {
     console.error('Save profile error:', err);
+    alert('Save failed. Please try again.');
   }
 
   btn.textContent = 'Save Profile';
@@ -656,7 +761,7 @@ async function loadProfilePosts(userId) {
   }
 
   const { data: profile } = await window.db
-    .from('profiles').select('username, display_name, is_verified, verified_type, reputation')
+    .from('profiles').select('username, display_name, avatar_url, is_verified, verified_type, reputation')
     .eq('user_id', userId).single();
 
   const postIds = posts.map(p => p.id);
@@ -681,7 +786,14 @@ async function loadProfilePosts(userId) {
 
   const username = profile?.username || 'unknown';
   const displayName = profile?.display_name || username;
+  const avatarUrl = profile?.avatar_url || '';
+
+  // Build avatar HTML for posts — img if available, initial letter fallback
   const initial = username.charAt(0).toUpperCase();
+  const postAvatarHtml = avatarUrl
+    ? `<img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(displayName)}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" /><div class="post-avatar" style="display:none;">${initial}</div>`
+    : `<div class="post-avatar">${initial}</div>`;
+
   const verifiedBadge = profile?.is_verified ? (() => {
     const badges = { staff: '🟣', notable: '⭐', identity: '🔵' };
     return `<span style="font-size:14px;">${badges[profile.verified_type] || '🔵'}</span>`;
@@ -718,7 +830,9 @@ async function loadProfilePosts(userId) {
     return `
       <div class="post-card" data-post-id="${post.id}">
         <div class="post-header">
-          <div class="post-avatar">${initial}</div>
+          <div style="display:flex;align-items:center;flex-shrink:0;">
+            ${postAvatarHtml}
+          </div>
           <div class="post-meta">
             <div class="post-username">
               ${escapeHtml(displayName)}
