@@ -129,7 +129,6 @@ async function startLiveSession() {
 
     currentLiveSession = liveSession;
 
-    // Notify followers
     await notifyFollowersLive(liveSession, title);
 
     document.getElementById('golive-modal').classList.remove('visible');
@@ -305,7 +304,6 @@ async function loadOwnProfile() {
   mutedKeywords = profile.muted_keywords || [];
   renderProfile(profile);
 
-  // Show Go Live only for verified users viewing their own profile
   if (profile.is_verified) {
     document.getElementById('go-live-btn').style.display = 'block';
   }
@@ -342,12 +340,10 @@ async function loadProfileByUsername(username) {
 
   renderProfile(profile);
 
-  // Show Go Live only on own verified profile
   if (isOwnProfile && profile.is_verified) {
     document.getElementById('go-live-btn').style.display = 'block';
   }
 
-  // Always check if this profile user is currently live
   await checkActiveLiveSession(profile.user_id);
   subscribeToLiveSessions(profile.user_id);
 
@@ -532,9 +528,9 @@ function renderKeywordTags() {
     return;
   }
   container.innerHTML = mutedKeywords.map((kw, idx) => `
-    <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:var(--bg-input);border:1px solid var(--border);border-radius:100px;font-size:13px;color:var(--text);">
+    <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:rgba(244,63,94,0.1);border:1px solid rgba(244,63,94,0.3);border-radius:100px;font-size:13px;color:#f43f5e;font-weight:600;">
       ${escapeHtml(kw)}
-      <button data-idx="${idx}" class="remove-keyword-btn" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:14px;line-height:1;padding:0;">×</button>
+      <button data-idx="${idx}" class="remove-keyword-btn" style="background:none;border:none;cursor:pointer;color:#f43f5e;font-size:14px;line-height:1;padding:0;opacity:0.7;">×</button>
     </span>
   `).join('');
   container.querySelectorAll('.remove-keyword-btn').forEach(btn => {
@@ -553,14 +549,22 @@ function showEditForm(profile) {
   document.getElementById('edit-website').value = profile.website || '';
   mutedKeywords = [...(profile.muted_keywords || [])];
   renderKeywordTags();
+
+  // Load muted communities
+  if (window.loadMutedCommunities) {
+    window.loadMutedCommunities(profile.muted_communities || []);
+  }
+
   initToggle('toggle-show-adult', 'toggle-show-adult-track');
   initToggle('toggle-is-adult-creator', 'toggle-is-adult-creator-track');
   setToggle('toggle-show-adult', 'toggle-show-adult-track', !!profile.show_adult_content);
   setToggle('toggle-is-adult-creator', 'toggle-is-adult-creator-track', !!profile.is_adult_creator);
+
   const addBtn = document.getElementById('add-keyword-btn');
   const keywordInput = document.getElementById('keyword-input');
   addBtn.onclick = () => addKeyword();
   keywordInput.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); addKeyword(); } };
+
   document.getElementById('save-profile-btn').onclick = saveProfile;
   document.getElementById('cancel-edit-btn').onclick = () => {
     document.getElementById('edit-profile-form').style.display = 'none';
@@ -585,20 +589,44 @@ async function saveProfile() {
   const website = document.getElementById('edit-website').value.trim();
   const showAdultContent = document.getElementById('toggle-show-adult')?.checked || false;
   const isAdultCreator = document.getElementById('toggle-is-adult-creator')?.checked || false;
+
+  // Collect current muted communities from the DOM
+  const mutedCommunityEls = document.querySelectorAll('#muted-communities-list .muted-community-item');
+  const currentMutedCommunities = Array.from(mutedCommunityEls).map(el => el.id.replace('muted-c-', ''));
+
   const btn = document.getElementById('save-profile-btn');
   btn.textContent = 'Saving...';
   btn.disabled = true;
+
   try {
     const { error } = await window.db.from('profiles').update({
-      display_name: displayName, bio, location, website,
+      display_name: displayName,
+      bio,
+      location,
+      website,
       show_adult_content: showAdultContent,
       is_adult_creator: isAdultCreator,
-      muted_keywords: mutedKeywords
+      muted_keywords: mutedKeywords,
+      muted_communities: currentMutedCommunities
     }).eq('user_id', currentUser.id);
+
     if (error) throw error;
-    viewingProfile = { ...viewingProfile, display_name: displayName, bio, location, website, show_adult_content: showAdultContent, is_adult_creator: isAdultCreator, muted_keywords: mutedKeywords };
+
+    viewingProfile = {
+      ...viewingProfile,
+      display_name: displayName,
+      bio,
+      location,
+      website,
+      show_adult_content: showAdultContent,
+      is_adult_creator: isAdultCreator,
+      muted_keywords: mutedKeywords,
+      muted_communities: currentMutedCommunities
+    };
+
     document.getElementById('profile-display-name').textContent = displayName || viewingProfile.username;
     document.getElementById('profile-bio').textContent = bio;
+
     const metaEl = document.getElementById('profile-meta');
     if (metaEl) {
       const parts = [];
@@ -606,10 +634,12 @@ async function saveProfile() {
       if (website) parts.push(`🔗 <a href="${escapeHtml(website)}" target="_blank" rel="noopener" style="color:var(--primary);text-decoration:none;">${escapeHtml(website.replace(/^https?:\/\//, ''))}</a>`);
       metaEl.innerHTML = parts.join('<span style="margin:0 4px;">·</span>');
     }
+
     document.getElementById('edit-profile-form').style.display = 'none';
   } catch (err) {
     console.error('Save profile error:', err);
   }
+
   btn.textContent = 'Save Profile';
   btn.disabled = false;
 }
