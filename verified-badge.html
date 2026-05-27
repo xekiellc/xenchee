@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Get Verified — Voxxee</title>
 
-  <!-- OG Meta Tags -->
   <meta property="og:title" content="Get Verified — Voxxee" />
   <meta property="og:description" content="Get your identity verified on Voxxee and display a blue verified badge on your profile. One-time $4.99 payment." />
   <meta property="og:type" content="website" />
@@ -14,7 +13,15 @@
   <meta name="twitter:title" content="Get Verified — Voxxee" />
   <meta name="twitter:description" content="Get your identity verified on Voxxee and display a blue verified badge on your profile. One-time $4.99 payment." />
 
-  <!-- GA4 -->
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192x192.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="/icon-512x512.png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <meta name="theme-color" content="#00e5ff" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Voxxee" />
+
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-FSCZJEWZ6F"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -101,29 +108,19 @@
 
     document.addEventListener('DOMContentLoaded', async () => {
       await waitForDb();
-
       const user = await window.auth.getUser();
       if (!user) { window.location.href = '/login.html'; return; }
 
       document.getElementById('logout-btn').addEventListener('click', async () => {
-        await window.auth.signOut();
-        window.location.href = '/';
+        await window.auth.signOut(); window.location.href = '/';
       });
 
-      // Check if already verified
-      const { data: profile } = await window.db
-        .from('profiles')
-        .select('is_verified, verified_type, username')
-        .eq('user_id', user.id)
-        .single();
+      const { data: profile } = await window.db.from('profiles').select('is_verified, verified_type, username').eq('user_id', user.id).single();
 
       if (profile?.is_verified) {
         document.getElementById('verify-btn').disabled = true;
         document.getElementById('verify-btn').textContent = '✅ Already Verified';
-        document.getElementById('alert-container').innerHTML = `
-          <div style="background:rgba(76,175,125,0.1);border:1px solid rgba(76,175,125,0.3);border-radius:8px;padding:12px 16px;font-size:14px;color:#4caf7d;text-align:center;">
-            Your account is already verified! 🔵
-          </div>`;
+        document.getElementById('alert-container').innerHTML = `<div style="background:rgba(76,175,125,0.1);border:1px solid rgba(76,175,125,0.3);border-radius:8px;padding:12px 16px;font-size:14px;color:#4caf7d;text-align:center;">Your account is already verified! 🔵</div>`;
         return;
       }
 
@@ -133,27 +130,19 @@
         const btn = document.getElementById('verify-btn');
         btn.disabled = true;
         btn.textContent = 'Redirecting to Stripe...';
-
         try {
           const response = await fetch('/.netlify/functions/create-checkout-session', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_id: user.id })
           });
-
           const { sessionId, error } = await response.json();
-
           if (error) throw new Error(error);
-
           const result = await stripe.redirectToCheckout({ sessionId });
           if (result.error) throw new Error(result.error.message);
-
         } catch (err) {
           console.error('Checkout error:', err);
-          document.getElementById('alert-container').innerHTML = `
-            <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:12px 16px;font-size:14px;color:#ef4444;">
-              Something went wrong. Please try again.
-            </div>`;
+          document.getElementById('alert-container').innerHTML = `<div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:12px 16px;font-size:14px;color:#ef4444;">Something went wrong. Please try again.</div>`;
           btn.disabled = false;
           btn.textContent = 'Get Verified — $4.99';
         }
