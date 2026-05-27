@@ -126,6 +126,39 @@
       padding: 20px; backdrop-filter: blur(6px);
     }
     .golive-modal.visible { display: flex; }
+
+    /* Mute tags */
+    .mute-tag {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 10px 4px 12px;
+      background: rgba(244,63,94,0.1);
+      border: 1px solid rgba(244,63,94,0.3);
+      border-radius: 100px;
+      font-size: 13px; font-weight: 600; color: #f43f5e;
+    }
+    .mute-tag button {
+      background: none; border: none; cursor: pointer;
+      color: #f43f5e; font-size: 14px; padding: 0; line-height: 1; opacity: 0.7;
+    }
+    .mute-tag button:hover { opacity: 1; }
+
+    /* Muted community items */
+    .muted-community-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 14px; border-radius: 10px;
+      border: 1px solid rgba(244,63,94,0.25);
+      background: rgba(244,63,94,0.05);
+      margin-bottom: 8px;
+    }
+    .muted-community-name { font-size: 13px; font-weight: 600; color: var(--text); }
+    .unmute-btn {
+      font-size: 12px; font-weight: 700; color: #f43f5e;
+      background: none; border: 1px solid rgba(244,63,94,0.3);
+      border-radius: 100px; padding: 3px 10px; cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .unmute-btn:hover { background: rgba(244,63,94,0.1); }
+
     .mobile-nav {
       display: none; position: fixed; bottom: 0; left: 0; right: 0;
       height: 56px; background: rgba(8,8,10,0.97);
@@ -224,6 +257,7 @@
 
       <div id="edit-profile-form" style="display:none;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;margin-bottom:20px;">
         <div class="section-heading">Edit Profile</div>
+
         <div class="form-group">
           <label class="form-label">Display Name</label>
           <input type="text" id="edit-display-name" class="form-input" placeholder="Your name" maxlength="50" />
@@ -241,6 +275,8 @@
           <label class="form-label">Website</label>
           <input type="url" id="edit-website" class="form-input" placeholder="https://yoursite.com" />
         </div>
+
+        <!-- Content Settings -->
         <div style="border-top:1px solid var(--border);margin-top:20px;padding-top:20px;">
           <div class="section-heading">🔞 Content Settings</div>
           <div style="background:var(--bg-input);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px;">
@@ -268,6 +304,8 @@
             </div>
           </div>
         </div>
+
+        <!-- Muted Keywords -->
         <div style="border-top:1px solid var(--border);margin-top:20px;padding-top:20px;">
           <div class="section-heading">🔇 Muted Keywords</div>
           <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Posts containing these words won't appear in your feed.</div>
@@ -276,8 +314,17 @@
             <input type="text" id="keyword-input" class="form-input" placeholder="Add a keyword..." maxlength="50" style="flex:1;" />
             <button id="add-keyword-btn" class="btn btn-ghost" style="flex-shrink:0;">+ Add</button>
           </div>
-          <div class="form-hint" style="margin-top:6px;">Up to 50 keywords. Case-insensitive.</div>
+          <div class="form-hint" style="margin-top:6px;">Press Enter or click + Add. Up to 50 keywords. Case-insensitive.</div>
         </div>
+
+        <!-- Muted Communities -->
+        <div style="border-top:1px solid var(--border);margin-top:20px;padding-top:20px;">
+          <div class="section-heading">🚫 Muted Communities</div>
+          <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Posts from these communities won't appear in your feed. Click Unmute to restore them.</div>
+          <div id="muted-communities-list"></div>
+          <div id="muted-communities-empty" style="display:none;font-size:13px;color:var(--text-dim);padding:12px 0;">No communities muted.</div>
+        </div>
+
         <div style="display:flex;gap:12px;margin-top:20px;flex-wrap:wrap;">
           <button id="save-profile-btn" class="btn btn-primary">Save Profile</button>
           <button id="cancel-edit-btn" class="btn btn-ghost">Cancel</button>
@@ -362,5 +409,54 @@
   <script src="js/supabase.js"></script>
   <script src="js/reputation.js"></script>
   <script src="js/profile.js"></script>
+
+  <script>
+    // Muted communities management — loaded when edit form opens
+    window.loadMutedCommunities = async function(mutedIds) {
+      const list = document.getElementById('muted-communities-list');
+      const empty = document.getElementById('muted-communities-empty');
+      if (!mutedIds || mutedIds.length === 0) {
+        list.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+      }
+      empty.style.display = 'none';
+      const { data: communities } = await window.db
+        .from('communities').select('id, name').in('id', mutedIds);
+      if (!communities || communities.length === 0) {
+        list.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+      }
+      list.innerHTML = communities.map(c => `
+        <div class="muted-community-item" id="muted-c-${c.id}">
+          <div class="muted-community-name">${escapeHtml(c.name)}</div>
+          <button class="unmute-btn" onclick="unmuteCommmunity('${c.id}')">Unmute</button>
+        </div>
+      `).join('');
+    };
+
+    window.unmuteCommmunity = async function(communityId) {
+      const user = await window.auth.getUser();
+      if (!user) return;
+      const { data: profile } = await window.db
+        .from('profiles').select('muted_communities').eq('user_id', user.id).single();
+      const current = profile?.muted_communities || [];
+      const updated = current.filter(id => id !== communityId);
+      await window.db.from('profiles').update({ muted_communities: updated }).eq('user_id', user.id);
+      const el = document.getElementById(`muted-c-${communityId}`);
+      if (el) el.remove();
+      const list = document.getElementById('muted-communities-list');
+      if (!list.children.length) {
+        document.getElementById('muted-communities-empty').style.display = 'block';
+      }
+    };
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.appendChild(document.createTextNode(text || ''));
+      return div.innerHTML;
+    }
+  </script>
 </body>
 </html>
