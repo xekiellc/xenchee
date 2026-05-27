@@ -31,7 +31,75 @@
   </script>
 
   <link rel="stylesheet" href="/css/main.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    .sidebar-nav li a {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 10px;
+      border-radius: var(--radius-md);
+      text-decoration: none;
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.15s ease;
+    }
+    .sidebar-nav li a:hover { background: var(--bg-hover); color: var(--text); }
+    .sidebar-nav li a.active { background: rgba(0,229,255,0.08); color: var(--primary); }
+    .sidebar-nav li a.active .nav-icon-box { background: rgba(0,229,255,0.2); }
+    .nav-icon-box {
+      width: 28px; height: 28px;
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      font-size: 15px;
+    }
+
+    .game-icon-box {
+      width: 56px; height: 56px;
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 16px;
+      flex-shrink: 0;
+    }
+    .game-icon-box i { font-size: 28px; }
+
+    .game-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      cursor: pointer;
+      transition: border-color 0.15s ease, transform 0.15s ease;
+      text-decoration: none;
+      display: block;
+    }
+    .game-card:hover { border-color: var(--primary); transform: translateY(-2px); }
+
+    .page-header { margin-bottom: 28px; }
+    .page-title {
+      font-family: var(--font-display);
+      font-size: 22px; font-weight: 900;
+      letter-spacing: -0.03em;
+      color: var(--text);
+      margin-bottom: 4px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .page-title-icon {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .section-label {
+      font-size: 11px; font-weight: 700;
+      color: var(--text-dim);
+      text-transform: uppercase; letter-spacing: 1.5px;
+      margin-bottom: 16px;
+    }
+  </style>
 </head>
 <body>
 
@@ -47,93 +115,131 @@
   <div class="app-layout">
     <div class="sidebar-left">
       <ul class="sidebar-nav">
-        <li><a href="/feed.html"><span class="sidebar-nav-icon">🏠</span>Home</a></li>
-        <li><a href="/search.html"><span class="sidebar-nav-icon">🔍</span>Search</a></li>
-        <li><a href="/communities.html"><span class="sidebar-nav-icon">💬</span>Communities</a></li>
-        <li><a href="/events.html"><span class="sidebar-nav-icon">📅</span>Events</a></li>
-        <li><a href="/messages.html"><span class="sidebar-nav-icon">✉️</span>Messages</a></li>
-        <li><a href="/notifications.html"><span class="sidebar-nav-icon">🔔</span>Notifications</a></li>
-        <li><a href="/memories.html"><span class="sidebar-nav-icon">🕰️</span>Memories</a></li>
-        <li><a href="/stories.html"><span class="sidebar-nav-icon">📸</span>Stories</a></li>
-        <li><a href="/games.html" class="active"><span class="sidebar-nav-icon">🎮</span>Games</a></li>
-        <li><a href="/profile.html"><span class="sidebar-nav-icon">👤</span>Profile</a></li>
-        <li><a href="/ecosystem.html"><span class="sidebar-nav-icon">🌐</span>Ecosystem</a></li>
+        <li><a href="/feed.html">
+          <div class="nav-icon-box" style="background:#00e5ff;">
+            <i class="ti ti-home" style="color:#000;font-size:15px;"></i>
+          </div>Home</a></li>
+        <li><a href="/search.html">
+          <div class="nav-icon-box" style="background:#8b5cf6;">
+            <i class="ti ti-search" style="color:#fff;font-size:15px;"></i>
+          </div>Search</a></li>
+        <li><a href="/communities.html">
+          <div class="nav-icon-box" style="background:#22c55e;">
+            <i class="ti ti-messages" style="color:#fff;font-size:15px;"></i>
+          </div>Communities</a></li>
+        <li><a href="/events.html">
+          <div class="nav-icon-box" style="background:#f59e0b;">
+            <i class="ti ti-calendar" style="color:#000;font-size:15px;"></i>
+          </div>Events</a></li>
+        <li><a href="/messages.html">
+          <div class="nav-icon-box" style="background:#fbbf24;">
+            <i class="ti ti-mail" style="color:#000;font-size:15px;"></i>
+          </div>Messages</a></li>
+        <li><a href="/notifications.html">
+          <div class="nav-icon-box" style="background:#f43f5e;">
+            <i class="ti ti-bell" style="color:#fff;font-size:15px;"></i>
+          </div>Notifications</a></li>
+        <li><a href="/memories.html">
+          <div class="nav-icon-box" style="background:#06b6d4;">
+            <i class="ti ti-clock" style="color:#fff;font-size:15px;"></i>
+          </div>Memories</a></li>
+        <li><a href="/stories.html">
+          <div class="nav-icon-box" style="background:#ec4899;">
+            <i class="ti ti-camera" style="color:#fff;font-size:15px;"></i>
+          </div>Stories</a></li>
+        <li><a href="/games.html" class="active">
+          <div class="nav-icon-box" style="background:#6366f1;">
+            <i class="ti ti-device-gamepad-2" style="color:#fff;font-size:15px;"></i>
+          </div>Games</a></li>
+        <li><a href="/profile.html">
+          <div class="nav-icon-box" style="background:#64748b;">
+            <i class="ti ti-user" style="color:#fff;font-size:15px;"></i>
+          </div>Profile</a></li>
+        <li><a href="/ecosystem.html">
+          <div class="nav-icon-box" style="background:#0ea5e9;">
+            <i class="ti ti-world" style="color:#fff;font-size:15px;"></i>
+          </div>Ecosystem</a></li>
       </ul>
     </div>
 
     <div class="feed-main">
 
-      <div style="margin-bottom:24px;">
-        <div style="font-size:24px;font-weight:800;color:var(--text);margin-bottom:4px;">🎮 Games</div>
+      <div class="page-header">
+        <div class="page-title">
+          <div class="page-title-icon">
+            <i class="ti ti-device-gamepad-2" style="color:#fff;font-size:20px;"></i>
+          </div>
+          Games
+        </div>
         <div style="font-size:15px;color:var(--text-muted);">Daily challenges and arcade games. Say exactly what you mean — then play.</div>
       </div>
 
-      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">Daily Challenges</div>
+      <div class="section-label">Daily Challenges</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:40px;">
 
-        <a href="/game-trivia.html" style="text-decoration:none;">
-          <div class="post-card" style="cursor:pointer;transition:border-color 0.15s ease;" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border)'">
-            <div style="font-size:40px;margin-bottom:12px;">🧠</div>
-            <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:6px;">Daily Trivia</div>
-            <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">10 questions. One shot. Compete with every Voxxee player today.</div>
-            <div style="display:flex;gap:8px;">
-              <span style="font-size:11px;padding:3px 10px;border-radius:100px;background:rgba(99,102,241,0.15);color:var(--primary);font-weight:600;">Daily</span>
-              <span style="font-size:11px;padding:3px 10px;border-radius:100px;background:rgba(76,175,125,0.15);color:#4caf7d;font-weight:600;">Leaderboard</span>
-            </div>
+        <a href="/game-trivia.html" class="game-card">
+          <div class="game-icon-box" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);">
+            <i class="ti ti-brain" style="color:#fff;"></i>
+          </div>
+          <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:6px;">Daily Trivia</div>
+          <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">10 questions. One shot. Compete with every Voxxee player today.</div>
+          <div style="display:flex;gap:8px;">
+            <span style="font-size:11px;padding:3px 10px;border-radius:100px;background:rgba(99,102,241,0.15);color:#6366f1;font-weight:600;">Daily</span>
+            <span style="font-size:11px;padding:3px 10px;border-radius:100px;background:rgba(34,197,94,0.15);color:#22c55e;font-weight:600;">Leaderboard</span>
           </div>
         </a>
 
-        <a href="/game-scramble.html" style="text-decoration:none;">
-          <div class="post-card" style="cursor:pointer;transition:border-color 0.15s ease;" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border)'">
-            <div style="font-size:40px;margin-bottom:12px;">🔤</div>
-            <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:6px;">Word Scramble</div>
-            <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">Unscramble the daily word. New word every day at midnight.</div>
-            <div style="display:flex;gap:8px;">
-              <span style="font-size:11px;padding:3px 10px;border-radius:100px;background:rgba(99,102,241,0.15);color:var(--primary);font-weight:600;">Daily</span>
-              <span style="font-size:11px;padding:3px 10px;border-radius:100px;background:rgba(245,166,35,0.15);color:#f5a623;font-weight:600;">Word</span>
-            </div>
+        <a href="/game-scramble.html" class="game-card">
+          <div class="game-icon-box" style="background:linear-gradient(135deg,#f59e0b,#fbbf24);">
+            <i class="ti ti-letter-case" style="color:#fff;"></i>
+          </div>
+          <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:6px;">Word Scramble</div>
+          <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">Unscramble the daily word. New word every day at midnight.</div>
+          <div style="display:flex;gap:8px;">
+            <span style="font-size:11px;padding:3px 10px;border-radius:100px;background:rgba(99,102,241,0.15);color:#6366f1;font-weight:600;">Daily</span>
+            <span style="font-size:11px;padding:3px 10px;border-radius:100px;background:rgba(245,166,35,0.15);color:#f5a623;font-weight:600;">Word</span>
           </div>
         </a>
 
       </div>
 
-      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">Arcade</div>
+      <div class="section-label">Arcade</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;">
 
-        <a href="/game-snake.html" style="text-decoration:none;">
-          <div class="post-card" style="cursor:pointer;transition:border-color 0.15s ease;" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border)'">
-            <div style="font-size:40px;margin-bottom:12px;">🐍</div>
-            <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:6px;">Snake</div>
-            <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">Classic snake. Eat, grow, don't crash. How long can you last?</div>
-            <span style="font-size:11px;padding:3px 10px;border-radius:100px;background:rgba(239,68,68,0.15);color:#ef4444;font-weight:600;">Arcade</span>
+        <a href="/game-snake.html" class="game-card">
+          <div class="game-icon-box" style="background:linear-gradient(135deg,#22c55e,#16a34a);">
+            <i class="ti ti-route" style="color:#fff;"></i>
           </div>
+          <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:6px;">Snake</div>
+          <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">Classic snake. Eat, grow, don't crash. How long can you last?</div>
+          <span style="font-size:11px;padding:3px 10px;border-radius:100px;background:rgba(239,68,68,0.15);color:#ef4444;font-weight:600;">Arcade</span>
         </a>
 
-        <a href="/game-2048.html" style="text-decoration:none;">
-          <div class="post-card" style="cursor:pointer;transition:border-color 0.15s ease;" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border)'">
-            <div style="font-size:40px;margin-bottom:12px;">🔢</div>
-            <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:6px;">2048</div>
-            <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">Slide and merge tiles. Reach 2048. Satisfyingly addictive.</div>
-            <span style="font-size:11px;padding:3px 10px;border-radius:100px;background:rgba(239,68,68,0.15);color:#ef4444;font-weight:600;">Arcade</span>
+        <a href="/game-2048.html" class="game-card">
+          <div class="game-icon-box" style="background:linear-gradient(135deg,#f97316,#fb923c);">
+            <i class="ti ti-grid-4x4" style="color:#fff;"></i>
           </div>
+          <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:6px;">2048</div>
+          <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">Slide and merge tiles. Reach 2048. Satisfyingly addictive.</div>
+          <span style="font-size:11px;padding:3px 10px;border-radius:100px;background:rgba(239,68,68,0.15);color:#ef4444;font-weight:600;">Arcade</span>
         </a>
 
-        <a href="/game-memory.html" style="text-decoration:none;">
-          <div class="post-card" style="cursor:pointer;transition:border-color 0.15s ease;" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border)'">
-            <div style="font-size:40px;margin-bottom:12px;">🃏</div>
-            <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:6px;">Memory Match</div>
-            <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">Flip cards and find matching pairs. Test your memory.</div>
-            <span style="font-size:11px;padding:3px 10px;border-radius:100px;background:rgba(239,68,68,0.15);color:#ef4444;font-weight:600;">Arcade</span>
+        <a href="/game-memory.html" class="game-card">
+          <div class="game-icon-box" style="background:linear-gradient(135deg,#ec4899,#db2777);">
+            <i class="ti ti-cards" style="color:#fff;"></i>
           </div>
+          <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:6px;">Memory Match</div>
+          <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">Flip cards and find matching pairs. Test your memory.</div>
+          <span style="font-size:11px;padding:3px 10px;border-radius:100px;background:rgba(239,68,68,0.15);color:#ef4444;font-weight:600;">Arcade</span>
         </a>
 
-        <a href="/game-reaction.html" style="text-decoration:none;">
-          <div class="post-card" style="cursor:pointer;transition:border-color 0.15s ease;" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border)'">
-            <div style="font-size:40px;margin-bottom:12px;">⚡</div>
-            <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:6px;">Reaction Time</div>
-            <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">Click when the screen turns green. How fast are your reflexes?</div>
-            <span style="font-size:11px;padding:3px 10px;border-radius:100px;background:rgba(239,68,68,0.15);color:#ef4444;font-weight:600;">Arcade</span>
+        <a href="/game-reaction.html" class="game-card">
+          <div class="game-icon-box" style="background:linear-gradient(135deg,#00e5ff,#06b6d4);">
+            <i class="ti ti-bolt" style="color:#000;"></i>
           </div>
+          <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:6px;">Reaction Time</div>
+          <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">Click when the screen turns green. How fast are your reflexes?</div>
+          <span style="font-size:11px;padding:3px 10px;border-radius:100px;background:rgba(239,68,68,0.15);color:#ef4444;font-weight:600;">Arcade</span>
         </a>
 
       </div>
@@ -141,8 +247,8 @@
     </div>
 
     <div class="sidebar-right">
-      <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">
-        🏆 Today's Trivia Leaders
+      <div style="font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">
+        Today's Trivia Leaders
       </div>
       <div id="trivia-leaderboard-sidebar">
         <div class="loading"><div class="spinner"></div></div>
@@ -153,5 +259,11 @@
 
   <script src="/js/supabase.js"></script>
   <script src="/js/games.js"></script>
+  <script>
+    document.getElementById('logout-btn').addEventListener('click', async () => {
+      await window.auth.signOut();
+      window.location.href = '/';
+    });
+  </script>
 </body>
 </html>
