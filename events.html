@@ -31,18 +31,28 @@
   </script>
 
   <link rel="stylesheet" href="/css/main.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
+    .sidebar-nav li a {
+      display: flex; align-items: center; gap: 10px;
+      padding: 7px 10px; border-radius: var(--radius-md);
+      text-decoration: none; color: var(--text-muted);
+      font-size: 14px; font-weight: 500; transition: all 0.15s ease;
+    }
+    .sidebar-nav li a:hover { background: var(--bg-hover); color: var(--text); }
+    .sidebar-nav li a.active { background: rgba(0,229,255,0.08); color: var(--primary); }
+    .nav-icon-box {
+      width: 28px; height: 28px; border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
     .mobile-nav {
-      display: none;
-      position: fixed;
-      bottom: 0; left: 0; right: 0;
-      height: 56px;
-      background: rgba(8,8,10,0.97);
-      border-top: 1px solid var(--border);
-      z-index: 1000;
-      backdrop-filter: blur(12px);
+      display: none; position: fixed; bottom: 0; left: 0; right: 0;
+      height: 56px; background: rgba(8,8,10,0.97);
+      border-top: 1px solid var(--border); z-index: 1000; backdrop-filter: blur(12px);
     }
     .mobile-nav-inner { display: flex; align-items: center; justify-content: space-around; height: 100%; }
     .mobile-nav-item {
@@ -52,9 +62,16 @@
     }
     .mobile-nav-item.active { color: var(--primary); }
     .mobile-nav-item span { font-size: 20px; line-height: 1; }
+
     .page-title {
       font-family: var(--font-display); font-size: 24px; font-weight: 900;
       letter-spacing: -0.02em; color: var(--text); margin-bottom: 4px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .page-title-icon {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: linear-gradient(135deg, #f59e0b, #fbbf24);
+      display: flex; align-items: center; justify-content: center;
     }
     .page-subtitle { font-size: 15px; color: var(--text-muted); }
     .widget-title {
@@ -85,17 +102,28 @@
   <div class="app-layout">
     <div class="sidebar-left">
       <ul class="sidebar-nav">
-        <li><a href="/feed.html"><span class="sidebar-nav-icon">🏠</span>Home</a></li>
-        <li><a href="/search.html"><span class="sidebar-nav-icon">🔍</span>Search</a></li>
-        <li><a href="/communities.html"><span class="sidebar-nav-icon">💬</span>Communities</a></li>
-        <li><a href="/events.html" class="active"><span class="sidebar-nav-icon">📅</span>Events</a></li>
-        <li><a href="/messages.html"><span class="sidebar-nav-icon">✉️</span>Messages</a></li>
-        <li><a href="/notifications.html"><span class="sidebar-nav-icon">🔔</span>Notifications</a></li>
-        <li><a href="/memories.html"><span class="sidebar-nav-icon">🕰️</span>Memories</a></li>
-        <li><a href="/stories.html"><span class="sidebar-nav-icon">📸</span>Stories</a></li>
-        <li><a href="/games.html"><span class="sidebar-nav-icon">🎮</span>Games</a></li>
-        <li><a href="/profile.html"><span class="sidebar-nav-icon">👤</span>Profile</a></li>
-        <li><a href="/ecosystem.html"><span class="sidebar-nav-icon">🌐</span>Ecosystem</a></li>
+        <li><a href="/feed.html">
+          <div class="nav-icon-box" style="background:#00e5ff;"><i class="ti ti-home" style="color:#000;font-size:15px;"></i></div>Home</a></li>
+        <li><a href="/search.html">
+          <div class="nav-icon-box" style="background:#8b5cf6;"><i class="ti ti-search" style="color:#fff;font-size:15px;"></i></div>Search</a></li>
+        <li><a href="/communities.html">
+          <div class="nav-icon-box" style="background:#22c55e;"><i class="ti ti-messages" style="color:#fff;font-size:15px;"></i></div>Communities</a></li>
+        <li><a href="/events.html" class="active">
+          <div class="nav-icon-box" style="background:#f59e0b;"><i class="ti ti-calendar" style="color:#000;font-size:15px;"></i></div>Events</a></li>
+        <li><a href="/messages.html">
+          <div class="nav-icon-box" style="background:#fbbf24;"><i class="ti ti-mail" style="color:#000;font-size:15px;"></i></div>Messages</a></li>
+        <li><a href="/notifications.html">
+          <div class="nav-icon-box" style="background:#f43f5e;"><i class="ti ti-bell" style="color:#fff;font-size:15px;"></i></div>Notifications</a></li>
+        <li><a href="/memories.html">
+          <div class="nav-icon-box" style="background:#06b6d4;"><i class="ti ti-clock" style="color:#fff;font-size:15px;"></i></div>Memories</a></li>
+        <li><a href="/stories.html">
+          <div class="nav-icon-box" style="background:#ec4899;"><i class="ti ti-camera" style="color:#fff;font-size:15px;"></i></div>Stories</a></li>
+        <li><a href="/games.html">
+          <div class="nav-icon-box" style="background:#6366f1;"><i class="ti ti-device-gamepad-2" style="color:#fff;font-size:15px;"></i></div>Games</a></li>
+        <li><a href="/profile.html">
+          <div class="nav-icon-box" style="background:#64748b;"><i class="ti ti-user" style="color:#fff;font-size:15px;"></i></div>Profile</a></li>
+        <li><a href="/ecosystem.html">
+          <div class="nav-icon-box" style="background:#0ea5e9;"><i class="ti ti-world" style="color:#fff;font-size:15px;"></i></div>Ecosystem</a></li>
       </ul>
     </div>
 
@@ -103,7 +131,12 @@
 
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
         <div>
-          <div class="page-title">📅 Events</div>
+          <div class="page-title">
+            <div class="page-title-icon">
+              <i class="ti ti-calendar" style="color:#000;font-size:20px;"></i>
+            </div>
+            Events
+          </div>
           <div class="page-subtitle">Community meetups, live discussions, and more.</div>
         </div>
         <button id="create-event-btn" class="btn btn-primary" style="flex-shrink:0;">+ Create Event</button>
@@ -148,7 +181,7 @@
         <div class="form-group">
           <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:12px;">
             <input type="checkbox" id="event-is-online" style="accent-color:var(--primary);" />
-            <span style="font-size:14px;color:var(--text);">🌐 This is an online event</span>
+            <span style="font-size:14px;color:var(--text);">This is an online event</span>
           </label>
         </div>
 
@@ -180,11 +213,11 @@
     </div>
 
     <div class="sidebar-right">
-      <div class="widget-title">📅 This Week</div>
+      <div class="widget-title">This Week</div>
       <div id="this-week-sidebar">
         <div class="loading"><div class="spinner"></div></div>
       </div>
-      <div class="widget-title" style="margin-top:32px;">🎯 Your RSVPs</div>
+      <div class="widget-title" style="margin-top:32px;">Your RSVPs</div>
       <div id="my-rsvps-sidebar">
         <div class="loading"><div class="spinner"></div></div>
       </div>
