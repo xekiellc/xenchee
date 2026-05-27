@@ -46,18 +46,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 function setupAvatarUpload() {
   const avatarEl = document.getElementById('profile-avatar-large');
-  const overlay = document.getElementById('avatar-upload-overlay');
   const label = document.getElementById('avatar-upload-label');
   const fileInput = document.getElementById('avatar-file-input');
-
   if (!avatarEl || !fileInput) return;
 
-  // Make overlay always visible on own profile (not just on hover)
-  // so clipping doesn't matter — user sees the label below instead
   if (label) label.classList.add('visible');
-
-  // Click anywhere on avatar circle triggers upload
   avatarEl.style.cursor = 'pointer';
+
   avatarEl.addEventListener('click', () => fileInput.click());
   if (label) label.addEventListener('click', () => fileInput.click());
 
@@ -143,45 +138,34 @@ function renderAvatarEl(avatarUrl, username) {
 }
 
 // ─── TOGGLE HELPERS ───────────────────────────────────────────────────────────
-// Uses data-checked attribute on the track element — bypasses hidden checkbox
+// Toggles are plain .toggle-track divs with .toggle-knob inside.
+// State stored in .on CSS class — no hidden checkboxes involved.
 
-function initToggle(trackId) {
-  const track = document.getElementById(trackId);
+function initToggle(id) {
+  const track = document.getElementById(id);
   if (!track) return;
-  if (track.querySelector('span')) return; // already init'd
-
-  const knob = document.createElement('span');
-  knob.style.cssText = 'position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:0.2s;pointer-events:none;';
-  track.appendChild(knob);
-
-  track.style.cursor = 'pointer';
-  track.addEventListener('click', () => {
-    const current = track.dataset.checked === 'true';
-    setToggleState(track, !current);
+  // Remove any old listener by cloning
+  const fresh = track.cloneNode(true);
+  track.parentNode.replaceChild(fresh, track);
+  fresh.addEventListener('click', () => {
+    fresh.classList.toggle('on');
   });
-
-  // Init to off
-  setToggleState(track, false);
 }
 
-function setToggleState(track, value) {
+function setToggle(id, value) {
+  const track = document.getElementById(id);
   if (!track) return;
-  track.dataset.checked = value ? 'true' : 'false';
-  track.style.background = value ? 'var(--primary)' : 'var(--border)';
-  const knob = track.querySelector('span');
-  if (knob) knob.style.transform = value ? 'translateX(20px)' : 'translateX(0)';
+  if (value) {
+    track.classList.add('on');
+  } else {
+    track.classList.remove('on');
+  }
 }
 
-function setToggle(trackId, value) {
-  const track = document.getElementById(trackId);
-  if (!track) return;
-  setToggleState(track, !!value);
-}
-
-function getToggle(trackId) {
-  const track = document.getElementById(trackId);
+function getToggle(id) {
+  const track = document.getElementById(id);
   if (!track) return false;
-  return track.dataset.checked === 'true';
+  return track.classList.contains('on');
 }
 
 // ─── LIVE SESSION ─────────────────────────────────────────────────────────────
@@ -672,11 +656,10 @@ function showEditForm(profile) {
     window.loadMutedCommunities(profile.muted_communities || []);
   }
 
-  // Init toggles using new data-checked system
-  initToggle('toggle-show-adult-track');
-  initToggle('toggle-is-adult-creator-track');
-  setToggle('toggle-show-adult-track', !!profile.show_adult_content);
-  setToggle('toggle-is-adult-creator-track', !!profile.is_adult_creator);
+  initToggle('toggle-show-adult');
+  initToggle('toggle-is-adult-creator');
+  setToggle('toggle-show-adult', !!profile.show_adult_content);
+  setToggle('toggle-is-adult-creator', !!profile.is_adult_creator);
 
   const addBtn = document.getElementById('add-keyword-btn');
   const keywordInput = document.getElementById('keyword-input');
@@ -705,10 +688,8 @@ async function saveProfile() {
   const bio = document.getElementById('edit-bio').value.trim();
   const location = document.getElementById('edit-location').value.trim();
   const website = document.getElementById('edit-website').value.trim();
-
-  // Read from data-checked attribute — bypasses hidden checkbox
-  const showAdultContent = getToggle('toggle-show-adult-track');
-  const isAdultCreator = getToggle('toggle-is-adult-creator-track');
+  const showAdultContent = getToggle('toggle-show-adult');
+  const isAdultCreator = getToggle('toggle-is-adult-creator');
 
   const mutedCommunityEls = document.querySelectorAll('#muted-communities-list .muted-community-item');
   const currentMutedCommunities = Array.from(mutedCommunityEls).map(el => el.id.replace('muted-c-', ''));
@@ -755,6 +736,7 @@ async function saveProfile() {
     }
 
     document.getElementById('edit-profile-form').style.display = 'none';
+
   } catch (err) {
     console.error('Save profile error:', err);
     alert('Save failed. Please try again.');
