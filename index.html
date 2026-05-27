@@ -105,41 +105,31 @@
       padding: 20px 22px;
     }
     .flip-card-front {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
       transition: border-color 0.2s ease;
-    }
-    .flip-card-front:hover { border-color: var(--primary); }
-    .flip-card-accent {
-      display: block;
-      width: 28px;
-      height: 2px;
-      border-radius: 2px;
-      margin-bottom: 12px;
     }
     .flip-card-label {
       font-family: var(--font-display);
       font-size: 17px;
       font-weight: 900;
-      color: var(--text);
+      color: #fff;
       letter-spacing: -0.03em;
       line-height: 1.2;
       text-align: left;
     }
     .flip-card-hint {
       font-size: 10px;
-      color: var(--text-dim);
       margin-top: 6px;
       letter-spacing: 0.5px;
       text-transform: uppercase;
+      opacity: 0.75;
     }
     .flip-card-back {
-      background: linear-gradient(135deg, #080e1c 0%, #0d1a30 100%);
-      border: 1px solid rgba(0,229,255,0.2);
       transform: rotateY(180deg);
       align-items: flex-start;
       justify-content: center;
       gap: 10px;
+      background: linear-gradient(135deg, #080e1c 0%, #0d1a30 100%);
+      border: 1px solid rgba(0,229,255,0.2);
     }
     .flip-card-back-label {
       font-family: var(--font-display);
@@ -155,20 +145,20 @@
       text-align: left;
     }
 
-    /* accent colors */
-    .accent-cyan   { background: #00e5ff; }
-    .accent-rose   { background: #f43f5e; }
-    .accent-green  { background: #22c55e; }
-    .accent-amber  { background: #fbbf24; }
-    .accent-purple { background: #8b5cf6; }
-    .accent-indigo { background: #6366f1; }
+    /* Card themes */
+    .card-cyan  { background: linear-gradient(135deg, #001a20 0%, #003040 100%); border: 1px solid rgba(0,229,255,0.35); }
+    .card-rose  { background: linear-gradient(135deg, #1a0008 0%, #300010 100%); border: 1px solid rgba(244,63,94,0.35); }
+    .card-green { background: linear-gradient(135deg, #001a0a 0%, #003018 100%); border: 1px solid rgba(34,197,94,0.35); }
+    .card-amber { background: linear-gradient(135deg, #1a1000 0%, #302000 100%); border: 1px solid rgba(251,191,36,0.35); }
+    .card-purple{ background: linear-gradient(135deg, #0d001a 0%, #1a0030 100%); border: 1px solid rgba(139,92,246,0.35); }
+    .card-indigo{ background: linear-gradient(135deg, #05001a 0%, #0a0030 100%); border: 1px solid rgba(99,102,241,0.35); }
 
-    .label-cyan   { color: #00e5ff; }
-    .label-rose   { color: #f43f5e; }
-    .label-green  { color: #22c55e; }
-    .label-amber  { color: #fbbf24; }
-    .label-purple { color: #8b5cf6; }
-    .label-indigo { color: #6366f1; }
+    .hint-cyan   { color: #00e5ff; }
+    .hint-rose   { color: #f43f5e; }
+    .hint-green  { color: #22c55e; }
+    .hint-amber  { color: #fbbf24; }
+    .hint-purple { color: #8b5cf6; }
+    .hint-indigo { color: #6366f1; }
 
     /* ── Sections ── */
     .communities-section,
@@ -245,13 +235,12 @@
 
         <div class="flip-card" onclick="this.classList.toggle('flipped')">
           <div class="flip-card-inner">
-            <div class="flip-card-front">
-              <span class="flip-card-accent accent-cyan"></span>
+            <div class="flip-card-front card-cyan">
               <div class="flip-card-label">18+ Verified</div>
-              <div class="flip-card-hint">tap to learn more</div>
+              <div class="flip-card-hint hint-cyan">tap to learn more</div>
             </div>
             <div class="flip-card-back">
-              <div class="flip-card-back-label label-cyan">18+ Verified</div>
+              <div class="flip-card-back-label hint-cyan">18+ Verified</div>
               <div class="flip-card-back-text">Every Voxxee member is age-verified. No bots, no minors, no fake accounts. Real adults only.</div>
             </div>
           </div>
@@ -259,13 +248,12 @@
 
         <div class="flip-card" onclick="this.classList.toggle('flipped')">
           <div class="flip-card-inner">
-            <div class="flip-card-front">
-              <span class="flip-card-accent accent-rose"></span>
+            <div class="flip-card-front card-rose">
               <div class="flip-card-label">No Shadowbans</div>
-              <div class="flip-card-hint">tap to learn more</div>
+              <div class="flip-card-hint hint-rose">tap to learn more</div>
             </div>
             <div class="flip-card-back">
-              <div class="flip-card-back-label label-rose">No Shadowbans</div>
+              <div class="flip-card-back-label hint-rose">No Shadowbans</div>
               <div class="flip-card-back-text">If your content is removed, you'll know exactly why. Every moderation action is logged publicly and appealable.</div>
             </div>
           </div>
@@ -273,13 +261,12 @@
 
         <div class="flip-card" onclick="this.classList.toggle('flipped')">
           <div class="flip-card-inner">
-            <div class="flip-card-front">
-              <span class="flip-card-accent accent-green"></span>
+            <div class="flip-card-front card-green">
               <div class="flip-card-label">Chronological Feed</div>
-              <div class="flip-card-hint">tap to learn more</div>
+              <div class="flip-card-hint hint-green">tap to learn more</div>
             </div>
             <div class="flip-card-back">
-              <div class="flip-card-back-label label-green">Chronological Feed</div>
+              <div class="flip-card-back-label hint-green">Chronological Feed</div>
               <div class="flip-card-back-text">No algorithm deciding what you see. Your feed shows posts in the order they were posted. Always.</div>
             </div>
           </div>
@@ -287,13 +274,12 @@
 
         <div class="flip-card" onclick="this.classList.toggle('flipped')">
           <div class="flip-card-inner">
-            <div class="flip-card-front">
-              <span class="flip-card-accent accent-amber"></span>
+            <div class="flip-card-front card-amber">
               <div class="flip-card-label">Polls & Downvotes</div>
-              <div class="flip-card-hint">tap to learn more</div>
+              <div class="flip-card-hint hint-amber">tap to learn more</div>
             </div>
             <div class="flip-card-back">
-              <div class="flip-card-back-label label-amber">Polls & Downvotes</div>
+              <div class="flip-card-back-label hint-amber">Polls & Downvotes</div>
               <div class="flip-card-back-text">Create polls, vote on others, and downvote content you disagree with. Real signal from real people.</div>
             </div>
           </div>
@@ -301,13 +287,12 @@
 
         <div class="flip-card" onclick="this.classList.toggle('flipped')">
           <div class="flip-card-inner">
-            <div class="flip-card-front">
-              <span class="flip-card-accent accent-purple"></span>
+            <div class="flip-card-front card-purple">
               <div class="flip-card-label">Real Communities</div>
-              <div class="flip-card-hint">tap to learn more</div>
+              <div class="flip-card-hint hint-purple">tap to learn more</div>
             </div>
             <div class="flip-card-back">
-              <div class="flip-card-back-label label-purple">Real Communities</div>
+              <div class="flip-card-back-label hint-purple">Real Communities</div>
               <div class="flip-card-back-text">Join communities built around your interests. Uncensored conversation with verified adults who actually care about the topic.</div>
             </div>
           </div>
@@ -315,13 +300,12 @@
 
         <div class="flip-card" onclick="this.classList.toggle('flipped')">
           <div class="flip-card-inner">
-            <div class="flip-card-front">
-              <span class="flip-card-accent accent-indigo"></span>
+            <div class="flip-card-front card-indigo">
               <div class="flip-card-label">First Amendment First</div>
-              <div class="flip-card-hint">tap to learn more</div>
+              <div class="flip-card-hint hint-indigo">tap to learn more</div>
             </div>
             <div class="flip-card-back">
-              <div class="flip-card-back-label label-indigo">First Amendment First</div>
+              <div class="flip-card-back-label hint-indigo">First Amendment First</div>
               <div class="flip-card-back-text">We don't remove speech because it's unpopular, offensive, or controversial. We remove only what's illegal. Full stop.</div>
             </div>
           </div>
