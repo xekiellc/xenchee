@@ -138,28 +138,21 @@ function renderAvatarEl(avatarUrl, username) {
 }
 
 // ─── TOGGLE HELPERS ───────────────────────────────────────────────────────────
-// Toggles are plain .toggle-track divs with .toggle-knob inside.
-// State stored in .on CSS class — no hidden checkboxes involved.
 
 function initToggle(id) {
   const track = document.getElementById(id);
   if (!track) return;
-  // Remove any old listener by cloning
-  const fresh = track.cloneNode(true);
-  track.parentNode.replaceChild(fresh, track);
-  fresh.addEventListener('click', () => {
-    fresh.classList.toggle('on');
+  if (track.dataset.init === 'true') return;
+  track.dataset.init = 'true';
+  track.addEventListener('click', () => {
+    track.classList.toggle('on');
   });
 }
 
 function setToggle(id, value) {
   const track = document.getElementById(id);
   if (!track) return;
-  if (value) {
-    track.classList.add('on');
-  } else {
-    track.classList.remove('on');
-  }
+  track.classList.toggle('on', !!value);
 }
 
 function getToggle(id) {
