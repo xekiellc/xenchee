@@ -41,17 +41,73 @@
       position: relative;
       border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     }
-    .profile-avatar-large {
+    .profile-avatar-wrap {
       position: absolute;
-      bottom: -36px; left: 24px;
-      width: 80px; height: 80px;
+      bottom: -40px;
+      left: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .profile-avatar-large {
+      width: 80px;
+      height: 80px;
       border-radius: 50%;
       background: var(--bg-card);
       border: 4px solid var(--bg-card);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 32px; font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      font-weight: 800;
       color: var(--primary);
       font-family: var(--font-display);
+      overflow: hidden;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .profile-avatar-large img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 50%;
+    }
+    .avatar-upload-overlay {
+      display: none;
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.55);
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 18px;
+    }
+    .profile-avatar-large:hover .avatar-upload-overlay {
+      display: flex;
+    }
+    .avatar-upload-label {
+      display: none;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--primary);
+      cursor: pointer;
+      text-align: center;
+      letter-spacing: 0.03em;
+      white-space: nowrap;
+    }
+    .avatar-upload-label.visible {
+      display: block;
+    }
+    .avatar-uploading {
+      font-size: 11px;
+      color: var(--text-muted);
+      display: none;
+      text-align: center;
+    }
+    .avatar-uploading.visible {
+      display: block;
     }
     .profile-card {
       background: var(--bg-card);
@@ -60,7 +116,7 @@
       margin-bottom: 20px;
       overflow: hidden;
     }
-    .profile-body { padding: 52px 24px 24px; }
+    .profile-body { padding: 56px 24px 24px; }
     .profile-top-row {
       display: flex;
       justify-content: space-between;
@@ -179,8 +235,9 @@
       .profile-body { padding: 52px 16px 20px; }
       .profile-display-name { font-size: 18px; }
       .profile-banner { height: 120px; }
-      .profile-avatar-large { width: 64px; height: 64px; font-size: 24px; bottom: -28px; }
-      .profile-body { padding-top: 44px; }
+      .profile-avatar-large { width: 64px; height: 64px; font-size: 24px; }
+      .profile-avatar-wrap { bottom: -32px; }
+      .profile-body { padding-top: 48px; }
       #daily-frame-container { height: 380px; }
     }
     @media (max-width: 480px) { .profile-stats { gap: 16px; } }
@@ -218,7 +275,17 @@
 
       <div class="profile-card" id="profile-header">
         <div class="profile-banner">
-          <div class="profile-avatar-large" id="profile-avatar-large">?</div>
+          <div class="profile-avatar-wrap" id="profile-avatar-wrap">
+            <div class="profile-avatar-large" id="profile-avatar-large">
+              <span id="profile-avatar-initial">?</span>
+              <img id="profile-avatar-img" src="" alt="Profile photo" style="display:none;" />
+              <div class="avatar-upload-overlay" id="avatar-upload-overlay" title="Change photo">📷</div>
+            </div>
+            <span class="avatar-upload-label" id="avatar-upload-label">Change Photo</span>
+            <span class="avatar-uploading" id="avatar-uploading">Uploading...</span>
+            <input type="file" id="avatar-file-input" accept="image/jpeg,image/png,image/gif,image/webp"
+              style="display:none;" />
+          </div>
         </div>
         <div class="profile-body">
           <div class="profile-top-row">
