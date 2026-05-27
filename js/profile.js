@@ -45,11 +45,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ─── AVATAR UPLOAD ────────────────────────────────────────────────────────────
 
 function setupAvatarUpload() {
+  const section = document.getElementById('avatar-upload-section');
   const uploadBtn = document.getElementById('avatar-upload-btn');
   const fileInput = document.getElementById('avatar-file-input');
   if (!uploadBtn || !fileInput) return;
 
-  uploadBtn.style.display = 'block';
+  // Show the whole section
+  if (section) section.style.display = 'block';
 
   uploadBtn.addEventListener('click', () => fileInput.click());
   fileInput.addEventListener('change', async () => {
@@ -75,7 +77,7 @@ async function uploadAvatar(file) {
   const uploadingEl = document.getElementById('avatar-uploading');
 
   if (uploadBtn) uploadBtn.style.display = 'none';
-  if (uploadingEl) uploadingEl.style.display = 'block';
+  if (uploadingEl) uploadingEl.style.display = 'inline';
 
   try {
     const ext = file.name.split('.').pop().toLowerCase() || 'jpg';
@@ -107,7 +109,7 @@ async function uploadAvatar(file) {
     console.error('Avatar upload error:', err);
     alert('Upload failed. Please try again.');
   } finally {
-    if (uploadBtn) uploadBtn.style.display = 'block';
+    if (uploadBtn) uploadBtn.style.display = 'inline-block';
     if (uploadingEl) uploadingEl.style.display = 'none';
   }
 }
@@ -131,8 +133,6 @@ function renderAvatarEl(avatarUrl, username) {
 }
 
 // ─── TOGGLE HELPERS ───────────────────────────────────────────────────────────
-// Toggles use window._toggleClick defined in HTML (inline onclick).
-// JS only needs to set initial state.
 
 function setToggleState(trackId, knobId, value) {
   const track = document.getElementById(trackId);
@@ -636,7 +636,6 @@ function showEditForm(profile) {
     window.loadMutedCommunities(profile.muted_communities || []);
   }
 
-  // Set initial toggle states
   setToggleState('toggle-show-adult', 'toggle-show-adult-knob', !!profile.show_adult_content);
   setToggleState('toggle-is-adult-creator', 'toggle-is-adult-creator-knob', !!profile.is_adult_creator);
 
