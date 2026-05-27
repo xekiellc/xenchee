@@ -16,22 +16,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   await waitForDb();
 
   currentUser = await window.auth.getUser();
-  if (!currentUser) {
-    window.location.href = '/login.html';
-    return;
-  }
+  if (!currentUser) { window.location.href = '/login.html'; return; }
 
   const params = new URLSearchParams(window.location.search);
   postId = params.get('post');
-
-  if (!postId) {
-    window.location.href = '/feed.html';
-    return;
-  }
+  if (!postId) { window.location.href = '/feed.html'; return; }
 
   const { data: profile } = await window.db
     .from('profiles').select('*').eq('user_id', currentUser.id).single();
-
   currentProfile = profile;
 
   if (profile) {
@@ -43,15 +35,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const res = await fetch('/.netlify/functions/config');
     const config = await res.json();
     giphyApiKey = config.GIPHY_API_KEY;
-  } catch (err) {
-    console.error('Could not load Giphy key:', err);
-  }
+  } catch (err) { console.error('Could not load Giphy key:', err); }
 
   initMentionAutocomplete('comment-content', 'comment-mention-dropdown');
 
   document.getElementById('logout-btn').addEventListener('click', async () => {
-    await window.auth.signOut();
-    window.location.href = '/';
+    await window.auth.signOut(); window.location.href = '/';
   });
 
   document.getElementById('comment-btn').addEventListener('click', handleCreateComment);
@@ -60,10 +49,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const picker = document.getElementById('gif-picker');
     const isVisible = picker.style.display !== 'none';
     picker.style.display = isVisible ? 'none' : 'block';
-    if (!isVisible) {
-      document.getElementById('gif-search-input').focus();
-      loadTrendingGifs();
-    }
+    if (!isVisible) { document.getElementById('gif-search-input').focus(); loadTrendingGifs(); }
   });
 
   document.getElementById('gif-search-btn').addEventListener('click', searchGifs);
@@ -143,10 +129,7 @@ async function loadPost() {
     const { data: post, error } = await window.db
       .from('posts').select('*').eq('id', postId).eq('is_removed', false).single();
 
-    if (error || !post) {
-      container.innerHTML = '<div class="loading">Post not found.</div>';
-      return;
-    }
+    if (error || !post) { container.innerHTML = '<div class="loading">Post not found.</div>'; return; }
 
     const { data: profile } = await window.db
       .from('profiles').select('username, display_name, is_verified, verified_type, reputation')
@@ -158,9 +141,64 @@ async function loadPost() {
     const timestamp = new Date(post.created_at).toLocaleDateString('en-US', {
       month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
     });
-
     const verifiedBadge = getVerifiedBadge(profile);
     const repBadge = repBadgeHtml(profile?.reputation);
+
+    // Load photo tags for this post
+    let photoTagMap = {};
+    if (post.media_urls && post.media_urls.length > 0) {
+      const { data: tags } = await window.db
+        .from('photo_tags')
+        .select('media_index, tagged_user_id, x_percent, y_percent')
+        .eq('post_id', postId);
+      if (tags && tags.length > 0) {
+        const tagUserIds = [...new Set(tags.map(t => t.tagged_user_id))];
+        const { data: tagProfiles } = await window.db
+          .from('profiles').select('user_id, username').in('user_id', tagUserIds);
+        const tagProfileMap = {};
+        if (tagProfiles) tagProfiles.forEach(p => { tagProfileMap[p.user_id] = p; });
+        tags.forEach(tag => {
+          if (!photoTagMap[tag.media_index]) photoTagMap[tag.media_index] = [];
+          photoTagMap[tag.media_index].push({ ...tag, username: tagProfileMap[tag.tagged_user_id]?.username || 'unknown' });
+        });
+      }
+    }
+
+    // Media with tag overlays
+    const mediaUrls = post.media_urls || [];
+    let mediaHtml = '';
+    if (mediaUrls.length > 0) {
+      const grid = mediaUrls.length === 1 ? '1fr' : 'repeat(2,1fr)';
+      mediaHtml = `<div style="display:grid;grid-template-columns:${grid};gap:6px;margin-top:10px;border-radius:10px;overflow:hidden;">
+        ${mediaUrls.map((url, idx) => {
+          const isVideo = url.match(/\.(mp4|mov|webm)(\?|$)/i);
+          if (isVideo) {
+            return `<video src="${url}" controls style="width:100%;max-height:400px;object-fit:cover;background:#000;" playsinline></video>`;
+          }
+          const tagsForImage = photoTagMap[idx] || [];
+          const tagPins = tagsForImage.map(tag => `
+            <div style="position:absolute;left:${tag.x_percent}%;top:${tag.y_percent}%;transform:translate(-50%,-50%);z-index:10;">
+              <div style="position:relative;">
+                <div style="width:20px;height:20px;border-radius:50%;background:var(--primary);border:2px solid #fff;"></div>
+                <div style="position:absolute;top:24px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.8);color:#fff;font-size:10px;font-weight:600;padding:2px 6px;border-radius:100px;white-space:nowrap;">
+                  <a href="/profile.html?user=${encodeURIComponent(tag.username)}" style="color:#fff;text-decoration:none;">@${escapeHtml(tag.username)}</a>
+                </div>
+              </div>
+            </div>
+          `).join('');
+          return `
+            <div style="position:relative;${mediaUrls.length===1?'':'aspect-ratio:1;'}overflow:hidden;">
+              <img src="${url}" style="width:100%;${mediaUrls.length===1?'max-height:400px;':'height:100%;'}object-fit:cover;cursor:pointer;display:block;" onclick="window.open('${url}','_blank')" />
+              ${tagPins}
+            </div>
+          `;
+        }).join('')}
+      </div>`;
+    }
+
+    const checkinHtml = post.checkin_location
+      ? `<div style="font-size:13px;color:var(--text-muted);margin-top:6px;">📍 ${escapeHtml(post.checkin_location)}</div>`
+      : '';
 
     container.innerHTML = `
       <div class="post-header">
@@ -176,6 +214,8 @@ async function loadPost() {
         </div>
       </div>
       <div class="post-content" style="margin-top:12px;">${renderMentions(post.content || '')}</div>
+      ${checkinHtml}
+      ${mediaHtml}
     `;
   } catch (err) {
     console.error('Load post error:', err);
@@ -186,7 +226,6 @@ async function loadPost() {
 async function loadComments() {
   const container = document.getElementById('comments-container');
   container.innerHTML = '<div class="loading"><div class="spinner"></div>Loading comments...</div>';
-
   try {
     const { data: comments, error } = await window.db
       .from('comments').select('*').eq('post_id', postId).eq('is_removed', false)
@@ -203,13 +242,11 @@ async function loadComments() {
     const { data: profiles } = await window.db
       .from('profiles').select('user_id, username, display_name, is_verified, verified_type, reputation')
       .in('user_id', userIds);
-
     const profileMap = {};
     if (profiles) profiles.forEach(p => { profileMap[p.user_id] = p; });
 
     container.innerHTML = comments.map(comment => renderComment(comment, profileMap)).join('');
     attachCommentListeners();
-
   } catch (err) {
     console.error('Load comments error:', err);
     container.innerHTML = '<div class="loading">Could not load comments.</div>';
@@ -234,7 +271,6 @@ function renderComment(comment, profileMap) {
   const timestamp = new Date(comment.created_at).toLocaleDateString('en-US', {
     month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
   });
-
   const verifiedBadge = getVerifiedBadge(profile);
   const repBadge = repBadgeHtml(profile?.reputation);
 
@@ -278,14 +314,12 @@ function attachCommentListeners() {
 
 async function handleCreateComment() {
   if (!currentUser) return;
-
   const content = document.getElementById('comment-content').value.trim();
   const hasGif = !!selectedGifUrl;
   if (!content && !hasGif) return;
 
   const btn = document.getElementById('comment-btn');
-  btn.textContent = 'Posting...';
-  btn.disabled = true;
+  btn.textContent = 'Posting...'; btn.disabled = true;
 
   try {
     if (content) {
@@ -294,7 +328,6 @@ async function handleCreateComment() {
       });
       if (error) throw error;
     }
-
     if (hasGif) {
       const { error } = await window.db.from('comments').insert({
         post_id: postId, user_id: currentUser.id, content: selectedGifUrl
@@ -302,7 +335,6 @@ async function handleCreateComment() {
       if (error) throw error;
     }
 
-    // Award reputation for commenting
     await awardReputation(currentUser.id, 'comment_created', postId, 'post', null);
 
     document.getElementById('comment-content').value = '';
@@ -311,14 +343,11 @@ async function handleCreateComment() {
     document.getElementById('gif-preview-img').src = '';
     document.getElementById('gif-toggle-btn').style.fontWeight = '';
 
-    btn.textContent = 'Comment';
-    btn.disabled = false;
+    btn.textContent = 'Comment'; btn.disabled = false;
     await loadComments();
-
   } catch (err) {
     console.error('Comment error:', err);
-    btn.textContent = 'Comment';
-    btn.disabled = false;
+    btn.textContent = 'Comment'; btn.disabled = false;
   }
 }
 
