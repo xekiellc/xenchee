@@ -42,7 +42,7 @@ async function handleSignup() {
   }
 
   if (!window.isOver18(dob)) {
-    showAlert('You must be 18 or older to join XenChee.', 'error');
+    showAlert('You must be 18 or older to join Voxxee.', 'error');
     return;
   }
 
@@ -57,7 +57,6 @@ async function handleSignup() {
     return;
   }
 
-  // reCAPTCHA check
   const recaptchaResponse = grecaptcha.getResponse();
   if (!recaptchaResponse) {
     showAlert('Please complete the reCAPTCHA verification.', 'error');
@@ -69,7 +68,6 @@ async function handleSignup() {
   btn.disabled = true;
 
   try {
-    // Verify reCAPTCHA via Netlify function
     const verifyRes = await fetch('/.netlify/functions/verify-recaptcha', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -85,7 +83,6 @@ async function handleSignup() {
       return;
     }
 
-    // Check username availability
     const { data: existing } = await window.db
       .from('profiles')
       .select('username')
@@ -122,14 +119,9 @@ async function handleSignup() {
         email: email,
         date_of_birth: dob,
         is_18_verified: true,
-      });
+      }).maybeSingle();
 
-      showAlert('Account created! Redirecting to login...', 'success');
-      btn.textContent = 'Account Created';
-
-      setTimeout(() => {
-        window.location.href = '/login.html';
-      }, 2000);
+      window.location.href = '/onboarding.html';
     }
 
   } catch (err) {
