@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Daily Trivia — Voxxee</title>
 
-  <!-- OG Meta Tags -->
   <meta property="og:title" content="Daily Trivia — Voxxee Games" />
   <meta property="og:description" content="Play Daily Trivia on Voxxee. 10 questions. One shot per day. Compete with everyone." />
   <meta property="og:type" content="website" />
@@ -14,7 +13,15 @@
   <meta name="twitter:title" content="Daily Trivia — Voxxee Games" />
   <meta name="twitter:description" content="Play Daily Trivia on Voxxee. 10 questions. One shot per day. Compete with everyone." />
 
-  <!-- GA4 -->
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192x192.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="/icon-512x512.png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <meta name="theme-color" content="#00e5ff" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Voxxee" />
+
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-FSCZJEWZ6F"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -67,9 +74,7 @@
     </div>
 
     <div class="sidebar-right">
-      <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">
-        🏆 Today's Leaderboard
-      </div>
+      <div style="font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">🏆 Today's Leaderboard</div>
       <div id="leaderboard-container">
         <div class="loading"><div class="spinner"></div></div>
       </div>
