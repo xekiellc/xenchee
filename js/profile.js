@@ -131,17 +131,8 @@ function renderAvatarEl(avatarUrl, username) {
 }
 
 // ─── TOGGLE HELPERS ───────────────────────────────────────────────────────────
-// Each toggle: outer div (track) + inner div (knob). State via inline styles only.
-
-function initToggle(trackId, knobId) {
-  const track = document.getElementById(trackId);
-  if (!track || track.dataset.init === 'true') return;
-  track.dataset.init = 'true';
-  track.addEventListener('click', () => {
-    const isOn = track.dataset.on === 'true';
-    setToggleState(trackId, knobId, !isOn);
-  });
-}
+// Toggles use window._toggleClick defined in HTML (inline onclick).
+// JS only needs to set initial state.
 
 function setToggleState(trackId, knobId, value) {
   const track = document.getElementById(trackId);
@@ -149,7 +140,7 @@ function setToggleState(trackId, knobId, value) {
   if (!track || !knob) return;
   track.dataset.on = value ? 'true' : 'false';
   track.style.background = value ? '#00e5ff' : '#444';
-  knob.style.transform = value ? 'translateX(20px)' : 'translateX(0)';
+  knob.style.transform = value ? 'translateX(20px)' : 'translateX(0px)';
 }
 
 function getToggleValue(trackId) {
@@ -645,8 +636,7 @@ function showEditForm(profile) {
     window.loadMutedCommunities(profile.muted_communities || []);
   }
 
-  initToggle('toggle-show-adult', 'toggle-show-adult-knob');
-  initToggle('toggle-is-adult-creator', 'toggle-is-adult-creator-knob');
+  // Set initial toggle states
   setToggleState('toggle-show-adult', 'toggle-show-adult-knob', !!profile.show_adult_content);
   setToggleState('toggle-is-adult-creator', 'toggle-is-adult-creator-knob', !!profile.is_adult_creator);
 
