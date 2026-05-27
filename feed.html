@@ -6,7 +6,7 @@
   <title>Voxxee — Feed</title>
 
   <meta property="og:title" content="Voxxee — Feed" />
-  <meta property="og:description" content="Your Voxxee feed. No algorithm. No Memoriesshadowbans. Just real people saying exactly what they mean." />
+  <meta property="og:description" content="Your Voxxee feed. No algorithm. No shadowbans. Just real people saying exactly what they mean." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://voxxee.com/feed.html" />
   <meta name="twitter:card" content="summary_large_image" />
@@ -116,6 +116,10 @@
       font-size: 11px; font-weight: 700; color: var(--text-dim);
       text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px;
     }
+    @keyframes livepulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.3); }
+    }
     .mobile-nav {
       display: none;
       position: fixed; bottom: 0; left: 0; right: 0;
@@ -197,13 +201,8 @@
           </div>
         </div>
 
-        <!-- Media Preview -->
         <div id="media-preview" style="display:none;margin-bottom:10px;"></div>
-
-        <!-- Link Preview -->
         <div id="link-preview-container" style="display:none;margin-bottom:10px;"></div>
-
-        <!-- Check-in Panel -->
         <div id="checkin-panel" style="display:none;margin-bottom:10px;"></div>
 
         <div class="create-post-footer">
@@ -216,7 +215,6 @@
           <button class="btn btn-primary" id="post-btn">Post</button>
         </div>
 
-        <!-- Poll Creator -->
         <div id="poll-creator" style="display:none;margin-top:16px;border-top:1px solid var(--border);padding-top:16px;">
           <div class="form-group">
             <label class="form-label">Poll Question</label>
@@ -250,13 +248,16 @@
         <button class="btn btn-ghost feed-tab-btn" data-mode="following">👥 Following</button>
       </div>
 
+      <!-- Live Banner -->
+      <div id="feed-live-banner" style="display:none;background:var(--bg-card);border:1px solid rgba(0,229,255,0.2);border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:16px;"></div>
+
+      <!-- Feed -->
       <div id="feed-container">
         <div class="loading"><div class="spinner"></div>Loading feed...</div>
       </div>
 
     </div>
 
-    <!-- Right Sidebar -->
     <div class="sidebar-right">
 
       <div id="birthdays-sidebar" style="display:none;margin-bottom:32px;">
@@ -285,7 +286,6 @@
 
   </div>
 
-  <!-- Mobile Bottom Nav -->
   <nav class="mobile-nav">
     <div class="mobile-nav-inner">
       <a href="/feed.html" class="mobile-nav-item active"><span>🏠</span>Home</a>
