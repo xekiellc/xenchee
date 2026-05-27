@@ -27,7 +27,7 @@
 
   <style>
     .onboarding-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; background: var(--bg); }
-    .onboarding-box { width: 100%; max-width: 620px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 40px; }
+    .onboarding-box { width: 100%; max-width: 660px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 40px; }
     .onboarding-logo { font-family: var(--font-display); font-size: 1.5rem; font-weight: 900; letter-spacing: -0.04em; color: var(--text); display: flex; align-items: center; gap: 8px; margin-bottom: 32px; }
     .onboarding-logo::before { content: 'VX'; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; background: var(--primary); color: #000; font-size: 12px; font-weight: 900; border-radius: 8px; }
     .step-indicator { display: flex; align-items: center; gap: 8px; margin-bottom: 32px; }
@@ -38,26 +38,70 @@
     .step.active { display: block; }
     .step-title { font-family: var(--font-display); font-size: 1.75rem; font-weight: 900; letter-spacing: -0.03em; color: var(--text); margin-bottom: 8px; }
     .step-subtitle { font-size: 15px; color: #6a6a7a; margin-bottom: 28px; line-height: 1.6; }
+
+    /* Interest grid */
     .interest-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-bottom: 28px; }
     .interest-btn { padding: 12px 16px; border-radius: 10px; border: 1px solid var(--border); background: transparent; color: #6a6a7a; font-size: 13px; font-weight: 600; font-family: var(--font-body); cursor: pointer; transition: all 0.15s ease; text-align: center; }
     .interest-btn:hover { border-color: var(--primary); color: var(--text); }
     .interest-btn.selected { border-color: var(--primary); background: var(--primary-dim); color: var(--primary); }
-    .community-pick-grid { display: flex; flex-direction: column; gap: 10px; margin-bottom: 28px; max-height: 360px; overflow-y: auto; }
-    .community-pick-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border); cursor: pointer; transition: all 0.15s ease; background: transparent; }
+
+    /* Community picker */
+    .community-search-bar { display: flex; gap: 8px; margin-bottom: 12px; }
+    .community-search-bar input { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; font-size: 14px; color: var(--text); font-family: var(--font-body); outline: none; }
+    .community-search-bar input:focus { border-color: var(--primary); }
+    .community-search-bar input::placeholder { color: #6a6a7a; }
+
+    .category-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px; scrollbar-width: none; }
+    .category-tabs::-webkit-scrollbar { display: none; }
+    .cat-tab { padding: 6px 14px; border-radius: 100px; border: 1px solid var(--border); background: transparent; color: #6a6a7a; font-size: 12px; font-weight: 600; font-family: var(--font-body); cursor: pointer; white-space: nowrap; transition: all 0.15s ease; flex-shrink: 0; }
+    .cat-tab:hover { border-color: var(--primary); color: var(--text); }
+    .cat-tab.active { border-color: var(--primary); background: var(--primary-dim); color: var(--primary); }
+
+    .community-pick-grid { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; max-height: 320px; overflow-y: auto; padding-right: 4px; }
+    .community-pick-grid::-webkit-scrollbar { width: 4px; }
+    .community-pick-grid::-webkit-scrollbar-track { background: transparent; }
+    .community-pick-grid::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .community-pick-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); cursor: pointer; transition: all 0.15s ease; background: transparent; }
     .community-pick-item:hover { border-color: var(--primary); background: var(--bg-hover); }
     .community-pick-item.selected { border-color: var(--primary); background: var(--primary-dim); }
-    .community-pick-logo { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; background: var(--primary-dim); color: var(--primary); }
-    .community-pick-name { font-size: 14px; font-weight: 600; color: var(--text); }
-    .community-pick-desc { font-size: 12px; color: #6a6a7a; margin-top: 2px; }
+    .community-pick-logo { width: 36px; height: 36px; border-radius: 8px; object-fit: cover; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; background: var(--primary-dim); color: var(--primary); }
+    .community-pick-name { font-size: 13px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 5px; }
+    .official-badge { font-size: 10px; background: rgba(0,229,255,0.15); color: var(--primary); padding: 1px 6px; border-radius: 100px; font-weight: 700; letter-spacing: 0.5px; }
+    .community-pick-desc { font-size: 11px; color: #6a6a7a; margin-top: 2px; }
     .community-pick-check { margin-left: auto; width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; transition: all 0.15s ease; }
     .community-pick-item.selected .community-pick-check { background: var(--primary); border-color: var(--primary); color: #000; }
-    .step-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+
+    .community-count-bar { font-size: 12px; color: #6a6a7a; margin-bottom: 16px; }
+    .community-count-bar span { color: var(--primary); font-weight: 700; }
+
+    .step-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 8px; }
+
+    /* Mute step */
+    .mute-search-wrap { margin-bottom: 12px; }
+    .mute-search-wrap input { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; font-size: 14px; color: var(--text); font-family: var(--font-body); outline: none; box-sizing: border-box; }
+    .mute-search-wrap input:focus { border-color: var(--primary); }
+    .mute-search-wrap input::placeholder { color: #6a6a7a; }
+    .mute-grid { display: flex; flex-direction: column; gap: 8px; max-height: 280px; overflow-y: auto; margin-bottom: 16px; padding-right: 4px; }
+    .mute-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); cursor: pointer; transition: all 0.15s ease; }
+    .mute-item:hover { border-color: #f43f5e; background: rgba(244,63,94,0.05); }
+    .mute-item.muted { border-color: #f43f5e; background: rgba(244,63,94,0.08); }
+    .mute-item-name { font-size: 13px; font-weight: 600; color: var(--text); flex: 1; }
+    .mute-item-check { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; transition: all 0.15s ease; }
+    .mute-item.muted .mute-item-check { background: #f43f5e; border-color: #f43f5e; color: #fff; }
+
+    /* Welcome */
     .welcome-icon { font-size: 64px; margin-bottom: 16px; }
     .welcome-features { display: flex; flex-direction: column; gap: 12px; margin-bottom: 32px; }
     .welcome-feature { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--bg); border-radius: 10px; border: 1px solid var(--border); }
     .welcome-feature-icon { font-size: 20px; width: 32px; text-align: center; }
     .welcome-feature-text { font-size: 14px; color: #b0b0be; }
     .welcome-feature-text strong { color: var(--text); font-weight: 600; }
+
+    @media (max-width: 480px) {
+      .onboarding-box { padding: 24px 20px; }
+      .step-title { font-size: 1.4rem; }
+    }
   </style>
 </head>
 <body>
@@ -70,8 +114,10 @@
         <div class="step-dot active" id="dot-1"></div>
         <div class="step-dot" id="dot-2"></div>
         <div class="step-dot" id="dot-3"></div>
+        <div class="step-dot" id="dot-4"></div>
       </div>
 
+      <!-- STEP 1: Interests -->
       <div class="step active" id="step-1">
         <div class="step-title">What are you into?</div>
         <div class="step-subtitle">Pick your interests and we'll show you the right communities.</div>
@@ -91,6 +137,8 @@
           <button class="interest-btn" data-interest="local">📍 Local</button>
           <button class="interest-btn" data-interest="philosophy">🧠 Philosophy</button>
           <button class="interest-btn" data-interest="freedom">🗽 Free Speech</button>
+          <button class="interest-btn" data-interest="pets">🐾 Pets</button>
+          <button class="interest-btn" data-interest="food">🍔 Food & Drink</button>
           <button class="interest-btn" data-interest="other">✨ Other</button>
         </div>
         <div class="step-actions">
@@ -99,9 +147,39 @@
         </div>
       </div>
 
+      <!-- STEP 2: Join Communities -->
       <div class="step" id="step-2">
         <div class="step-title">Join some communities</div>
-        <div class="step-subtitle">Based on your interests — join at least one to get started.</div>
+        <div class="step-subtitle">Search or browse by category. Join at least one to get started.</div>
+
+        <div class="community-search-bar">
+          <input type="text" id="community-search" placeholder="Search communities..." />
+        </div>
+
+        <div class="category-tabs" id="category-tabs">
+          <button class="cat-tab active" data-cat="all">All</button>
+          <button class="cat-tab" data-cat="official">⭐ Official</button>
+          <button class="cat-tab" data-cat="sports">Sports</button>
+          <button class="cat-tab" data-cat="music">Music</button>
+          <button class="cat-tab" data-cat="politics">Politics</button>
+          <button class="cat-tab" data-cat="media">Media</button>
+          <button class="cat-tab" data-cat="finance">Finance</button>
+          <button class="cat-tab" data-cat="tech">Tech</button>
+          <button class="cat-tab" data-cat="entertainment">Entertainment</button>
+          <button class="cat-tab" data-cat="gaming">Gaming</button>
+          <button class="cat-tab" data-cat="lifestyle">Lifestyle</button>
+          <button class="cat-tab" data-cat="food">Food</button>
+          <button class="cat-tab" data-cat="health">Health</button>
+          <button class="cat-tab" data-cat="culture">Culture</button>
+          <button class="cat-tab" data-cat="alternative">Alternative</button>
+          <button class="cat-tab" data-cat="hobbies">Hobbies</button>
+          <button class="cat-tab" data-cat="marketplace">Marketplace</button>
+          <button class="cat-tab" data-cat="pets">Pets</button>
+          <button class="cat-tab" data-cat="local">Local</button>
+          <button class="cat-tab" data-cat="topic">Topics</button>
+        </div>
+
+        <div class="community-count-bar" id="community-count-bar">Showing <span id="showing-count">0</span> communities</div>
         <div class="community-pick-grid" id="community-pick-grid">
           <div class="loading"><div class="spinner"></div>Loading communities...</div>
         </div>
@@ -111,7 +189,22 @@
         </div>
       </div>
 
+      <!-- STEP 3: Mute Communities -->
       <div class="step" id="step-3">
+        <div class="step-title">Anything you want to mute?</div>
+        <div class="step-subtitle">Communities you mute won't appear in your feed. You can change this anytime in settings.</div>
+        <div class="mute-search-wrap">
+          <input type="text" id="mute-search" placeholder="Search communities to mute..." />
+        </div>
+        <div class="mute-grid" id="mute-grid"></div>
+        <div class="step-actions">
+          <button class="btn btn-ghost" id="step3-back">← Back</button>
+          <button class="btn btn-primary" id="step3-next">Continue →</button>
+        </div>
+      </div>
+
+      <!-- STEP 4: Welcome -->
+      <div class="step" id="step-4">
         <div class="welcome-icon">🎉</div>
         <div class="step-title">You're all set!</div>
         <div class="step-subtitle">Welcome to Voxxee — where real conversations happen.</div>
@@ -146,9 +239,14 @@
     }
 
     let currentStep = 1;
+    const TOTAL_STEPS = 4;
     let selectedInterests = [];
     let selectedCommunities = [];
+    let mutedCommunities = [];
     let currentUser = null;
+    let allCommunities = [];
+    let activeCategory = 'all';
+    let searchQuery = '';
 
     document.addEventListener('DOMContentLoaded', async () => {
       await waitForDb();
@@ -173,19 +271,52 @@
     }
 
     function setupNavigation() {
-      document.getElementById('step1-next').addEventListener('click', async () => { goToStep(2); await loadFilteredCommunities(); });
+      document.getElementById('step1-next').addEventListener('click', async () => {
+        goToStep(2);
+        await loadAllCommunities();
+      });
       document.getElementById('step2-back').addEventListener('click', () => goToStep(1));
-      document.getElementById('step2-next').addEventListener('click', async () => { await joinSelectedCommunities(); goToStep(3); });
+      document.getElementById('step2-next').addEventListener('click', () => {
+        goToStep(3);
+        renderMuteGrid('');
+      });
+      document.getElementById('step3-back').addEventListener('click', () => goToStep(2));
+      document.getElementById('step3-next').addEventListener('click', async () => {
+        await joinSelectedCommunities();
+        await saveMutedCommunities();
+        goToStep(4);
+      });
       document.getElementById('finish-btn').addEventListener('click', async () => {
         await window.db.from('profiles').update({ onboarding_complete: true }).eq('user_id', currentUser.id);
         window.location.href = '/feed.html';
+      });
+
+      // Category tabs
+      document.getElementById('category-tabs').addEventListener('click', (e) => {
+        const tab = e.target.closest('.cat-tab');
+        if (!tab) return;
+        document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        activeCategory = tab.dataset.cat;
+        renderCommunityGrid();
+      });
+
+      // Community search
+      document.getElementById('community-search').addEventListener('input', (e) => {
+        searchQuery = e.target.value.trim().toLowerCase();
+        renderCommunityGrid();
+      });
+
+      // Mute search
+      document.getElementById('mute-search').addEventListener('input', (e) => {
+        renderMuteGrid(e.target.value.trim().toLowerCase());
       });
     }
 
     function goToStep(n) {
       document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
       document.getElementById(`step-${n}`).classList.add('active');
-      for (let i = 1; i <= 3; i++) {
+      for (let i = 1; i <= TOTAL_STEPS; i++) {
         const dot = document.getElementById(`dot-${i}`);
         dot.classList.remove('active', 'done');
         if (i === n) dot.classList.add('active');
@@ -194,31 +325,117 @@
       currentStep = n;
     }
 
-    async function loadFilteredCommunities() {
+    async function loadAllCommunities() {
       const grid = document.getElementById('community-pick-grid');
       grid.innerHTML = '<div class="loading"><div class="spinner"></div>Loading communities...</div>';
-      const { data: communities } = await window.db.from('communities').select('*').order('member_count', { ascending: false });
-      if (!communities || communities.length === 0) { grid.innerHTML = '<p style="color:#6a6a7a;font-size:14px;">No communities yet.</p>'; return; }
-      grid.innerHTML = communities.map(c => {
+      const { data } = await window.db.from('communities').select('*').order('is_official', { ascending: false }).order('name', { ascending: true });
+      allCommunities = data || [];
+      renderCommunityGrid();
+    }
+
+    function getFilteredCommunities() {
+      return allCommunities.filter(c => {
+        const matchCat = activeCategory === 'all' ? true :
+          activeCategory === 'official' ? c.is_official :
+          c.community_type === activeCategory;
+        const matchSearch = searchQuery === '' ? true :
+          c.name.toLowerCase().includes(searchQuery) ||
+          (c.description || '').toLowerCase().includes(searchQuery);
+        return matchCat && matchSearch;
+      });
+    }
+
+    function renderCommunityGrid() {
+      const grid = document.getElementById('community-pick-grid');
+      const filtered = getFilteredCommunities();
+      document.getElementById('showing-count').textContent = filtered.length;
+
+      if (filtered.length === 0) {
+        grid.innerHTML = '<div style="padding:20px;text-align:center;color:#6a6a7a;font-size:14px;">No communities found.</div>';
+        return;
+      }
+
+      grid.innerHTML = filtered.map(c => {
+        const isSelected = selectedCommunities.includes(c.id);
+        const officialBadge = c.is_official ? '<span class="official-badge">OFFICIAL</span>' : '';
         const logoHtml = c.logo_url
-          ? `<img src="${c.logo_url}" style="width:40px;height:40px;border-radius:8px;object-fit:cover;" onerror="this.style.display='none'" />`
-          : `<div class="community-pick-logo">${c.name.charAt(0)}</div>`;
-        return `<div class="community-pick-item" data-id="${c.id}" data-slug="${c.slug}">${logoHtml}<div><div class="community-pick-name">${escapeHtml(c.name)}</div><div class="community-pick-desc">${escapeHtml(c.description || '')}</div></div><div class="community-pick-check">✓</div></div>`;
+          ? `<img src="${c.logo_url}" style="width:36px;height:36px;border-radius:8px;object-fit:cover;" onerror="this.outerHTML='<div class=\'community-pick-logo\'>${escapeHtml(c.name.charAt(0))}</div>'" />`
+          : `<div class="community-pick-logo">${escapeHtml(c.name.charAt(0))}</div>`;
+        return `
+          <div class="community-pick-item${isSelected ? ' selected' : ''}" data-id="${c.id}">
+            ${logoHtml}
+            <div style="flex:1;min-width:0;">
+              <div class="community-pick-name">${escapeHtml(c.name)} ${officialBadge}</div>
+              <div class="community-pick-desc">${escapeHtml((c.description || '').substring(0, 60))}${(c.description || '').length > 60 ? '...' : ''}</div>
+            </div>
+            <div class="community-pick-check">${isSelected ? '✓' : ''}</div>
+          </div>`;
       }).join('');
-      document.querySelectorAll('.community-pick-item').forEach(item => {
+
+      grid.querySelectorAll('.community-pick-item').forEach(item => {
         item.addEventListener('click', () => {
-          item.classList.toggle('selected');
           const id = item.dataset.id;
-          if (item.classList.contains('selected')) { selectedCommunities.push(id); }
-          else { selectedCommunities = selectedCommunities.filter(c => c !== id); }
+          if (selectedCommunities.includes(id)) {
+            selectedCommunities = selectedCommunities.filter(c => c !== id);
+            item.classList.remove('selected');
+            item.querySelector('.community-pick-check').textContent = '';
+          } else {
+            selectedCommunities.push(id);
+            item.classList.add('selected');
+            item.querySelector('.community-pick-check').textContent = '✓';
+          }
           document.getElementById('step2-next').disabled = selectedCommunities.length === 0;
+        });
+      });
+    }
+
+    function renderMuteGrid(query) {
+      const grid = document.getElementById('mute-grid');
+      const filtered = allCommunities.filter(c =>
+        !selectedCommunities.includes(c.id) &&
+        (query === '' || c.name.toLowerCase().includes(query))
+      );
+
+      if (filtered.length === 0) {
+        grid.innerHTML = '<div style="padding:16px;text-align:center;color:#6a6a7a;font-size:13px;">No communities found.</div>';
+        return;
+      }
+
+      grid.innerHTML = filtered.map(c => {
+        const isMuted = mutedCommunities.includes(c.id);
+        return `
+          <div class="mute-item${isMuted ? ' muted' : ''}" data-id="${c.id}">
+            <div class="mute-item-name">${escapeHtml(c.name)}</div>
+            <div class="mute-item-check">${isMuted ? '✕' : ''}</div>
+          </div>`;
+      }).join('');
+
+      grid.querySelectorAll('.mute-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const id = item.dataset.id;
+          if (mutedCommunities.includes(id)) {
+            mutedCommunities = mutedCommunities.filter(c => c !== id);
+            item.classList.remove('muted');
+            item.querySelector('.mute-item-check').textContent = '';
+          } else {
+            mutedCommunities.push(id);
+            item.classList.add('muted');
+            item.querySelector('.mute-item-check').textContent = '✕';
+          }
         });
       });
     }
 
     async function joinSelectedCommunities() {
       if (selectedCommunities.length === 0) return;
-      await window.db.from('community_members').insert(selectedCommunities.map(communityId => ({ user_id: currentUser.id, community_id: communityId, role: 'member' })));
+      await window.db.from('community_members').insert(
+        selectedCommunities.map(communityId => ({ user_id: currentUser.id, community_id: communityId, role: 'member' }))
+      );
+    }
+
+    async function saveMutedCommunities() {
+      if (mutedCommunities.length === 0) return;
+      await window.db.from('profiles').update({ muted_communities: mutedCommunities }).eq('user_id', currentUser.id);
     }
 
     function escapeHtml(text) {
