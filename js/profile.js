@@ -50,7 +50,6 @@ function setupAvatarUpload() {
   const fileInput = document.getElementById('avatar-file-input');
   if (!uploadBtn || !fileInput) return;
 
-  // Show the whole section
   if (section) section.style.display = 'block';
 
   uploadBtn.addEventListener('click', () => fileInput.click());
@@ -552,7 +551,8 @@ function renderProfile(profile) {
     const editBtn = document.getElementById('edit-profile-btn');
     if (editBtn) {
       editBtn.style.display = 'block';
-      editBtn.addEventListener('click', () => showEditForm(profile));
+      // Always use viewingProfile so latest saved state is reflected
+      editBtn.addEventListener('click', () => showEditForm(viewingProfile));
     }
   } else {
     const followBtn = document.getElementById('follow-btn');
