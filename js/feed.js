@@ -15,6 +15,7 @@ let selectedMediaFiles = [];
 let selectedCheckin = null;
 let linkPreviewData = null;
 let linkPreviewTimeout = null;
+let liveSubscription = null;
 
 const REACTIONS = [
   { type: 'like', emoji: '❤️', label: 'Like' },
@@ -65,10 +66,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadTrendingCommunities(),
     loadEcosystemSidebar(),
     loadNotifBadge(),
-    loadBirthdays()
+    loadBirthdays(),
+    loadLiveBanner()
   ]);
 
   setupEventListeners();
+  subscribeToLiveSessions();
 
   document.addEventListener('click', (e) => {
     if (!e.target.closest('.reaction-btn-wrapper')) {
@@ -86,6 +89,82 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 });
+
+// ─── LIVE BANNER ─────────────────────────────────────────────────────────────
+
+async function loadLiveBanner() {
+  const banner = document.getElementById('feed-live-banner');
+  if (!banner || !currentUser) return;
+
+  try {
+    // Get who the current user follows
+    const { data: follows } = await window.db
+      .from('follows').select('following_id').eq('follower_id', currentUser.id);
+    const followingIds = follows ? follows.map(f => f.following_id) : [];
+    if (followingIds.length === 0) { banner.style.display = 'none'; return; }
+
+    // Check for active live sessions from followed users
+    const { data: sessions } = await window.db
+      .from('live_sessions')
+      .select('id, host_user_id, title, viewer_count, started_at')
+      .eq('is_active', true)
+      .in('host_user_id', followingIds)
+      .order('started_at', { ascending: false });
+
+    if (!sessions || sessions.length === 0) { banner.style.display = 'none'; return; }
+
+    // Get profiles for live hosts
+    const hostIds = sessions.map(s => s.host_user_id);
+    const { data: profiles } = await window.db
+      .from('profiles').select('user_id, username, display_name').in('user_id', hostIds);
+    const profileMap = {};
+    if (profiles) profiles.forEach(p => { profileMap[p.user_id] = p; });
+
+    // Render live banner — show up to 3 live streams
+    const items = sessions.slice(0, 3).map(session => {
+      const profile = profileMap[session.host_user_id];
+      const username = profile?.username || 'someone';
+      const displayName = profile?.display_name || username;
+      const viewers = session.viewer_count || 0;
+      return `
+        <a href="/profile.html?user=${encodeURIComponent(username)}"
+          style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg-card);border:1px solid rgba(0,229,255,0.2);border-radius:10px;text-decoration:none;flex-shrink:0;min-width:200px;max-width:280px;">
+          <div style="width:8px;height:8px;border-radius:50%;background:#ff3b3b;animation:livepulse 1.2s infinite;flex-shrink:0;"></div>
+          <div style="min-width:0;">
+            <div style="font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(displayName)}</div>
+            ${session.title ? `<div style="font-size:12px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(session.title)}</div>` : ''}
+          </div>
+          <div style="margin-left:auto;font-size:11px;color:var(--text-muted);white-space:nowrap;flex-shrink:0;">👁 ${viewers}</div>
+        </a>
+      `;
+    }).join('');
+
+    banner.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <div style="width:8px;height:8px;border-radius:50%;background:#ff3b3b;animation:livepulse 1.2s infinite;flex-shrink:0;"></div>
+        <span style="font-size:13px;font-weight:700;color:var(--text);">Live Now</span>
+        <span style="font-size:12px;color:var(--text-muted);">${sessions.length} stream${sessions.length !== 1 ? 's' : ''} from people you follow</span>
+      </div>
+      <div style="display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;">
+        ${items}
+      </div>
+    `;
+    banner.style.display = 'block';
+  } catch (err) {
+    console.error('Live banner error:', err);
+    banner.style.display = 'none';
+  }
+}
+
+function subscribeToLiveSessions() {
+  if (liveSubscription) liveSubscription.unsubscribe();
+  liveSubscription = window.db
+    .channel('feed-live-sessions')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'live_sessions' }, () => {
+      loadLiveBanner();
+    })
+    .subscribe();
+}
 
 // ─── MEDIA UPLOAD ────────────────────────────────────────────────────────────
 
@@ -914,7 +993,6 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
     ? (post.content || '').replace(/\n\n🔁 \[Reposted\]$/, '').trim()
     : (post.content || '');
 
-  // Media display
   const mediaUrls = post.media_urls || [];
   let mediaHtml = '';
   if (mediaUrls.length > 0) {
@@ -929,12 +1007,10 @@ function renderPost(post, profileMap, communityMap, reactionMap, commentCountMap
     </div>`;
   }
 
-  // Check-in display
   const checkinHtml = post.checkin_location
     ? `<div style="font-size:13px;color:var(--text-muted);margin-top:6px;">📍 ${escapeHtml(post.checkin_location)}</div>`
     : '';
 
-  // Link preview display
   let linkPreviewHtml = '';
   if (post.link_preview && typeof post.link_preview === 'object') {
     const lp = post.link_preview;
@@ -1457,7 +1533,6 @@ async function handleCreatePost() {
       .from('posts').insert(postData).select().single();
     if (postError) throw postError;
 
-    // Upload media
     if (selectedMediaFiles.length > 0 && post) {
       const mediaUrls = await uploadMediaFiles(post.id);
       if (mediaUrls.length > 0) {
@@ -1481,7 +1556,6 @@ async function handleCreatePost() {
 
     await window.db.from('profiles').update({ post_count: (currentProfile?.post_count || 0) + 1 }).eq('user_id', currentUser.id);
 
-    // Reset composer
     document.getElementById('post-content').value = '';
     selectedMediaFiles = [];
     selectedCheckin = null;
