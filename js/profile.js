@@ -19,14 +19,16 @@ let viewerCountInterval = null;
 document.addEventListener('DOMContentLoaded', async () => {
   await waitForDb();
 
-  currentUser = await window.auth.getUser();
-  if (!currentUser) {
+  // Use getSession() instead of getUser() — reads from local cache, no network round trip
+  const { data: { session } } = await window.db.auth.getSession();
+  if (!session?.user) {
     window.location.href = '/login.html';
     return;
   }
+  currentUser = session.user;
 
   document.getElementById('logout-btn').addEventListener('click', async () => {
-    await window.auth.signOut();
+    await window.db.auth.signOut();
     window.location.href = '/';
   });
 
@@ -283,7 +285,6 @@ async function uploadIntroVideo(file) {
     return;
   }
 
-  // Check duration client-side
   const duration = await getVideoDuration(file);
   if (duration > 10) {
     alert('Intro video must be 10 seconds or less.');
@@ -641,8 +642,12 @@ function subscribeToLiveSessions(userId) {
 // ─── PROFILE LOAD ─────────────────────────────────────────────────────────────
 
 async function loadOwnProfile() {
+  // Select only fields needed — skip large JSON fields not needed for display init
   const { data: profile } = await window.db
-    .from('profiles').select('*').eq('user_id', currentUser.id).single();
+    .from('profiles')
+    .select('user_id, username, display_name, bio, location, website, avatar_url, banner_url, intro_video_url, is_verified, verified_type, reputation, post_count, follower_count, following_count, show_adult_content, is_adult_creator, muted_keywords, muted_communities')
+    .eq('user_id', currentUser.id)
+    .single();
 
   if (!profile) {
     document.getElementById('profile-header').innerHTML = '<div class="loading">Profile not found.</div>';
@@ -661,19 +666,25 @@ async function loadOwnProfile() {
     document.getElementById('go-live-btn').style.display = 'block';
   }
 
-  await checkActiveLiveSession(currentUser.id);
+  // Run these in parallel — don't await sequentially
+  await Promise.all([
+    checkActiveLiveSession(currentUser.id),
+    loadProfilePosts(profile.user_id),
+    loadProfileCommunities()
+  ]);
+
   subscribeToLiveSessions(currentUser.id);
 
-  await Promise.all([
-    loadProfilePosts(profile.user_id),
-    loadProfileCommunities(),
-    loadProfileAnalytics(profile.user_id)
-  ]);
+  // Analytics loads lazily via IntersectionObserver
+  lazyLoadAnalytics(profile.user_id);
 }
 
 async function loadProfileByUsername(username) {
   const { data: profile } = await window.db
-    .from('profiles').select('*').eq('username', username.toLowerCase()).single();
+    .from('profiles')
+    .select('user_id, username, display_name, bio, location, website, avatar_url, banner_url, intro_video_url, is_verified, verified_type, reputation, post_count, follower_count, following_count, show_adult_content, is_adult_creator, muted_keywords, muted_communities')
+    .eq('username', username.toLowerCase())
+    .single();
 
   if (!profile) {
     document.getElementById('profile-header').innerHTML = '<div class="loading">User not found.</div>';
@@ -702,14 +713,29 @@ async function loadProfileByUsername(username) {
     document.getElementById('go-live-btn').style.display = 'block';
   }
 
-  await checkActiveLiveSession(profile.user_id);
+  await Promise.all([
+    checkActiveLiveSession(profile.user_id),
+    loadProfilePosts(profile.user_id),
+    loadProfileCommunities()
+  ]);
+
   subscribeToLiveSessions(profile.user_id);
 
-  await Promise.all([
-    loadProfilePosts(profile.user_id),
-    loadProfileCommunities(),
-    isOwnProfile ? loadProfileAnalytics(profile.user_id) : Promise.resolve()
-  ]);
+  if (isOwnProfile) lazyLoadAnalytics(profile.user_id);
+}
+
+function lazyLoadAnalytics(userId) {
+  const analyticsEl = document.getElementById('profile-analytics');
+  if (!analyticsEl) return;
+
+  const observer = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting) {
+      observer.disconnect();
+      loadProfileAnalytics(userId);
+    }
+  }, { threshold: 0.1 });
+
+  observer.observe(analyticsEl);
 }
 
 async function loadProfileAnalytics(userId) {
