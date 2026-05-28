@@ -38,14 +38,10 @@
     .step.active { display: block; }
     .step-title { font-family: var(--font-display); font-size: 1.75rem; font-weight: 900; letter-spacing: -0.03em; color: var(--text); margin-bottom: 8px; }
     .step-subtitle { font-size: 15px; color: #6a6a7a; margin-bottom: 28px; line-height: 1.6; }
-
-    /* Interest grid */
     .interest-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-bottom: 28px; }
     .interest-btn { padding: 12px 16px; border-radius: 10px; border: 1px solid var(--border); background: transparent; color: #6a6a7a; font-size: 13px; font-weight: 600; font-family: var(--font-body); cursor: pointer; transition: all 0.15s ease; text-align: center; }
     .interest-btn:hover { border-color: var(--primary); color: var(--text); }
     .interest-btn.selected { border-color: var(--primary); background: var(--primary-dim); color: var(--primary); }
-
-    /* Community picker */
     .community-search-bar { display: flex; gap: 8px; margin-bottom: 12px; }
     .community-search-bar input { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; font-size: 14px; color: var(--text); font-family: var(--font-body); outline: none; }
     .community-search-bar input:focus { border-color: var(--primary); }
@@ -70,13 +66,10 @@
     .community-pick-item.selected .community-pick-check { background: var(--primary); border-color: var(--primary); color: #000; }
     .community-count-bar { font-size: 12px; color: #6a6a7a; margin-bottom: 12px; }
     .community-count-bar span { color: var(--primary); font-weight: 700; }
-
-    /* Mute section */
+    .preselect-banner { font-size: 12px; color: var(--primary); background: var(--primary-dim); border: 1px solid rgba(0,229,255,0.2); border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; display: none; }
     .mute-section { margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border); }
     .mute-section-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
     .mute-section-sub { font-size: 13px; color: #6a6a7a; margin-bottom: 16px; }
-
-    /* Community mute */
     .mute-search-wrap { margin-bottom: 10px; }
     .mute-search-wrap input { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; font-size: 14px; color: var(--text); font-family: var(--font-body); outline: none; box-sizing: border-box; }
     .mute-search-wrap input:focus { border-color: #f43f5e; }
@@ -88,8 +81,6 @@
     .mute-item-name { font-size: 13px; font-weight: 600; color: var(--text); flex: 1; }
     .mute-item-check { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; transition: all 0.15s ease; }
     .mute-item.muted .mute-item-check { background: #f43f5e; border-color: #f43f5e; color: #fff; }
-
-    /* Keyword mute */
     .keyword-input-wrap { display: flex; gap: 8px; margin-bottom: 12px; }
     .keyword-input-wrap input { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; font-size: 14px; color: var(--text); font-family: var(--font-body); outline: none; }
     .keyword-input-wrap input:focus { border-color: #f43f5e; }
@@ -101,17 +92,13 @@
     .keyword-tag button { background: none; border: none; cursor: pointer; color: #f43f5e; font-size: 14px; padding: 0; line-height: 1; opacity: 0.7; }
     .keyword-tag button:hover { opacity: 1; }
     .keyword-hint { font-size: 12px; color: #6a6a7a; margin-top: 8px; }
-
     .step-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 24px; }
-
-    /* Welcome */
     .welcome-icon { font-size: 64px; margin-bottom: 16px; }
     .welcome-features { display: flex; flex-direction: column; gap: 12px; margin-bottom: 32px; }
     .welcome-feature { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--bg); border-radius: 10px; border: 1px solid var(--border); }
     .welcome-feature-icon { font-size: 20px; width: 32px; text-align: center; }
     .welcome-feature-text { font-size: 14px; color: #b0b0be; }
     .welcome-feature-text strong { color: var(--text); font-weight: 600; }
-
     @media (max-width: 480px) {
       .onboarding-box { padding: 24px 20px; }
       .step-title { font-size: 1.4rem; }
@@ -131,7 +118,6 @@
         <div class="step-dot" id="dot-4"></div>
       </div>
 
-      <!-- STEP 1: Interests -->
       <div class="step active" id="step-1">
         <div class="step-title">What are you into?</div>
         <div class="step-subtitle">Pick your interests and we'll show you the right communities.</div>
@@ -161,10 +147,9 @@
         </div>
       </div>
 
-      <!-- STEP 2: Join Communities -->
       <div class="step" id="step-2">
         <div class="step-title">Join some communities</div>
-        <div class="step-subtitle">Search or browse by category. Join at least one to get started.</div>
+        <div class="step-subtitle">We've pre-selected communities based on your interests. Add or remove any you like.</div>
         <div class="community-search-bar">
           <input type="text" id="community-search" placeholder="Search communities..." />
         </div>
@@ -190,6 +175,7 @@
           <button class="cat-tab" data-cat="local">Local</button>
           <button class="cat-tab" data-cat="topic">Topics</button>
         </div>
+        <div id="preselect-banner" class="preselect-banner"></div>
         <div class="community-count-bar">Showing <span id="showing-count">0</span> communities</div>
         <div class="community-pick-grid" id="community-pick-grid">
           <div class="loading"><div class="spinner"></div>Loading communities...</div>
@@ -200,20 +186,15 @@
         </div>
       </div>
 
-      <!-- STEP 3: Mute Communities + Keywords -->
       <div class="step" id="step-3">
         <div class="step-title">Filter your feed</div>
         <div class="step-subtitle">Mute communities and keywords you never want to see. You can always change this in settings.</div>
-
-        <!-- Community mute -->
         <div class="mute-section-title">Mute communities</div>
         <div class="mute-section-sub">Communities you mute won't appear in your feed.</div>
         <div class="mute-search-wrap">
           <input type="text" id="mute-search" placeholder="Search communities to mute..." />
         </div>
         <div class="mute-grid" id="mute-grid"></div>
-
-        <!-- Keyword mute -->
         <div class="mute-section">
           <div class="mute-section-title">Mute keywords</div>
           <div class="mute-section-sub">Any post containing these words will be hidden from your feed. Type a word and press Enter.</div>
@@ -224,18 +205,16 @@
           <div class="keyword-tags" id="keyword-tags"></div>
           <div class="keyword-hint">Press Enter or click + Add. Case insensitive — "Trump" also mutes "trump".</div>
         </div>
-
         <div class="step-actions">
           <button class="btn btn-ghost" id="step3-back">← Back</button>
           <button class="btn btn-primary" id="step3-next">Continue →</button>
         </div>
       </div>
 
-      <!-- STEP 4: Welcome -->
       <div class="step" id="step-4">
         <div class="welcome-icon">🎉</div>
         <div class="step-title">You're all set!</div>
-        <div class="step-subtitle">Welcome to Voxxee — where real conversations happen.</div>
+        <div class="step-subtitle">Welcome to Voxxee — Vox Populi Vox Dei.</div>
         <div class="welcome-features">
           <div class="welcome-feature">
             <div class="welcome-feature-icon">💬</div>
@@ -266,6 +245,27 @@
       }
     }
 
+    const INTEREST_TO_CATEGORY = {
+      politics:      ['politics'],
+      tech:          ['tech'],
+      finance:       ['finance'],
+      science:       ['science', 'health'],
+      health:        ['health'],
+      sports:        ['sports'],
+      entertainment: ['entertainment'],
+      gaming:        ['gaming'],
+      music:         ['music'],
+      art:           ['culture', 'hobbies'],
+      news:          ['media'],
+      crypto:        ['finance', 'tech'],
+      local:         ['local'],
+      philosophy:    ['culture', 'topic'],
+      freedom:       ['politics', 'alternative'],
+      pets:          ['pets'],
+      food:          ['food'],
+      other:         []
+    };
+
     let currentStep = 1;
     const TOTAL_STEPS = 4;
     let selectedInterests = [];
@@ -279,7 +279,8 @@
 
     document.addEventListener('DOMContentLoaded', async () => {
       await waitForDb();
-      currentUser = await window.auth.getUser();
+      const { data: { session } } = await window.db.auth.getSession();
+      currentUser = session?.user;
       if (!currentUser) { window.location.href = '/login.html'; return; }
       const { data: profile } = await window.db.from('profiles').select('onboarding_complete').eq('user_id', currentUser.id).single();
       if (profile?.onboarding_complete) { window.location.href = '/feed.html'; return; }
@@ -303,7 +304,6 @@
     function setupKeywordInput() {
       const input = document.getElementById('keyword-input');
       const addBtn = document.getElementById('keyword-add-btn');
-
       function addKeyword() {
         const val = input.value.trim().toLowerCase();
         if (!val || mutedKeywords.includes(val)) { input.value = ''; return; }
@@ -312,7 +312,6 @@
         input.value = '';
         input.focus();
       }
-
       input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addKeyword(); } });
       addBtn.addEventListener('click', addKeyword);
     }
@@ -357,7 +356,6 @@
         await window.db.from('profiles').update({ onboarding_complete: true }).eq('user_id', currentUser.id);
         window.location.href = '/feed.html';
       });
-
       document.getElementById('category-tabs').addEventListener('click', (e) => {
         const tab = e.target.closest('.cat-tab');
         if (!tab) return;
@@ -366,12 +364,10 @@
         activeCategory = tab.dataset.cat;
         renderCommunityGrid();
       });
-
       document.getElementById('community-search').addEventListener('input', (e) => {
         searchQuery = e.target.value.trim().toLowerCase();
         renderCommunityGrid();
       });
-
       document.getElementById('mute-search').addEventListener('input', (e) => {
         renderMuteGrid(e.target.value.trim().toLowerCase());
       });
@@ -394,7 +390,26 @@
       grid.innerHTML = '<div class="loading"><div class="spinner"></div>Loading communities...</div>';
       const { data } = await window.db.from('communities').select('*').order('is_official', { ascending: false }).order('name', { ascending: true });
       allCommunities = data || [];
+      preSelectByInterests();
       renderCommunityGrid();
+    }
+
+    function preSelectByInterests() {
+      const targetTypes = new Set();
+      selectedInterests.forEach(interest => {
+        const cats = INTEREST_TO_CATEGORY[interest] || [];
+        cats.forEach(c => targetTypes.add(c));
+      });
+      const preSelected = allCommunities.filter(c => c.is_official || targetTypes.has(c.community_type));
+      selectedCommunities = [...new Set(preSelected.map(c => c.id))];
+      const banner = document.getElementById('preselect-banner');
+      if (selectedCommunities.length > 0) {
+        banner.textContent = `✓ We pre-selected ${selectedCommunities.length} communities based on your interests. Feel free to add or remove any.`;
+        banner.style.display = 'block';
+      } else {
+        banner.style.display = 'none';
+      }
+      document.getElementById('step2-next').disabled = selectedCommunities.length === 0;
     }
 
     function getFilteredCommunities() {
