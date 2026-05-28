@@ -108,6 +108,22 @@ async function uploadBanner(file) {
   }
 }
 
+async function removeBanner() {
+  if (!confirm('Remove your banner photo?')) return;
+  try {
+    const { error } = await window.db
+      .from('profiles')
+      .update({ banner_url: null })
+      .eq('user_id', currentUser.id);
+    if (error) throw error;
+    if (viewingProfile) viewingProfile.banner_url = null;
+    renderBannerEl(null);
+  } catch (err) {
+    console.error('Remove banner error:', err);
+    alert('Failed to remove banner. Please try again.');
+  }
+}
+
 function renderBannerEl(bannerUrl) {
   const bannerEl = document.getElementById('profile-banner');
   const imgEl = document.getElementById('profile-banner-img');
@@ -115,7 +131,7 @@ function renderBannerEl(bannerUrl) {
   if (bannerUrl && imgEl) {
     imgEl.src = bannerUrl;
     imgEl.style.display = 'block';
-    bannerEl.style.background = 'none';
+    bannerEl.style.background = '#000';
   } else {
     if (imgEl) imgEl.style.display = 'none';
     bannerEl.style.background = 'linear-gradient(135deg, var(--primary) 0%, #a78bfa 100%)';
@@ -127,6 +143,7 @@ function renderBannerEl(bannerUrl) {
 function setupAvatarUpload() {
   const section = document.getElementById('avatar-upload-section');
   const uploadBtn = document.getElementById('avatar-upload-btn');
+  const deleteBtn = document.getElementById('avatar-delete-btn');
   const fileInput = document.getElementById('avatar-file-input');
   if (!uploadBtn || !fileInput) return;
 
@@ -139,6 +156,26 @@ function setupAvatarUpload() {
     await uploadAvatar(file);
     fileInput.value = '';
   });
+
+  if (deleteBtn) {
+    deleteBtn.addEventListener('click', removeAvatar);
+  }
+}
+
+async function removeAvatar() {
+  if (!confirm('Remove your profile photo?')) return;
+  try {
+    const { error } = await window.db
+      .from('profiles')
+      .update({ avatar_url: null })
+      .eq('user_id', currentUser.id);
+    if (error) throw error;
+    if (viewingProfile) viewingProfile.avatar_url = null;
+    renderAvatarEl(null, viewingProfile?.username || '');
+  } catch (err) {
+    console.error('Remove avatar error:', err);
+    alert('Failed to remove photo. Please try again.');
+  }
 }
 
 async function uploadAvatar(file) {
@@ -732,6 +769,8 @@ function showEditForm(profile) {
   document.getElementById('cancel-edit-btn').onclick = () => {
     document.getElementById('edit-profile-form').style.display = 'none';
   };
+  document.getElementById('remove-avatar-btn').onclick = removeAvatar;
+  document.getElementById('remove-banner-btn').onclick = removeBanner;
 }
 
 function addKeyword() {
