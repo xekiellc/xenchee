@@ -1,552 +1,144 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Welcome to Voxxee</title>
+async function waitForDb(timeout = 5000) {
+  const start = Date.now();
+  while (!window.db) {
+    if (Date.now() - start > timeout) throw new Error('Supabase init timeout');
+    await new Promise(r => setTimeout(r, 50));
+  }
+}
 
-  <link rel="manifest" href="/manifest.json" />
-  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192x192.png" />
-  <link rel="icon" type="image/png" sizes="512x512" href="/icon-512x512.png" />
-  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-  <meta name="theme-color" content="#00e5ff" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Voxxee" />
+document.addEventListener('DOMContentLoaded', async () => {
+  await waitForDb();
 
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-FSCZJEWZ6F"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-FSCZJEWZ6F');
-  </script>
+  // Redirect if already logged in
+  const { data: { session } } = await window.db.auth.getSession();
+  if (session?.user) {
+    window.location.href = '/feed.html';
+    return;
+  }
 
-  <link rel="stylesheet" href="css/main.css" />
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  document.getElementById('signup-btn').addEventListener('click', handleSignup);
 
-  <style>
-    .onboarding-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; background: var(--bg); }
-    .onboarding-box { width: 100%; max-width: 660px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 40px; }
-    .onboarding-logo { font-family: var(--font-display); font-size: 1.5rem; font-weight: 900; letter-spacing: -0.04em; color: var(--text); display: flex; align-items: center; gap: 8px; margin-bottom: 32px; }
-    .onboarding-logo::before { content: 'VX'; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; background: var(--primary); color: #000; font-size: 12px; font-weight: 900; border-radius: 8px; }
-    .step-indicator { display: flex; align-items: center; gap: 8px; margin-bottom: 32px; }
-    .step-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); transition: all 0.2s ease; }
-    .step-dot.active { background: var(--primary); width: 24px; border-radius: 4px; }
-    .step-dot.done { background: var(--primary); opacity: 0.4; }
-    .step { display: none; }
-    .step.active { display: block; }
-    .step-title { font-family: var(--font-display); font-size: 1.75rem; font-weight: 900; letter-spacing: -0.03em; color: var(--text); margin-bottom: 8px; }
-    .step-subtitle { font-size: 15px; color: #6a6a7a; margin-bottom: 28px; line-height: 1.6; }
+  document.getElementById('password-toggle').addEventListener('click', () => {
+    const input = document.getElementById('password');
+    input.type = input.type === 'password' ? 'text' : 'password';
+  });
 
-    .interest-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-bottom: 28px; }
-    .interest-btn { padding: 12px 16px; border-radius: 10px; border: 1px solid var(--border); background: transparent; color: #6a6a7a; font-size: 13px; font-weight: 600; font-family: var(--font-body); cursor: pointer; transition: all 0.15s ease; text-align: center; }
-    .interest-btn:hover { border-color: var(--primary); color: var(--text); }
-    .interest-btn.selected { border-color: var(--primary); background: var(--primary-dim); color: var(--primary); }
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') handleSignup();
+  });
+});
 
-    .community-search-bar { display: flex; gap: 8px; margin-bottom: 12px; }
-    .community-search-bar input { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; font-size: 14px; color: var(--text); font-family: var(--font-body); outline: none; }
-    .community-search-bar input:focus { border-color: var(--primary); }
-    .community-search-bar input::placeholder { color: #6a6a7a; }
-    .category-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px; scrollbar-width: none; }
-    .category-tabs::-webkit-scrollbar { display: none; }
-    .cat-tab { padding: 6px 14px; border-radius: 100px; border: 1px solid var(--border); background: transparent; color: #6a6a7a; font-size: 12px; font-weight: 600; font-family: var(--font-body); cursor: pointer; white-space: nowrap; transition: all 0.15s ease; flex-shrink: 0; }
-    .cat-tab:hover { border-color: var(--primary); color: var(--text); }
-    .cat-tab.active { border-color: var(--primary); background: var(--primary-dim); color: var(--primary); }
-    .community-pick-grid { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; max-height: 280px; overflow-y: auto; padding-right: 4px; }
-    .community-pick-grid::-webkit-scrollbar { width: 4px; }
-    .community-pick-grid::-webkit-scrollbar-track { background: transparent; }
-    .community-pick-grid::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-    .community-pick-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); cursor: pointer; transition: all 0.15s ease; background: transparent; }
-    .community-pick-item:hover { border-color: var(--primary); background: var(--bg-hover); }
-    .community-pick-item.selected { border-color: var(--primary); background: var(--primary-dim); }
-    .community-pick-logo { width: 36px; height: 36px; border-radius: 8px; object-fit: cover; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; background: var(--primary-dim); color: var(--primary); }
-    .community-pick-name { font-size: 13px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 5px; }
-    .official-badge { font-size: 10px; background: rgba(0,229,255,0.15); color: var(--primary); padding: 1px 6px; border-radius: 100px; font-weight: 700; letter-spacing: 0.5px; }
-    .community-pick-desc { font-size: 11px; color: #6a6a7a; margin-top: 2px; }
-    .community-pick-check { margin-left: auto; width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; transition: all 0.15s ease; }
-    .community-pick-item.selected .community-pick-check { background: var(--primary); border-color: var(--primary); color: #000; }
-    .community-count-bar { font-size: 12px; color: #6a6a7a; margin-bottom: 12px; }
-    .community-count-bar span { color: var(--primary); font-weight: 700; }
+async function handleSignup() {
+  const email = document.getElementById('email').value.trim();
+  const username = document.getElementById('username').value.trim().toLowerCase();
+  const password = document.getElementById('password').value;
+  const dob = document.getElementById('dob').value;
+  const termsChecked = document.getElementById('terms').checked;
 
-    .preselect-banner { font-size: 12px; color: var(--primary); background: var(--primary-dim); border: 1px solid rgba(0,229,255,0.2); border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; display: none; }
+  clearAlert();
 
-    .mute-section { margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border); }
-    .mute-section-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
-    .mute-section-sub { font-size: 13px; color: #6a6a7a; margin-bottom: 16px; }
-    .mute-search-wrap { margin-bottom: 10px; }
-    .mute-search-wrap input { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; font-size: 14px; color: var(--text); font-family: var(--font-body); outline: none; box-sizing: border-box; }
-    .mute-search-wrap input:focus { border-color: #f43f5e; }
-    .mute-search-wrap input::placeholder { color: #6a6a7a; }
-    .mute-grid { display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto; margin-bottom: 20px; padding-right: 4px; }
-    .mute-item { display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-radius: 10px; border: 1px solid var(--border); cursor: pointer; transition: all 0.15s ease; }
-    .mute-item:hover { border-color: #f43f5e; background: rgba(244,63,94,0.05); }
-    .mute-item.muted { border-color: #f43f5e; background: rgba(244,63,94,0.08); }
-    .mute-item-name { font-size: 13px; font-weight: 600; color: var(--text); flex: 1; }
-    .mute-item-check { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; transition: all 0.15s ease; }
-    .mute-item.muted .mute-item-check { background: #f43f5e; border-color: #f43f5e; color: #fff; }
+  if (!email || !username || !password || !dob) {
+    showAlert('Please fill in all fields.', 'error');
+    return;
+  }
 
-    .keyword-input-wrap { display: flex; gap: 8px; margin-bottom: 12px; }
-    .keyword-input-wrap input { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; font-size: 14px; color: var(--text); font-family: var(--font-body); outline: none; }
-    .keyword-input-wrap input:focus { border-color: #f43f5e; }
-    .keyword-input-wrap input::placeholder { color: #6a6a7a; }
-    .keyword-input-wrap button { padding: 10px 16px; border-radius: 10px; border: 1px solid #f43f5e; background: rgba(244,63,94,0.1); color: #f43f5e; font-size: 13px; font-weight: 700; font-family: var(--font-body); cursor: pointer; white-space: nowrap; transition: all 0.15s ease; }
-    .keyword-input-wrap button:hover { background: rgba(244,63,94,0.2); }
-    .keyword-tags { display: flex; flex-wrap: wrap; gap: 8px; min-height: 32px; }
-    .keyword-tag { display: flex; align-items: center; gap: 6px; padding: 5px 10px 5px 12px; background: rgba(244,63,94,0.1); border: 1px solid rgba(244,63,94,0.3); border-radius: 100px; font-size: 13px; font-weight: 600; color: #f43f5e; }
-    .keyword-tag button { background: none; border: none; cursor: pointer; color: #f43f5e; font-size: 14px; padding: 0; line-height: 1; opacity: 0.7; }
-    .keyword-tag button:hover { opacity: 1; }
-    .keyword-hint { font-size: 12px; color: #6a6a7a; margin-top: 8px; }
+  if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+    showAlert('Username can only contain letters, numbers, and underscores.', 'error');
+    return;
+  }
 
-    .step-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 24px; }
+  if (username.length < 3) {
+    showAlert('Username must be at least 3 characters.', 'error');
+    return;
+  }
 
-    .welcome-icon { font-size: 64px; margin-bottom: 16px; }
-    .welcome-features { display: flex; flex-direction: column; gap: 12px; margin-bottom: 32px; }
-    .welcome-feature { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--bg); border-radius: 10px; border: 1px solid var(--border); }
-    .welcome-feature-icon { font-size: 20px; width: 32px; text-align: center; }
-    .welcome-feature-text { font-size: 14px; color: #b0b0be; }
-    .welcome-feature-text strong { color: var(--text); font-weight: 600; }
+  if (password.length < 8) {
+    showAlert('Password must be at least 8 characters.', 'error');
+    return;
+  }
 
-    @media (max-width: 480px) {
-      .onboarding-box { padding: 24px 20px; }
-      .step-title { font-size: 1.4rem; }
-    }
-  </style>
-</head>
-<body>
-  <div class="onboarding-wrap">
-    <div class="onboarding-box">
+  if (!window.isOver18(dob)) {
+    showAlert('You must be 18 or older to join Voxxee.', 'error');
+    return;
+  }
 
-      <div class="onboarding-logo">Voxxee</div>
+  if (!termsChecked) {
+    showAlert('Please agree to the Terms of Service and Privacy Policy.', 'error');
+    return;
+  }
 
-      <div class="step-indicator">
-        <div class="step-dot active" id="dot-1"></div>
-        <div class="step-dot" id="dot-2"></div>
-        <div class="step-dot" id="dot-3"></div>
-        <div class="step-dot" id="dot-4"></div>
-      </div>
+  const recaptchaResponse = grecaptcha.getResponse();
+  if (!recaptchaResponse) {
+    showAlert('Please complete the reCAPTCHA verification.', 'error');
+    return;
+  }
 
-      <!-- STEP 1: Interests -->
-      <div class="step active" id="step-1">
-        <div class="step-title">What are you into?</div>
-        <div class="step-subtitle">Pick your interests and we'll show you the right communities.</div>
-        <div class="interest-grid" id="interest-grid">
-          <button class="interest-btn" data-interest="politics">🏛️ Politics</button>
-          <button class="interest-btn" data-interest="tech">💻 Tech</button>
-          <button class="interest-btn" data-interest="finance">📈 Finance</button>
-          <button class="interest-btn" data-interest="science">🔬 Science</button>
-          <button class="interest-btn" data-interest="health">💊 Health</button>
-          <button class="interest-btn" data-interest="sports">⚽ Sports</button>
-          <button class="interest-btn" data-interest="entertainment">🎬 Entertainment</button>
-          <button class="interest-btn" data-interest="gaming">🎮 Gaming</button>
-          <button class="interest-btn" data-interest="music">🎵 Music</button>
-          <button class="interest-btn" data-interest="art">🎨 Art</button>
-          <button class="interest-btn" data-interest="news">📰 News</button>
-          <button class="interest-btn" data-interest="crypto">₿ Crypto</button>
-          <button class="interest-btn" data-interest="local">📍 Local</button>
-          <button class="interest-btn" data-interest="philosophy">🧠 Philosophy</button>
-          <button class="interest-btn" data-interest="freedom">🗽 Free Speech</button>
-          <button class="interest-btn" data-interest="pets">🐾 Pets</button>
-          <button class="interest-btn" data-interest="food">🍔 Food & Drink</button>
-          <button class="interest-btn" data-interest="other">✨ Other</button>
-        </div>
-        <div class="step-actions">
-          <span style="font-size:13px;color:#6a6a7a;">Pick at least one</span>
-          <button class="btn btn-primary" id="step1-next" disabled>Continue →</button>
-        </div>
-      </div>
+  const btn = document.getElementById('signup-btn');
+  btn.textContent = 'Creating account...';
+  btn.disabled = true;
 
-      <!-- STEP 2: Join Communities -->
-      <div class="step" id="step-2">
-        <div class="step-title">Join some communities</div>
-        <div class="step-subtitle">We've pre-selected communities based on your interests. Add or remove any you like.</div>
-        <div class="community-search-bar">
-          <input type="text" id="community-search" placeholder="Search communities..." />
-        </div>
-        <div class="category-tabs" id="category-tabs">
-          <button class="cat-tab active" data-cat="all">All</button>
-          <button class="cat-tab" data-cat="official">⭐ Official</button>
-          <button class="cat-tab" data-cat="sports">Sports</button>
-          <button class="cat-tab" data-cat="music">Music</button>
-          <button class="cat-tab" data-cat="politics">Politics</button>
-          <button class="cat-tab" data-cat="media">Media</button>
-          <button class="cat-tab" data-cat="finance">Finance</button>
-          <button class="cat-tab" data-cat="tech">Tech</button>
-          <button class="cat-tab" data-cat="entertainment">Entertainment</button>
-          <button class="cat-tab" data-cat="gaming">Gaming</button>
-          <button class="cat-tab" data-cat="lifestyle">Lifestyle</button>
-          <button class="cat-tab" data-cat="food">Food</button>
-          <button class="cat-tab" data-cat="health">Health</button>
-          <button class="cat-tab" data-cat="culture">Culture</button>
-          <button class="cat-tab" data-cat="alternative">Alternative</button>
-          <button class="cat-tab" data-cat="hobbies">Hobbies</button>
-          <button class="cat-tab" data-cat="marketplace">Marketplace</button>
-          <button class="cat-tab" data-cat="pets">Pets</button>
-          <button class="cat-tab" data-cat="local">Local</button>
-          <button class="cat-tab" data-cat="topic">Topics</button>
-        </div>
-        <div id="preselect-banner" class="preselect-banner"></div>
-        <div class="community-count-bar">Showing <span id="showing-count">0</span> communities</div>
-        <div class="community-pick-grid" id="community-pick-grid">
-          <div class="loading"><div class="spinner"></div>Loading communities...</div>
-        </div>
-        <div class="step-actions">
-          <button class="btn btn-ghost" id="step2-back">← Back</button>
-          <button class="btn btn-primary" id="step2-next" disabled>Join & Continue →</button>
-        </div>
-      </div>
+  try {
+    // Check username availability
+    const { data: existing } = await window.db
+      .from('profiles')
+      .select('username')
+      .eq('username', username)
+      .single();
 
-      <!-- STEP 3: Mute Communities + Keywords -->
-      <div class="step" id="step-3">
-        <div class="step-title">Filter your feed</div>
-        <div class="step-subtitle">Mute communities and keywords you never want to see. You can always change this in settings.</div>
-
-        <div class="mute-section-title">Mute communities</div>
-        <div class="mute-section-sub">Communities you mute won't appear in your feed.</div>
-        <div class="mute-search-wrap">
-          <input type="text" id="mute-search" placeholder="Search communities to mute..." />
-        </div>
-        <div class="mute-grid" id="mute-grid"></div>
-
-        <div class="mute-section">
-          <div class="mute-section-title">Mute keywords</div>
-          <div class="mute-section-sub">Any post containing these words will be hidden from your feed. Type a word and press Enter.</div>
-          <div class="keyword-input-wrap">
-            <input type="text" id="keyword-input" placeholder="e.g. politics, trump, cereal..." />
-            <button id="keyword-add-btn">+ Add</button>
-          </div>
-          <div class="keyword-tags" id="keyword-tags"></div>
-          <div class="keyword-hint">Press Enter or click + Add. Case insensitive — "Trump" also mutes "trump".</div>
-        </div>
-
-        <div class="step-actions">
-          <button class="btn btn-ghost" id="step3-back">← Back</button>
-          <button class="btn btn-primary" id="step3-next">Continue →</button>
-        </div>
-      </div>
-
-      <!-- STEP 4: Welcome -->
-      <div class="step" id="step-4">
-        <div class="welcome-icon">🎉</div>
-        <div class="step-title">You're all set!</div>
-        <div class="step-subtitle">Welcome to Voxxee — Vox Populi Vox Dei.</div>
-        <div class="welcome-features">
-          <div class="welcome-feature">
-            <div class="welcome-feature-icon">💬</div>
-            <div class="welcome-feature-text"><strong>Say what you mean.</strong> No shadowbans, no algorithm suppression.</div>
-          </div>
-          <div class="welcome-feature">
-            <div class="welcome-feature-icon">📊</div>
-            <div class="welcome-feature-text"><strong>Polls are first-class.</strong> Vote, create, and see real-time results.</div>
-          </div>
-          <div class="welcome-feature">
-            <div class="welcome-feature-icon">👁️</div>
-            <div class="welcome-feature-text"><strong>Views are visible.</strong> See exactly how far your voice reaches.</div>
-          </div>
-        </div>
-        <button class="btn btn-primary btn-block" id="finish-btn" style="font-size:15px;padding:14px;">Enter Voxxee →</button>
-      </div>
-
-    </div>
-  </div>
-
-  <script src="js/supabase.js"></script>
-  <script>
-    async function waitForDb(timeout = 5000) {
-      const start = Date.now();
-      while (!window.db) {
-        if (Date.now() - start > timeout) throw new Error('timeout');
-        await new Promise(r => setTimeout(r, 50));
-      }
+    if (existing) {
+      showAlert('That username is already taken. Please choose another.', 'error');
+      btn.textContent = 'Create Account';
+      btn.disabled = false;
+      return;
     }
 
-    // Maps interest keys → community_type values used in DB
-    const INTEREST_TO_CATEGORY = {
-      politics:      ['politics'],
-      tech:          ['tech'],
-      finance:       ['finance'],
-      science:       ['science', 'health'],
-      health:        ['health'],
-      sports:        ['sports'],
-      entertainment: ['entertainment'],
-      gaming:        ['gaming'],
-      music:         ['music'],
-      art:           ['culture', 'hobbies'],
-      news:          ['media'],
-      crypto:        ['finance', 'tech'],
-      local:         ['local'],
-      philosophy:    ['culture', 'topic'],
-      freedom:       ['politics', 'alternative'],
-      pets:          ['pets'],
-      food:          ['food'],
-      other:         []
-    };
+    // Sign up with Supabase Auth
+    const { data, error } = await window.auth.signUp(email, password, dob);
 
-    let currentStep = 1;
-    const TOTAL_STEPS = 4;
-    let selectedInterests = [];
-    let selectedCommunities = [];
-    let mutedCommunities = [];
-    let mutedKeywords = [];
-    let currentUser = null;
-    let allCommunities = [];
-    let activeCategory = 'all';
-    let searchQuery = '';
-
-    document.addEventListener('DOMContentLoaded', async () => {
-      await waitForDb();
-      currentUser = await window.auth.getUser();
-      if (!currentUser) { window.location.href = '/login.html'; return; }
-      const { data: profile } = await window.db.from('profiles').select('onboarding_complete').eq('user_id', currentUser.id).single();
-      if (profile?.onboarding_complete) { window.location.href = '/feed.html'; return; }
-      setupInterests();
-      setupNavigation();
-      setupKeywordInput();
-    });
-
-    function setupInterests() {
-      document.querySelectorAll('.interest-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          btn.classList.toggle('selected');
-          const interest = btn.dataset.interest;
-          if (btn.classList.contains('selected')) { selectedInterests.push(interest); }
-          else { selectedInterests = selectedInterests.filter(i => i !== interest); }
-          document.getElementById('step1-next').disabled = selectedInterests.length === 0;
-        });
-      });
-    }
-
-    function setupKeywordInput() {
-      const input = document.getElementById('keyword-input');
-      const addBtn = document.getElementById('keyword-add-btn');
-      function addKeyword() {
-        const val = input.value.trim().toLowerCase();
-        if (!val || mutedKeywords.includes(val)) { input.value = ''; return; }
-        mutedKeywords.push(val);
-        renderKeywordTags();
-        input.value = '';
-        input.focus();
-      }
-      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addKeyword(); } });
-      addBtn.addEventListener('click', addKeyword);
-    }
-
-    function renderKeywordTags() {
-      const container = document.getElementById('keyword-tags');
-      if (mutedKeywords.length === 0) {
-        container.innerHTML = '<span style="font-size:13px;color:#6a6a7a;">No keywords muted yet.</span>';
-        return;
-      }
-      container.innerHTML = mutedKeywords.map(kw => `
-        <div class="keyword-tag">
-          <span>${escapeHtml(kw)}</span>
-          <button onclick="removeKeyword('${escapeHtml(kw)}')" title="Remove">×</button>
-        </div>
-      `).join('');
-    }
-
-    function removeKeyword(kw) {
-      mutedKeywords = mutedKeywords.filter(k => k !== kw);
-      renderKeywordTags();
-    }
-
-    function setupNavigation() {
-      document.getElementById('step1-next').addEventListener('click', async () => {
-        goToStep(2);
-        await loadAllCommunities();
-      });
-      document.getElementById('step2-back').addEventListener('click', () => goToStep(1));
-      document.getElementById('step2-next').addEventListener('click', () => {
-        goToStep(3);
-        renderMuteGrid('');
-        renderKeywordTags();
-      });
-      document.getElementById('step3-back').addEventListener('click', () => goToStep(2));
-      document.getElementById('step3-next').addEventListener('click', async () => {
-        await joinSelectedCommunities();
-        await saveMutePreferences();
-        goToStep(4);
-      });
-      document.getElementById('finish-btn').addEventListener('click', async () => {
-        await window.db.from('profiles').update({ onboarding_complete: true }).eq('user_id', currentUser.id);
-        window.location.href = '/feed.html';
-      });
-
-      document.getElementById('category-tabs').addEventListener('click', (e) => {
-        const tab = e.target.closest('.cat-tab');
-        if (!tab) return;
-        document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
-        activeCategory = tab.dataset.cat;
-        renderCommunityGrid();
-      });
-
-      document.getElementById('community-search').addEventListener('input', (e) => {
-        searchQuery = e.target.value.trim().toLowerCase();
-        renderCommunityGrid();
-      });
-
-      document.getElementById('mute-search').addEventListener('input', (e) => {
-        renderMuteGrid(e.target.value.trim().toLowerCase());
-      });
-    }
-
-    function goToStep(n) {
-      document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
-      document.getElementById(`step-${n}`).classList.add('active');
-      for (let i = 1; i <= TOTAL_STEPS; i++) {
-        const dot = document.getElementById(`dot-${i}`);
-        dot.classList.remove('active', 'done');
-        if (i === n) dot.classList.add('active');
-        else if (i < n) dot.classList.add('done');
-      }
-      currentStep = n;
-    }
-
-    async function loadAllCommunities() {
-      const grid = document.getElementById('community-pick-grid');
-      grid.innerHTML = '<div class="loading"><div class="spinner"></div>Loading communities...</div>';
-      const { data } = await window.db.from('communities').select('*').order('is_official', { ascending: false }).order('name', { ascending: true });
-      allCommunities = data || [];
-      preSelectByInterests();
-      renderCommunityGrid();
-    }
-
-    function preSelectByInterests() {
-      // Build set of target community_types from selected interests
-      const targetTypes = new Set();
-      selectedInterests.forEach(interest => {
-        const cats = INTEREST_TO_CATEGORY[interest] || [];
-        cats.forEach(c => targetTypes.add(c));
-      });
-
-      // Also always pre-select official communities
-      const preSelected = allCommunities.filter(c =>
-        c.is_official || targetTypes.has(c.community_type)
-      );
-
-      selectedCommunities = [...new Set(preSelected.map(c => c.id))];
-
-      // Show banner if we pre-selected anything
-      const banner = document.getElementById('preselect-banner');
-      if (selectedCommunities.length > 0) {
-        banner.textContent = `✓ We pre-selected ${selectedCommunities.length} communities based on your interests. Feel free to add or remove any.`;
-        banner.style.display = 'block';
+    if (error) {
+      if (error.message.includes('already registered')) {
+        showAlert('An account with this email already exists.', 'error');
       } else {
-        banner.style.display = 'none';
+        showAlert(error.message || 'Signup failed. Please try again.', 'error');
       }
-
-      document.getElementById('step2-next').disabled = selectedCommunities.length === 0;
+      btn.textContent = 'Create Account';
+      btn.disabled = false;
+      return;
     }
 
-    function getFilteredCommunities() {
-      return allCommunities.filter(c => {
-        const matchCat = activeCategory === 'all' ? true :
-          activeCategory === 'official' ? c.is_official :
-          c.community_type === activeCategory;
-        const matchSearch = searchQuery === '' ? true :
-          c.name.toLowerCase().includes(searchQuery) ||
-          (c.description || '').toLowerCase().includes(searchQuery);
-        return matchCat && matchSearch;
+    if (data?.user) {
+      // Create profile
+      await window.db.from('profiles').insert({
+        user_id: data.user.id,
+        username,
+        display_name: username,
+        onboarding_complete: false
       });
-    }
 
-    function renderCommunityGrid() {
-      const grid = document.getElementById('community-pick-grid');
-      const filtered = getFilteredCommunities();
-      document.getElementById('showing-count').textContent = filtered.length;
-      if (filtered.length === 0) {
-        grid.innerHTML = '<div style="padding:20px;text-align:center;color:#6a6a7a;font-size:14px;">No communities found.</div>';
-        return;
-      }
-      grid.innerHTML = filtered.map(c => {
-        const isSelected = selectedCommunities.includes(c.id);
-        const officialBadge = c.is_official ? '<span class="official-badge">OFFICIAL</span>' : '';
-        const logoHtml = c.logo_url
-          ? `<img src="${c.logo_url}" style="width:36px;height:36px;border-radius:8px;object-fit:cover;" />`
-          : `<div class="community-pick-logo">${escapeHtml(c.name.charAt(0))}</div>`;
-        return `
-          <div class="community-pick-item${isSelected ? ' selected' : ''}" data-id="${c.id}">
-            ${logoHtml}
-            <div style="flex:1;min-width:0;">
-              <div class="community-pick-name">${escapeHtml(c.name)} ${officialBadge}</div>
-              <div class="community-pick-desc">${escapeHtml((c.description || '').substring(0, 60))}${(c.description || '').length > 60 ? '...' : ''}</div>
-            </div>
-            <div class="community-pick-check">${isSelected ? '✓' : ''}</div>
-          </div>`;
-      }).join('');
-      grid.querySelectorAll('.community-pick-item').forEach(item => {
-        item.addEventListener('click', () => {
-          const id = item.dataset.id;
-          if (selectedCommunities.includes(id)) {
-            selectedCommunities = selectedCommunities.filter(c => c !== id);
-            item.classList.remove('selected');
-            item.querySelector('.community-pick-check').textContent = '';
-          } else {
-            selectedCommunities.push(id);
-            item.classList.add('selected');
-            item.querySelector('.community-pick-check').textContent = '✓';
-          }
-          document.getElementById('step2-next').disabled = selectedCommunities.length === 0;
-        });
+      // Create users record
+      await window.db.from('users').insert({
+        id: data.user.id,
+        email,
+        date_of_birth: dob,
+        username
       });
+
+      window.location.href = '/onboarding.html';
     }
 
-    function renderMuteGrid(query) {
-      const grid = document.getElementById('mute-grid');
-      const filtered = allCommunities.filter(c =>
-        !selectedCommunities.includes(c.id) &&
-        (query === '' || c.name.toLowerCase().includes(query))
-      );
-      if (filtered.length === 0) {
-        grid.innerHTML = '<div style="padding:12px;text-align:center;color:#6a6a7a;font-size:13px;">No communities found.</div>';
-        return;
-      }
-      grid.innerHTML = filtered.map(c => {
-        const isMuted = mutedCommunities.includes(c.id);
-        return `
-          <div class="mute-item${isMuted ? ' muted' : ''}" data-id="${c.id}">
-            <div class="mute-item-name">${escapeHtml(c.name)}</div>
-            <div class="mute-item-check">${isMuted ? '✕' : ''}</div>
-          </div>`;
-      }).join('');
-      grid.querySelectorAll('.mute-item').forEach(item => {
-        item.addEventListener('click', () => {
-          const id = item.dataset.id;
-          if (mutedCommunities.includes(id)) {
-            mutedCommunities = mutedCommunities.filter(c => c !== id);
-            item.classList.remove('muted');
-            item.querySelector('.mute-item-check').textContent = '';
-          } else {
-            mutedCommunities.push(id);
-            item.classList.add('muted');
-            item.querySelector('.mute-item-check').textContent = '✕';
-          }
-        });
-      });
-    }
+  } catch (err) {
+    console.error('Signup error:', err);
+    showAlert('Something went wrong. Please try again.', 'error');
+    btn.textContent = 'Create Account';
+    btn.disabled = false;
+  }
+}
 
-    async function joinSelectedCommunities() {
-      if (selectedCommunities.length === 0) return;
-      await window.db.from('community_members').insert(
-        selectedCommunities.map(communityId => ({ user_id: currentUser.id, community_id: communityId, role: 'member' }))
-      );
-    }
+function showAlert(message, type) {
+  const container = document.getElementById('alert-container');
+  container.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+}
 
-    async function saveMutePreferences() {
-      const updates = {};
-      if (mutedCommunities.length > 0) updates.muted_communities = mutedCommunities;
-      if (mutedKeywords.length > 0) updates.muted_keywords = mutedKeywords;
-      if (Object.keys(updates).length > 0) {
-        await window.db.from('profiles').update(updates).eq('user_id', currentUser.id);
-      }
-    }
-
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.appendChild(document.createTextNode(text || ''));
-      return div.innerHTML;
-    }
-  </script>
-</body>
-</html>
+function clearAlert() {
+  document.getElementById('alert-container').innerHTML = '';
+}
