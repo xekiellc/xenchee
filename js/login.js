@@ -9,8 +9,8 @@ async function waitForDb(timeout = 5000) {
 document.addEventListener('DOMContentLoaded', async () => {
   await waitForDb();
 
-  const user = await window.auth.getUser();
-  if (user) {
+  const { data: { session } } = await window.db.auth.getSession();
+  if (session?.user) {
     window.location.href = '/feed.html';
     return;
   }
