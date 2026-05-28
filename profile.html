@@ -186,6 +186,28 @@
       background: none; border: 1px solid rgba(244,63,94,0.3);
       border-radius: 100px; padding: 3px 10px; cursor: pointer;
     }
+    .intro-video-section {
+      margin-top: 16px;
+      border-top: 1px solid var(--border);
+      padding-top: 16px;
+    }
+    .intro-video-label {
+      font-size: 12px; font-weight: 700; color: var(--text-dim);
+      text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;
+    }
+    .intro-video-player {
+      width: 100%;
+      max-width: 320px;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #000;
+    }
+    .intro-video-player video {
+      width: 100%;
+      display: block;
+      max-height: 180px;
+      object-fit: cover;
+    }
     .mobile-nav {
       display: none; position: fixed; bottom: 0; left: 0; right: 0;
       height: 56px; background: rgba(8,8,10,0.97);
@@ -288,6 +310,24 @@
             <div class="profile-stat"><strong id="profile-follower-count">0</strong> Followers</div>
             <div class="profile-stat"><strong id="profile-following-count">0</strong> Following</div>
           </div>
+
+          <div id="intro-video-section" class="intro-video-section" style="display:none;">
+            <div class="intro-video-label">🎬 Intro</div>
+            <div class="intro-video-player">
+              <video id="intro-video-player" controls playsinline preload="metadata"></video>
+            </div>
+          </div>
+
+          <div id="intro-video-upload-section" style="display:none;margin-top:16px;">
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <button id="intro-video-upload-btn" class="btn btn-ghost" style="font-size:13px;padding:6px 16px;">🎬 Upload Intro Video</button>
+              <button id="intro-video-delete-btn" class="btn btn-ghost" style="font-size:13px;padding:6px 16px;color:#f43f5e;border-color:rgba(244,63,94,0.3);display:none;">🗑️ Remove Video</button>
+            </div>
+            <div style="font-size:12px;color:var(--text-dim);margin-top:4px;">10 seconds max. MP4, MOV, or WEBM.</div>
+            <span id="intro-video-uploading" style="display:none;font-size:13px;color:var(--text-muted);margin-top:6px;">Uploading...</span>
+            <input type="file" id="intro-video-file-input" accept="video/mp4,video/quicktime,video/webm" style="display:none;" />
+          </div>
+
         </div>
       </div>
 
