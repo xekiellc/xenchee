@@ -157,9 +157,7 @@ function setupAvatarUpload() {
     fileInput.value = '';
   });
 
-  if (deleteBtn) {
-    deleteBtn.addEventListener('click', removeAvatar);
-  }
+  if (deleteBtn) deleteBtn.addEventListener('click', removeAvatar);
 }
 
 async function removeAvatar() {
@@ -245,6 +243,137 @@ function renderAvatarEl(avatarUrl, username) {
       initialEl.style.display = 'block';
       initialEl.textContent = initial;
     }
+  }
+}
+
+// ─── INTRO VIDEO ──────────────────────────────────────────────────────────────
+
+function setupIntroVideoUpload() {
+  const uploadBtn = document.getElementById('intro-video-upload-btn');
+  const deleteBtn = document.getElementById('intro-video-delete-btn');
+  const fileInput = document.getElementById('intro-video-file-input');
+  const section = document.getElementById('intro-video-upload-section');
+
+  if (!uploadBtn || !fileInput) return;
+  if (section) section.style.display = 'block';
+
+  if (viewingProfile?.intro_video_url && deleteBtn) {
+    deleteBtn.style.display = 'inline-flex';
+  }
+
+  uploadBtn.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+    await uploadIntroVideo(file);
+    fileInput.value = '';
+  });
+
+  if (deleteBtn) deleteBtn.addEventListener('click', removeIntroVideo);
+}
+
+async function uploadIntroVideo(file) {
+  const allowed = ['video/mp4', 'video/quicktime', 'video/webm'];
+  if (!allowed.includes(file.type)) {
+    alert('Please choose an MP4, MOV, or WEBM video.');
+    return;
+  }
+  if (file.size > 50 * 1024 * 1024) {
+    alert('Video must be under 50MB.');
+    return;
+  }
+
+  // Check duration client-side
+  const duration = await getVideoDuration(file);
+  if (duration > 10) {
+    alert('Intro video must be 10 seconds or less.');
+    return;
+  }
+
+  const uploadBtn = document.getElementById('intro-video-upload-btn');
+  const uploadingEl = document.getElementById('intro-video-uploading');
+  const deleteBtn = document.getElementById('intro-video-delete-btn');
+
+  if (uploadBtn) uploadBtn.style.display = 'none';
+  if (uploadingEl) uploadingEl.style.display = 'inline';
+
+  try {
+    const ext = file.name.split('.').pop().toLowerCase() || 'mp4';
+    const path = `intros/${currentUser.id}/${Date.now()}.${ext}`;
+
+    const { error: uploadError } = await window.db.storage
+      .from('voxxee-media')
+      .upload(path, file, { upsert: true, contentType: file.type });
+
+    if (uploadError) throw uploadError;
+
+    const { data: urlData } = window.db.storage
+      .from('voxxee-media')
+      .getPublicUrl(path);
+
+    const publicUrl = urlData.publicUrl;
+
+    const { error: updateError } = await window.db
+      .from('profiles')
+      .update({ intro_video_url: publicUrl })
+      .eq('user_id', currentUser.id);
+
+    if (updateError) throw updateError;
+
+    if (viewingProfile) viewingProfile.intro_video_url = publicUrl;
+    renderIntroVideoEl(publicUrl);
+    if (deleteBtn) deleteBtn.style.display = 'inline-flex';
+
+  } catch (err) {
+    console.error('Intro video upload error:', err);
+    alert('Upload failed. Please try again.');
+  } finally {
+    if (uploadBtn) uploadBtn.style.display = 'inline-flex';
+    if (uploadingEl) uploadingEl.style.display = 'none';
+  }
+}
+
+function getVideoDuration(file) {
+  return new Promise((resolve) => {
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.onloadedmetadata = () => {
+      URL.revokeObjectURL(video.src);
+      resolve(video.duration);
+    };
+    video.onerror = () => resolve(0);
+    video.src = URL.createObjectURL(file);
+  });
+}
+
+async function removeIntroVideo() {
+  if (!confirm('Remove your intro video?')) return;
+  try {
+    const { error } = await window.db
+      .from('profiles')
+      .update({ intro_video_url: null })
+      .eq('user_id', currentUser.id);
+    if (error) throw error;
+    if (viewingProfile) viewingProfile.intro_video_url = null;
+    renderIntroVideoEl(null);
+    const deleteBtn = document.getElementById('intro-video-delete-btn');
+    if (deleteBtn) deleteBtn.style.display = 'none';
+  } catch (err) {
+    console.error('Remove intro video error:', err);
+    alert('Failed to remove video. Please try again.');
+  }
+}
+
+function renderIntroVideoEl(videoUrl) {
+  const section = document.getElementById('intro-video-section');
+  const player = document.getElementById('intro-video-player');
+  if (!section || !player) return;
+  if (videoUrl) {
+    player.src = videoUrl;
+    section.style.display = 'block';
+  } else {
+    player.src = '';
+    section.style.display = 'none';
   }
 }
 
@@ -526,6 +655,7 @@ async function loadOwnProfile() {
   renderProfile(profile);
   setupAvatarUpload();
   setupBannerUpload();
+  setupIntroVideoUpload();
 
   if (profile.is_verified) {
     document.getElementById('go-live-btn').style.display = 'block';
@@ -565,6 +695,7 @@ async function loadProfileByUsername(username) {
   if (isOwnProfile) {
     setupAvatarUpload();
     setupBannerUpload();
+    setupIntroVideoUpload();
   }
 
   if (isOwnProfile && profile.is_verified) {
@@ -627,6 +758,7 @@ async function loadProfileAnalytics(userId) {
 function renderProfile(profile) {
   renderAvatarEl(profile.avatar_url, profile.username);
   renderBannerEl(profile.banner_url);
+  renderIntroVideoEl(profile.intro_video_url);
 
   document.getElementById('profile-display-name').textContent = profile.display_name || profile.username;
   document.getElementById('profile-username').textContent = '@' + profile.username;
