@@ -53,11 +53,12 @@ function avatarHtml(profile, size = 40) {
 document.addEventListener('DOMContentLoaded', async () => {
   await waitForDb();
 
-  currentUser = await window.auth.getUser();
-  if (!currentUser) {
+  const { data: { session } } = await window.db.auth.getSession();
+  if (!session?.user) {
     window.location.href = '/login.html';
     return;
   }
+  currentUser = session.user;
 
   const { data: profile } = await window.db
     .from('profiles').select('*').eq('user_id', currentUser.id).single();
@@ -1393,6 +1394,7 @@ async function loadGifPickerTrending(postId) {
   if (!resultsEl) return;
   resultsEl.innerHTML = '<div style="grid-column:1/-1;font-size:12px;color:var(--text-muted);padding:8px;text-align:center;">Loading...</div>';
   try {
+    await window.loadApiKeys();
     const key = window.giphyApiKey;
     if (!key) { resultsEl.innerHTML = '<div style="grid-column:1/-1;font-size:12px;color:var(--text-muted);padding:8px;">GIFs unavailable.</div>'; return; }
     const res = await fetch(`https://api.giphy.com/v1/gifs/trending?api_key=${key}&limit=12&rating=g`);
@@ -1406,6 +1408,7 @@ async function searchGifsForPost(postId, query) {
   if (!resultsEl) return;
   resultsEl.innerHTML = '<div style="grid-column:1/-1;font-size:12px;color:var(--text-muted);padding:8px;text-align:center;">Searching...</div>';
   try {
+    await window.loadApiKeys();
     const key = window.giphyApiKey;
     if (!key) return;
     const res = await fetch(`https://api.giphy.com/v1/gifs/search?api_key=${key}&q=${encodeURIComponent(query)}&limit=12&rating=g`);
