@@ -68,7 +68,16 @@
       background: none; border: none; cursor: pointer;
       font-size: 18px; color: var(--text-dim); padding: 0;
     }
-
+    .forgot-link {
+      display: block;
+      text-align: right;
+      font-size: 13px;
+      color: var(--primary);
+      text-decoration: none;
+      margin-top: 6px;
+      font-weight: 600;
+    }
+    .forgot-link:hover { text-decoration: underline; }
     @media (max-width: 480px) {
       .auth-card { padding: 24px 20px; border-radius: var(--radius-lg); }
       .auth-title { font-size: 1.5rem; }
@@ -102,6 +111,7 @@
           <input type="password" id="password" class="form-input" placeholder="Your password" style="padding-right:48px;" autocomplete="current-password" />
           <button id="password-toggle" type="button" class="password-toggle">👁️</button>
         </div>
+        <a href="/reset-password.html" class="forgot-link">Forgot password?</a>
       </div>
 
       <button id="login-btn" class="btn btn-primary btn-block" style="justify-content:center;padding:11px;">
