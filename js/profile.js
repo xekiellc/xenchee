@@ -42,6 +42,86 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
+// ─── BANNER UPLOAD ────────────────────────────────────────────────────────────
+
+function setupBannerUpload() {
+  const btn = document.getElementById('banner-upload-btn');
+  const fileInput = document.getElementById('banner-file-input');
+  if (!btn || !fileInput) return;
+
+  btn.classList.add('visible');
+
+  btn.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+    await uploadBanner(file);
+    fileInput.value = '';
+  });
+}
+
+async function uploadBanner(file) {
+  const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+  if (!allowed.includes(file.type)) {
+    alert('Please choose a JPG, PNG, or WEBP image.');
+    return;
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    alert('Banner image must be under 10MB.');
+    return;
+  }
+
+  const btn = document.getElementById('banner-upload-btn');
+  if (btn) { btn.textContent = 'Uploading...'; btn.disabled = true; }
+
+  try {
+    const ext = file.name.split('.').pop().toLowerCase() || 'jpg';
+    const path = `banners/${currentUser.id}/${Date.now()}.${ext}`;
+
+    const { error: uploadError } = await window.db.storage
+      .from('voxxee-media')
+      .upload(path, file, { upsert: true, contentType: file.type });
+
+    if (uploadError) throw uploadError;
+
+    const { data: urlData } = window.db.storage
+      .from('voxxee-media')
+      .getPublicUrl(path);
+
+    const publicUrl = urlData.publicUrl;
+
+    const { error: updateError } = await window.db
+      .from('profiles')
+      .update({ banner_url: publicUrl })
+      .eq('user_id', currentUser.id);
+
+    if (updateError) throw updateError;
+
+    if (viewingProfile) viewingProfile.banner_url = publicUrl;
+    renderBannerEl(publicUrl);
+
+  } catch (err) {
+    console.error('Banner upload error:', err);
+    alert('Upload failed. Please try again.');
+  } finally {
+    if (btn) { btn.textContent = '📷 Change Banner'; btn.disabled = false; }
+  }
+}
+
+function renderBannerEl(bannerUrl) {
+  const bannerEl = document.getElementById('profile-banner');
+  const imgEl = document.getElementById('profile-banner-img');
+  if (!bannerEl) return;
+  if (bannerUrl && imgEl) {
+    imgEl.src = bannerUrl;
+    imgEl.style.display = 'block';
+    bannerEl.style.background = 'none';
+  } else {
+    if (imgEl) imgEl.style.display = 'none';
+    bannerEl.style.background = 'linear-gradient(135deg, var(--primary) 0%, #a78bfa 100%)';
+  }
+}
+
 // ─── AVATAR UPLOAD ────────────────────────────────────────────────────────────
 
 function setupAvatarUpload() {
@@ -408,6 +488,7 @@ async function loadOwnProfile() {
   mutedKeywords = profile.muted_keywords || [];
   renderProfile(profile);
   setupAvatarUpload();
+  setupBannerUpload();
 
   if (profile.is_verified) {
     document.getElementById('go-live-btn').style.display = 'block';
@@ -444,7 +525,10 @@ async function loadProfileByUsername(username) {
   }
 
   renderProfile(profile);
-  if (isOwnProfile) setupAvatarUpload();
+  if (isOwnProfile) {
+    setupAvatarUpload();
+    setupBannerUpload();
+  }
 
   if (isOwnProfile && profile.is_verified) {
     document.getElementById('go-live-btn').style.display = 'block';
@@ -505,6 +589,7 @@ async function loadProfileAnalytics(userId) {
 
 function renderProfile(profile) {
   renderAvatarEl(profile.avatar_url, profile.username);
+  renderBannerEl(profile.banner_url);
 
   document.getElementById('profile-display-name').textContent = profile.display_name || profile.username;
   document.getElementById('profile-username').textContent = '@' + profile.username;
@@ -551,7 +636,6 @@ function renderProfile(profile) {
     const editBtn = document.getElementById('edit-profile-btn');
     if (editBtn) {
       editBtn.style.display = 'block';
-      // Always use viewingProfile so latest saved state is reflected
       editBtn.addEventListener('click', () => showEditForm(viewingProfile));
     }
   } else {
