@@ -1,6 +1,6 @@
 (function() {
   const SUPABASE_URL = 'https://vclvqbblcnimzbdwejzl.supabase.co';
-  const SUPABASE_ANON_KEY = 'PASTE_CURRENT_KEY_FROM_DASHBOARD_HERE';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjbHZxYmJsY25pbXpiZHdlanpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxOTE3MDcsImV4cCI6MjA5NDc2NzcwN30.1pzrBlar6wStEEyMQNKEqrzE1qyqQUFg9poxSq1QDEQ';
 
   const { createClient } = supabase;
   window.db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -54,7 +54,6 @@
     return age >= 18;
   };
 
-  // Lazy load other API keys only when needed
   window.loadApiKeys = async function() {
     if (window.giphyApiKey) return;
     try {
