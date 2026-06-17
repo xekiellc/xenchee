@@ -1,6 +1,6 @@
 (function() {
   const SUPABASE_URL = 'https://vclvqbblcnimzbdwejzl.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjbHZxYmJsY25pbXpiZHdlanpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUyNjkxNzMsImV4cCI6MjA2MDg0NTE3M30.GCOFPBMOAnr-q6DqN_xpPx2eqG48vZSXNJzxeSXoBiM';
+  const SUPABASE_ANON_KEY = 'PASTE_CURRENT_KEY_FROM_DASHBOARD_HERE';
 
   const { createClient } = supabase;
   window.db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
