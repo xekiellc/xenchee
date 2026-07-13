@@ -19,7 +19,6 @@ let viewerCountInterval = null;
 document.addEventListener('DOMContentLoaded', async () => {
   await waitForDb();
 
-  // Use getSession() instead of getUser() — reads from local cache, no network round trip
   const { data: { session } } = await window.db.auth.getSession();
   if (!session?.user) {
     window.location.href = '/login.html';
@@ -642,7 +641,6 @@ function subscribeToLiveSessions(userId) {
 // ─── PROFILE LOAD ─────────────────────────────────────────────────────────────
 
 async function loadOwnProfile() {
-  // Select only fields needed — skip large JSON fields not needed for display init
   const { data: profile } = await window.db
     .from('profiles')
     .select('user_id, username, display_name, bio, location, website, avatar_url, banner_url, intro_video_url, is_verified, verified_type, reputation, post_count, follower_count, following_count, show_adult_content, is_adult_creator, muted_keywords, muted_communities')
@@ -666,7 +664,6 @@ async function loadOwnProfile() {
     document.getElementById('go-live-btn').style.display = 'block';
   }
 
-  // Run these in parallel — don't await sequentially
   await Promise.all([
     checkActiveLiveSession(currentUser.id),
     loadProfilePosts(profile.user_id),
@@ -675,7 +672,9 @@ async function loadOwnProfile() {
 
   subscribeToLiveSessions(currentUser.id);
 
-  // Analytics loads lazily via IntersectionObserver
+  // ── TOP 8 (own profile — owner can edit) ──
+  if (window.loadTop8) await window.loadTop8(profile.user_id, true);
+
   lazyLoadAnalytics(profile.user_id);
 }
 
@@ -720,6 +719,9 @@ async function loadProfileByUsername(username) {
   ]);
 
   subscribeToLiveSessions(profile.user_id);
+
+  // ── TOP 8 (viewing another profile — read only unless own) ──
+  if (window.loadTop8) await window.loadTop8(profile.user_id, isOwnProfile);
 
   if (isOwnProfile) lazyLoadAnalytics(profile.user_id);
 }
