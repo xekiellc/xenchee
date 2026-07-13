@@ -208,6 +208,264 @@
       max-height: 180px;
       object-fit: cover;
     }
+
+    /* ── TOP 8 ── */
+    .top8-section {
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+    }
+    .top8-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .top8-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .top8-edit-btn {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--primary);
+      background: none;
+      border: 1px solid rgba(0,229,255,0.3);
+      border-radius: 100px;
+      padding: 3px 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .top8-edit-btn:hover { background: var(--primary-dim); }
+    .top8-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+    .top8-slot {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .top8-avatar {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--bg-input);
+      border: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--primary);
+      overflow: hidden;
+      position: relative;
+      transition: border-color 0.15s;
+    }
+    .top8-slot:hover .top8-avatar { border-color: var(--primary); }
+    .top8-avatar img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 50%;
+    }
+    .top8-empty-avatar {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      border: 2px dashed var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      color: var(--border);
+      transition: all 0.15s;
+    }
+    .top8-slot:hover .top8-empty-avatar {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+    .top8-name {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-align: center;
+      max-width: 64px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .top8-position {
+      font-size: 10px;
+      color: var(--text-dim);
+    }
+
+    /* ── TOP 8 MODAL ── */
+    .top8-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.80);
+      z-index: 2500;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      backdrop-filter: blur(6px);
+    }
+    .top8-modal.visible { display: flex; }
+    .top8-modal-inner {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      width: 100%;
+      max-width: 480px;
+      max-height: 85vh;
+      overflow-y: auto;
+      padding: 24px;
+    }
+    .top8-modal-title {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .top8-modal-sub {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+    .top8-slots-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .top8-slot-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--bg-input);
+    }
+    .top8-slot-pos {
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--primary);
+      width: 18px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .top8-slot-avatar-sm {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--primary);
+      overflow: hidden;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .top8-slot-avatar-sm img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 50%;
+    }
+    .top8-slot-info { flex: 1; min-width: 0; }
+    .top8-slot-uname { font-size: 13px; font-weight: 600; color: var(--text); }
+    .top8-slot-empty-label { font-size: 13px; color: var(--text-dim); font-style: italic; }
+    .top8-slot-actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .top8-slot-up, .top8-slot-down, .top8-slot-remove {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 12px;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: all 0.15s;
+    }
+    .top8-slot-up:hover, .top8-slot-down:hover { border-color: var(--primary); color: var(--primary); }
+    .top8-slot-remove:hover { border-color: #f43f5e; color: #f43f5e; }
+    .top8-search-section { border-top: 1px solid var(--border); padding-top: 16px; }
+    .top8-search-label { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
+    .top8-search-input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 14px;
+      color: var(--text);
+      font-family: var(--font-body);
+      outline: none;
+      box-sizing: border-box;
+      margin-bottom: 10px;
+    }
+    .top8-search-input:focus { border-color: var(--primary); }
+    .top8-search-results { display: flex; flex-direction: column; gap: 6px; max-height: 180px; overflow-y: auto; }
+    .top8-search-result {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .top8-search-result:hover { border-color: var(--primary); background: var(--primary-dim); }
+    .top8-search-result-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--primary);
+      overflow: hidden;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .top8-search-result-avatar img {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      object-fit: cover; border-radius: 50%;
+    }
+    .top8-search-result-name { font-size: 13px; font-weight: 600; color: var(--text); }
+    .top8-search-result-user { font-size: 12px; color: var(--text-muted); }
+    .top8-modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+
     .mobile-nav {
       display: none; position: fixed; bottom: 0; left: 0; right: 0;
       height: 56px; background: rgba(8,8,10,0.97);
@@ -230,8 +488,15 @@
       .profile-body { padding: 0 16px 20px; }
       .profile-display-name { font-size: 18px; }
       #daily-frame-container { height: 380px; }
+      .top8-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; }
+      .top8-avatar, .top8-empty-avatar { width: 48px; height: 48px; }
     }
-    @media (max-width: 480px) { .profile-stats { gap: 16px; } }
+    @media (max-width: 480px) {
+      .profile-stats { gap: 16px; }
+      .top8-grid { grid-template-columns: repeat(4, 1fr); gap: 6px; }
+      .top8-avatar, .top8-empty-avatar { width: 44px; height: 44px; font-size: 16px; }
+      .top8-name { font-size: 10px; max-width: 52px; }
+    }
   </style>
 </head>
 <body>
@@ -326,6 +591,17 @@
             <div style="font-size:12px;color:var(--text-dim);margin-top:4px;">10 seconds max. MP4, MOV, or WEBM.</div>
             <span id="intro-video-uploading" style="display:none;font-size:13px;color:var(--text-muted);margin-top:6px;">Uploading...</span>
             <input type="file" id="intro-video-file-input" accept="video/mp4,video/quicktime,video/webm" style="display:none;" />
+          </div>
+
+          <!-- TOP 8 -->
+          <div class="top8-section" id="top8-section">
+            <div class="top8-header">
+              <div class="top8-label">⭐ Top 8</div>
+              <button class="top8-edit-btn" id="top8-edit-btn" style="display:none;">Edit</button>
+            </div>
+            <div class="top8-grid" id="top8-grid">
+              <!-- filled by JS -->
+            </div>
           </div>
 
         </div>
@@ -457,6 +733,24 @@
     </div>
   </div>
 
+  <!-- TOP 8 MODAL -->
+  <div id="top8-modal" class="top8-modal">
+    <div class="top8-modal-inner">
+      <div class="top8-modal-title">⭐ Edit Top 8</div>
+      <div class="top8-modal-sub">Add up to 8 friends to your Top 8. Use arrows to reorder.</div>
+      <div class="top8-slots-list" id="top8-slots-list"></div>
+      <div class="top8-search-section">
+        <div class="top8-search-label">Add a friend</div>
+        <input type="text" class="top8-search-input" id="top8-search-input" placeholder="Search by username..." />
+        <div class="top8-search-results" id="top8-search-results"></div>
+      </div>
+      <div class="top8-modal-actions">
+        <button class="btn btn-ghost" id="top8-modal-cancel">Cancel</button>
+        <button class="btn btn-primary" id="top8-modal-save">Save Top 8</button>
+      </div>
+    </div>
+  </div>
+
   <div id="golive-modal" class="golive-modal">
     <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-xl);padding:28px;width:100%;max-width:420px;">
       <div style="font-family:var(--font-display);font-size:18px;font-weight:800;color:var(--text);margin-bottom:6px;">🔴 Go Live</div>
@@ -517,6 +811,7 @@
   <script src="js/profile.js"></script>
 
   <script>
+    // ── MUTED COMMUNITIES (existing) ──────────────────────────────
     window.loadMutedCommunities = async function(mutedIds) {
       const list = document.getElementById('muted-communities-list');
       const empty = document.getElementById('muted-communities-empty');
@@ -556,6 +851,226 @@
         document.getElementById('muted-communities-empty').style.display = 'block';
       }
     };
+
+    // ── TOP 8 ──────────────────────────────────────────────────────
+    let top8Data = [];       // [{position, friend_id, profile}]
+    let top8IsOwner = false;
+    let top8UserId = null;
+    let top8SearchTimer = null;
+
+    function avatarHtml(profile, size = 56) {
+      const init = (profile?.display_name || profile?.username || '?').charAt(0).toUpperCase();
+      if (profile?.avatar_url) {
+        return `<img src="${escapeHtml(profile.avatar_url)}" alt="${escapeHtml(init)}" onerror="this.style.display='none'" />`;
+      }
+      return init;
+    }
+
+    async function loadTop8(userId, isOwner) {
+      top8UserId = userId;
+      top8IsOwner = isOwner;
+      if (isOwner) document.getElementById('top8-edit-btn').style.display = 'inline-block';
+
+      const { data } = await window.db
+        .from('top_friends')
+        .select('position, friend_id')
+        .eq('user_id', userId)
+        .order('position', { ascending: true });
+
+      if (!data || data.length === 0) {
+        top8Data = [];
+        renderTop8Grid();
+        return;
+      }
+
+      const friendIds = data.map(r => r.friend_id);
+      const { data: profiles } = await window.db
+        .from('profiles')
+        .select('user_id, username, display_name, avatar_url')
+        .in('user_id', friendIds);
+
+      const profileMap = {};
+      (profiles || []).forEach(p => profileMap[p.user_id] = p);
+
+      top8Data = data.map(r => ({
+        position: r.position,
+        friend_id: r.friend_id,
+        profile: profileMap[r.friend_id] || null
+      }));
+
+      renderTop8Grid();
+    }
+
+    function renderTop8Grid() {
+      const grid = document.getElementById('top8-grid');
+      const slots = [];
+      for (let i = 1; i <= 8; i++) {
+        const entry = top8Data.find(d => d.position === i);
+        if (entry && entry.profile) {
+          const p = entry.profile;
+          const name = p.display_name || p.username || 'User';
+          slots.push(`
+            <a class="top8-slot" href="/profile.html?u=${escapeHtml(p.username)}">
+              <div class="top8-avatar">${avatarHtml(p, 56)}</div>
+              <div class="top8-name">${escapeHtml(name)}</div>
+              <div class="top8-position">#${i}</div>
+            </a>`);
+        } else {
+          slots.push(`
+            <div class="top8-slot" ${top8IsOwner ? 'onclick="openTop8Modal()"' : ''}>
+              <div class="top8-empty-avatar">+</div>
+              <div class="top8-name" style="color:var(--text-dim);">Empty</div>
+              <div class="top8-position">#${i}</div>
+            </div>`);
+        }
+      }
+      grid.innerHTML = slots.join('');
+    }
+
+    function openTop8Modal() {
+      renderTop8SlotsList();
+      document.getElementById('top8-search-input').value = '';
+      document.getElementById('top8-search-results').innerHTML = '';
+      document.getElementById('top8-modal').classList.add('visible');
+    }
+
+    function renderTop8SlotsList() {
+      const list = document.getElementById('top8-slots-list');
+      const rows = [];
+      for (let i = 1; i <= 8; i++) {
+        const entry = top8Data.find(d => d.position === i);
+        const p = entry?.profile;
+        const name = p ? (p.display_name || p.username || 'User') : null;
+        rows.push(`
+          <div class="top8-slot-row" id="top8-row-${i}">
+            <div class="top8-slot-pos">${i}</div>
+            <div class="top8-slot-avatar-sm">${p ? avatarHtml(p, 36) : '+'}</div>
+            <div class="top8-slot-info">
+              ${p
+                ? `<div class="top8-slot-uname">${escapeHtml(name)}</div>`
+                : `<div class="top8-slot-empty-label">Empty slot</div>`}
+            </div>
+            ${p ? `
+              <div class="top8-slot-actions">
+                <button class="top8-slot-up" onclick="top8Move(${i}, -1)" title="Move up">↑</button>
+                <button class="top8-slot-down" onclick="top8Move(${i}, 1)" title="Move down">↓</button>
+                <button class="top8-slot-remove" onclick="top8Remove(${i})" title="Remove">✕</button>
+              </div>` : ''}
+          </div>`);
+      }
+      list.innerHTML = rows.join('');
+    }
+
+    function top8Move(position, direction) {
+      const newPos = position + direction;
+      if (newPos < 1 || newPos > 8) return;
+      const current = top8Data.find(d => d.position === position);
+      const other = top8Data.find(d => d.position === newPos);
+      if (!current) return;
+      if (other) other.position = position;
+      current.position = newPos;
+      top8Data.sort((a, b) => a.position - b.position);
+      renderTop8SlotsList();
+    }
+
+    function top8Remove(position) {
+      top8Data = top8Data.filter(d => d.position !== position);
+      // Repack positions
+      top8Data.sort((a, b) => a.position - b.position);
+      top8Data.forEach((d, i) => d.position = i + 1);
+      renderTop8SlotsList();
+    }
+
+    function top8Add(friendProfile) {
+      if (top8Data.length >= 8) {
+        alert('Your Top 8 is full. Remove someone first.');
+        return;
+      }
+      if (top8Data.find(d => d.friend_id === friendProfile.user_id)) {
+        alert('This person is already in your Top 8.');
+        return;
+      }
+      const nextPos = top8Data.length + 1;
+      top8Data.push({ position: nextPos, friend_id: friendProfile.user_id, profile: friendProfile });
+      document.getElementById('top8-search-input').value = '';
+      document.getElementById('top8-search-results').innerHTML = '';
+      renderTop8SlotsList();
+    }
+
+    async function saveTop8() {
+      const btn = document.getElementById('top8-modal-save');
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+
+      // Delete all existing and reinsert
+      await window.db.from('top_friends').delete().eq('user_id', top8UserId);
+
+      if (top8Data.length > 0) {
+        const rows = top8Data.map(d => ({
+          user_id: top8UserId,
+          friend_id: d.friend_id,
+          position: d.position
+        }));
+        await window.db.from('top_friends').insert(rows);
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Save Top 8';
+      document.getElementById('top8-modal').classList.remove('visible');
+      renderTop8Grid();
+    }
+
+    // Search users
+    let top8SearchDebounce = null;
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('top8-edit-btn').addEventListener('click', openTop8Modal);
+      document.getElementById('top8-modal-cancel').addEventListener('click', () => {
+        document.getElementById('top8-modal').classList.remove('visible');
+      });
+      document.getElementById('top8-modal-save').addEventListener('click', saveTop8);
+
+      document.getElementById('top8-search-input').addEventListener('input', (e) => {
+        clearTimeout(top8SearchDebounce);
+        const q = e.target.value.trim();
+        if (!q) { document.getElementById('top8-search-results').innerHTML = ''; return; }
+        top8SearchDebounce = setTimeout(() => searchTop8Users(q), 300);
+      });
+    });
+
+    async function searchTop8Users(query) {
+      const results = document.getElementById('top8-search-results');
+      results.innerHTML = '<div style="font-size:13px;color:var(--text-muted);padding:8px;">Searching...</div>';
+      const { data } = await window.db
+        .from('profiles')
+        .select('user_id, username, display_name, avatar_url')
+        .ilike('username', `%${query}%`)
+        .neq('user_id', top8UserId)
+        .limit(8);
+
+      if (!data || data.length === 0) {
+        results.innerHTML = '<div style="font-size:13px;color:var(--text-muted);padding:8px;">No users found.</div>';
+        return;
+      }
+
+      results.innerHTML = data.map(p => {
+        const name = p.display_name || p.username || 'User';
+        const alreadyIn = top8Data.find(d => d.friend_id === p.user_id);
+        return `
+          <div class="top8-search-result ${alreadyIn ? 'already-in' : ''}"
+               onclick="${alreadyIn ? '' : `top8Add(${JSON.stringify(p).replace(/"/g, '&quot;')})`}"
+               style="${alreadyIn ? 'opacity:0.5;cursor:default;' : ''}">
+            <div class="top8-search-result-avatar">${avatarHtml(p, 32)}</div>
+            <div>
+              <div class="top8-search-result-name">${escapeHtml(name)}</div>
+              <div class="top8-search-result-user">@${escapeHtml(p.username || '')}</div>
+            </div>
+            ${alreadyIn ? '<span style="font-size:11px;color:var(--primary);margin-left:auto;">✓ Added</span>' : ''}
+          </div>`;
+      }).join('');
+    }
+
+    // Expose loadTop8 for profile.js to call
+    window.loadTop8 = loadTop8;
 
     function escapeHtml(text) {
       const div = document.createElement('div');
