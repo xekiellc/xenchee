@@ -18,9 +18,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('signup-btn').addEventListener('click', handleSignup);
 
+  // Password show/hide toggle
   document.getElementById('password-toggle').addEventListener('click', () => {
     const input = document.getElementById('password');
-    input.type = input.type === 'password' ? 'text' : 'password';
+    const btn = document.getElementById('password-toggle');
+    const shown = input.type === 'text';
+    input.type = shown ? 'password' : 'text';
+    btn.textContent = shown ? '👁️' : '🙈';
+    btn.setAttribute('aria-label', shown ? 'Show password' : 'Hide password');
+    input.focus();
   });
 
   document.addEventListener('keydown', (e) => {
