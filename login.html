@@ -67,7 +67,10 @@
       transform: translateY(-50%);
       background: none; border: none; cursor: pointer;
       font-size: 18px; color: var(--text-dim); padding: 0;
+      line-height: 1;
+      user-select: none;
     }
+    .password-toggle:hover { color: var(--primary); }
     .forgot-link {
       display: block;
       text-align: right;
@@ -109,7 +112,7 @@
         <label class="form-label">Password</label>
         <div class="password-wrap">
           <input type="password" id="password" class="form-input" placeholder="Your password" style="padding-right:48px;" autocomplete="current-password" />
-          <button id="password-toggle" type="button" class="password-toggle">👁️</button>
+          <button id="password-toggle" type="button" class="password-toggle" aria-label="Show password">👁️</button>
         </div>
         <a href="/reset-password.html" class="forgot-link">Forgot password?</a>
       </div>
@@ -126,5 +129,18 @@
 
   <script src="js/supabase.js"></script>
   <script src="js/login.js"></script>
+  <script>
+    // Password show/hide toggle
+    const toggleBtn = document.getElementById('password-toggle');
+    const passwordInput = document.getElementById('password');
+    let shown = false;
+    toggleBtn.addEventListener('click', () => {
+      shown = !shown;
+      passwordInput.type = shown ? 'text' : 'password';
+      toggleBtn.textContent = shown ? '🙈' : '👁️';
+      toggleBtn.setAttribute('aria-label', shown ? 'Hide password' : 'Show password');
+      passwordInput.focus();
+    });
+  </script>
 </body>
 </html>
