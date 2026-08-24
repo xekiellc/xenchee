@@ -97,7 +97,7 @@ async function handleSignup() {
       return;
     }
 
-    // Sign up with Supabase Auth
+    // Sign up with Supabase Auth — triggers auto-create users + profiles rows
     const { data, error } = await window.auth.signUp(email, password, dob);
 
     if (error) {
@@ -112,20 +112,21 @@ async function handleSignup() {
     }
 
     if (data?.user) {
-      // Create users record (no username column on this table)
-      await window.db.from('users').insert({
-        id: data.user.id,
-        email,
-        date_of_birth: dob
-      });
-
-      // Create profile
-      await window.db.from('profiles').insert({
+      // Create profile (users row is handled by DB trigger)
+      const { error: profileError } = await window.db.from('profiles').insert({
         user_id: data.user.id,
         username,
         display_name: username,
         onboarding_complete: false
       });
+
+      if (profileError) {
+        console.error('Profile error:', profileError);
+        showAlert('Account created but profile setup failed. Please contact support.', 'error');
+        btn.textContent = 'Create Account';
+        btn.disabled = false;
+        return;
+      }
 
       window.location.href = '/onboarding.html';
     }
