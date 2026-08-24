@@ -9,7 +9,6 @@ async function waitForDb(timeout = 5000) {
 document.addEventListener('DOMContentLoaded', async () => {
   await waitForDb();
 
-  // Redirect if already logged in
   const { data: { session } } = await window.db.auth.getSession();
   if (session?.user) {
     window.location.href = '/feed.html';
@@ -113,20 +112,19 @@ async function handleSignup() {
     }
 
     if (data?.user) {
+      // Create users record (no username column on this table)
+      await window.db.from('users').insert({
+        id: data.user.id,
+        email,
+        date_of_birth: dob
+      });
+
       // Create profile
       await window.db.from('profiles').insert({
         user_id: data.user.id,
         username,
         display_name: username,
         onboarding_complete: false
-      });
-
-      // Create users record
-      await window.db.from('users').insert({
-        id: data.user.id,
-        email,
-        date_of_birth: dob,
-        username
       });
 
       window.location.href = '/onboarding.html';
