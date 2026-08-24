@@ -82,12 +82,16 @@ async function handleSignup() {
   btn.disabled = true;
 
   try {
-    // Check username availability
-    const { data: existing } = await window.db
+    // Check username availability — maybeSingle() returns null instead of 406 when not found
+    const { data: existing, error: checkError } = await window.db
       .from('profiles')
       .select('username')
       .eq('username', username)
-      .single();
+      .maybeSingle();
+
+    if (checkError) {
+      console.error('Username check error:', checkError);
+    }
 
     if (existing) {
       showAlert('That username is already taken. Please choose another.', 'error');
