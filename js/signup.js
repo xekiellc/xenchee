@@ -17,7 +17,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('signup-btn').addEventListener('click', handleSignup);
 
-  // Password show/hide toggle
   document.getElementById('password-toggle').addEventListener('click', () => {
     const input = document.getElementById('password');
     const btn = document.getElementById('password-toggle');
@@ -97,7 +96,7 @@ async function handleSignup() {
       return;
     }
 
-    // Sign up with Supabase Auth — triggers auto-create users + profiles rows
+    // Sign up — DB triggers auto-create users + profiles rows
     const { data, error } = await window.auth.signUp(email, password, dob);
 
     if (error) {
@@ -112,21 +111,11 @@ async function handleSignup() {
     }
 
     if (data?.user) {
-      // Create profile (users row is handled by DB trigger)
-      const { error: profileError } = await window.db.from('profiles').insert({
-        user_id: data.user.id,
-        username,
-        display_name: username,
-        onboarding_complete: false
-      });
-
-      if (profileError) {
-        console.error('Profile error:', profileError);
-        showAlert('Account created but profile setup failed. Please contact support.', 'error');
-        btn.textContent = 'Create Account';
-        btn.disabled = false;
-        return;
-      }
+      // Update the trigger-created profile with the chosen username
+      await window.db
+        .from('profiles')
+        .update({ username, display_name: username, onboarding_complete: false })
+        .eq('user_id', data.user.id);
 
       window.location.href = '/onboarding.html';
     }
